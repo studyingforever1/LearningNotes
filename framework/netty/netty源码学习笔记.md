@@ -4583,6 +4583,18 @@ Netty 中的内存池可以看作一个 Java 版本的 jemalloc 实现，并结�
 
 
 ```java
+
+
+	//确定当前申请容量是否是Tiny或者Small规格的
+  	// capacity < pageSize
+    boolean isTinyOrSmall(int normCapacity) {
+        //原理是subpageOverflowMask是2的次幂-1取反 低位都是0 高位是1 
+        //如果normCapacity小于8192 那么&结果就是全0 否则高位存在1不等于0
+        return (normCapacity & subpageOverflowMask) == 0;
+    }
+
+
+
 //PoolArena中的normalizeCapacity方法 具有和 HashMap初始化容器大小的相同最接近2次幂的计算
 
  int normalizeCapacity(int reqCapacity) {

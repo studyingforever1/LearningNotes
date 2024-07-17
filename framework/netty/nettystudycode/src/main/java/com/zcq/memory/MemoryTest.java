@@ -8,10 +8,9 @@ public class MemoryTest {
     public static void main(String[] args) {
         PooledByteBufAllocator pooledByteBufAllocator = new PooledByteBufAllocator();
         ByteBuf byteBuf = pooledByteBufAllocator.buffer();
-        byteBuf.writeBytes(new byte[1024 * 1024 * 10]);
-        System.out.println(byteBuf.refCnt());
 
-        System.out.println(getPower2(Integer.MAX_VALUE));
+
+        System.out.println(lessThanPower2(4,4));
     }
 
     public static void testOther() {
@@ -21,6 +20,22 @@ public class MemoryTest {
         System.out.println(Integer.toBinaryString(1));
         System.out.println(Integer.toBinaryString(~(15)));
     }
+
+    /**
+     * 比较前面那个数字是否小于第二个数字
+     * @param int1 被比较数
+     * @param int2 比较数字 必须是2的次幂
+     * @return 比较结果 true 小于 false 大于等于
+     */
+    public static boolean lessThanPower2(int int1, int int2) {
+        System.out.println(Integer.toBinaryString(int2));
+        int i = ~(int2 - 1);
+        System.out.println(Integer.toBinaryString(i));
+        System.out.println(Integer.toBinaryString(int1));
+        System.out.println(Integer.toBinaryString(int1 & i));
+        return (int1 & i) == 0;
+    }
+
 
 
     /**

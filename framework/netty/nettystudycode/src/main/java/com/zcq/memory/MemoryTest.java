@@ -7,11 +7,18 @@ public class MemoryTest {
 
     public static void main(String[] args) {
         PooledByteBufAllocator pooledByteBufAllocator = new PooledByteBufAllocator();
-        ByteBuf byteBuf = pooledByteBufAllocator.buffer();
-
-
-        System.out.println(lessThanPower2(4,4));
+        ByteBuf byteBuf = pooledByteBufAllocator.buffer(1);
     }
+
+
+    /**
+     * long只能与long类型 &
+     * handle 高32位bitmapIdx 低32位 memoryMapIdx
+     */
+    public static void testYu(){
+        System.out.println(4611686018427389952L & 0x00000000FFFFFFFFL);
+    }
+
 
     public static void testOther() {
         System.out.println((1 & ~15) + 16);

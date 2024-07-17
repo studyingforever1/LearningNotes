@@ -4589,10 +4589,12 @@ Netty 中的内存池可以看作一个 Java 版本的 jemalloc 实现，并结�
         if (reqCapacity < 0) {
             throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");
         }
+     	//如果需要的容量大于chunkSize 16M 直接返回
         if (reqCapacity >= chunkSize) {
             return reqCapacity;
         }
 
+     	//如果reqCapacity > tiny 处于small和normal的大小范围 
      	//这里就是和hashMap相同逻辑计算的部分 
         if (!isTiny(reqCapacity)) { // >= 512
             // Doubled
@@ -4612,12 +4614,15 @@ Netty 中的内存池可以看作一个 Java 版本的 jemalloc 实现，并结�
 
             return normalizedCapacity;
         }
+     
+     	//接下来处理reqCapacity处于tiny的范围
 
+     	//如果reqCapacity是16的倍数
         // Quantum-spaced
         if ((reqCapacity & 15) == 0) {
             return reqCapacity;
         }
-
+		//找到最接近的16的倍数
         return (reqCapacity & ~15) + 16;
     }
 ```

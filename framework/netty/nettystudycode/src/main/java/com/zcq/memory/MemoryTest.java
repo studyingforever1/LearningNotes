@@ -8,6 +8,7 @@ public class MemoryTest {
     public static void main(String[] args) {
         PooledByteBufAllocator pooledByteBufAllocator = new PooledByteBufAllocator();
         ByteBuf byteBuf = pooledByteBufAllocator.buffer(1);
+        byteBuf.release();
     }
 
 

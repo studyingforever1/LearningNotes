@@ -4592,6 +4592,11 @@ Netty 中的内存池可以看作一个 Java 版本的 jemalloc 实现，并结�
         //如果normCapacity小于8192 那么&结果就是全0 否则高位存在1不等于0
         return (normCapacity & subpageOverflowMask) == 0;
     }
+	//确定当前申请容量是否是Tiny规格的
+  	// normCapacity < 512
+    static boolean isTiny(int normCapacity) {
+        return (normCapacity & 0xFFFFFE00) == 0;
+    }
 
 
 

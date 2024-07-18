@@ -4503,7 +4503,7 @@ kmem_cache 中包含三个 Slab 链表：**完全分配使用 slab_full**、**�
 
 在了解了常用的内存分配算法之后，再理解 jemalloc 的架构设计会相对轻松一些。下图是 jemalloc 的架构图，我们一起学习下它的核心设计理念。
 
-<img src=".\images\jemalloc架构设计.png" style="zoom: 50%;" />
+<img src=".\images\jemalloc架构设计.png" style="zoom: 33%;" />
 
 
 
@@ -4979,7 +4979,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         super(preferDirect);
         //实例化PoolThreadLocalCache对象 只是简单的创建了对象 内部什么都没初始化
         threadCache = new PoolThreadLocalCache();
-        //?????
+        //tiny、small、normal内存规格同一个大小的缓存数量
         this.tinyCacheSize = tinyCacheSize;
         this.smallCacheSize = smallCacheSize;
         this.normalCacheSize = normalCacheSize;
@@ -5077,7 +5077,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     //内存规格的枚举
     enum SizeClass {
-        //在 Tiny 场景下，最小的划分单位为 16B，按 16B 依次递增，16B、32B、48B …… 496B； 共32种情况
+        //在 Tiny 场景下，最小的划分单位为 16B，按 16B 依次递增，16B、32B、48B …… 496B； 共31种情况
         Tiny,
         //在 Small 场景下，总共可以划分为 512B、1024B、2048B、4096B 4种情况。
         Small,
@@ -5085,7 +5085,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         Normal
     }
 
-    //计算tinySubpage的缓存子页数组大小 512/16 = 32种情况
+    //计算tinySubpage的缓存子页数组大小 32 但实际存储是从下标1开始到31
     static final int numTinySubpagePools = 512 >>> 4;
 
     //分配器
@@ -5154,7 +5154,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         this.chunkSize = chunkSize;
         //这里取出来是-8192 前面为1 后面为0 便于后面进行快速位运算判断
         subpageOverflowMask = ~(pageSize - 1);
-        //基于numTinySubpagePools = 32种情况来创建tinySubpagePools数组
+        //基于numTinySubpagePools = 32来创建tinySubpagePools数组
         tinySubpagePools = newSubpagePoolArray(numTinySubpagePools);
         for (int i = 0; i < tinySubpagePools.length; i ++) {
             //每个subpage只创建一个head
@@ -5195,6 +5195,81 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         metrics.add(q100);
         chunkListMetrics = Collections.unmodifiableList(metrics);
     }
+    
+    
+    //分配内存
+    PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
+        //新建一个ByteBuf对象 当作分配的这块内存的容器
+        PooledByteBuf<T> buf = newByteBuf(maxCapacity);
+        allocate(cache, buf, reqCapacity);
+        return buf;
+    }
+    
+    private void allocate(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity) {
+        //将所需的内存大小进行规格化 
+        final int normCapacity = normalizeCapacity(reqCapacity);
+        
+        //判断所需内存大小是否属于tiny或者small规格
+        if (isTinyOrSmall(normCapacity)) { // capacity < pageSize
+            int tableIdx;
+            PoolSubpage<T>[] table;
+            //判断是否是tiny规格
+            boolean tiny = isTiny(normCapacity);
+            if (tiny) { // < 512
+                //用线程本地的cache分配一下试试看
+                if (cache.allocateTiny(this, buf, reqCapacity, normCapacity)) {
+                    // was able to allocate out of the cache so move on
+                    return;
+                }
+                tableIdx = tinyIdx(normCapacity);
+                table = tinySubpagePools;
+            } else {
+                if (cache.allocateSmall(this, buf, reqCapacity, normCapacity)) {
+                    // was able to allocate out of the cache so move on
+                    return;
+                }
+                tableIdx = smallIdx(normCapacity);
+                table = smallSubpagePools;
+            }
+
+            final PoolSubpage<T> head = table[tableIdx];
+
+            /**
+             * Synchronize on the head. This is needed as {@link PoolChunk#allocateSubpage(int)} and
+             * {@link PoolChunk#free(long)} may modify the doubly linked list as well.
+             */
+            synchronized (head) {
+                final PoolSubpage<T> s = head.next;
+                if (s != head) {
+                    assert s.doNotDestroy && s.elemSize == normCapacity;
+                    long handle = s.allocate();
+                    assert handle >= 0;
+                    s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
+
+                    if (tiny) {
+                        allocationsTiny.increment();
+                    } else {
+                        allocationsSmall.increment();
+                    }
+                    return;
+                }
+            }
+            allocateNormal(buf, reqCapacity, normCapacity);
+            return;
+        }
+        if (normCapacity <= chunkSize) {
+            if (cache.allocateNormal(this, buf, reqCapacity, normCapacity)) {
+                // was able to allocate out of the cache so move on
+                return;
+            }
+            allocateNormal(buf, reqCapacity, normCapacity);
+        } else {
+            // Huge allocations are never served via the cache so just call allocateHuge
+            allocateHuge(buf, reqCapacity);
+        }
+    }
+    
+    
 
 	//确定当前申请容量是否是Tiny或者Small规格的
   	// capacity < pageSize
@@ -5213,7 +5288,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
 //PoolArena中的normalizeCapacity方法 具有和 HashMap初始化容器大小的相同最接近2次幂的计算
 
- int normalizeCapacity(int reqCapacity) {
+ 	int normalizeCapacity(int reqCapacity) {
         if (reqCapacity < 0) {
             throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");
         }
@@ -5562,6 +5637,28 @@ final class PoolThreadCache {
         }
     }
 
+    
+    //利用cache分配tiny大小的内存
+    boolean allocateTiny(PoolArena<?> area, PooledByteBuf<?> buf, int reqCapacity, int normCapacity) {
+        return allocate(cacheForTiny(area, normCapacity), buf, reqCapacity);
+    }
+    
+    //根据规格大小计算所属的MemoryRegionCache
+    private MemoryRegionCache<?> cacheForTiny(PoolArena<?> area, int normCapacity) {
+        //通过normCapacity计算当前规格所在的MemoryRegionCache
+        //比如 16B的规格应该在第1位
+        int idx = PoolArena.tinyIdx(normCapacity);
+        if (area.isDirect()) {
+            return cache(tinySubPageDirectCaches, idx);
+        }
+        return cache(tinySubPageHeapCaches, idx);
+    }
+    
+    
+    
+
+
+}
 
 ```
 

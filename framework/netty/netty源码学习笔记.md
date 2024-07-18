@@ -4646,6 +4646,42 @@ Netty 中的内存池可以看作一个 Java 版本的 jemalloc 实现，并结�
 
 
 
+##### PoolChunk
+
+
+
+```java
+   
+
+	//如果两个比特相同（都是0或都是1），那么异或的结果为0。
+    //如果两个比特不同（一个是0，另一个是1），那么异或的结果为1。
+	//通过memoryMapIdx的下标计算subpage的下标位置 
+	//因为maxSubpageAllocs = 2048 
+	//异或运算在这里被用作一种技巧来清除 memoryMapIdx 最高位的设置位。当 maxSubpageAllocs 是一个2的幂次方时，它的二进制表示只有一个位是1，其余都是0。进行异或运算时，如果 memoryMapIdx 的最高位也是1，则通过异或会将这一位清零，而不会影响到其他位。返回值是处理后的 memoryMapIdx，此时最高位的1已经被清除，剩下的部分可以看作是在子页面内的相对偏移量或索引。
+	private int subpageIdx(int memoryMapIdx) {
+        return memoryMapIdx ^ maxSubpageAllocs; // remove highest set bit, to get offset
+    }
+
+
+
+   
+   private void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int bitmapIdx, int reqCapacity) {
+        assert bitmapIdx != 0;
+
+        int memoryMapIdx = memoryMapIdx(handle);
+
+        PoolSubpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
+        assert subpage.doNotDestroy;
+        assert reqCapacity <= subpage.elemSize;
+		
+        //?????? runOffset的计算???
+        buf.init(
+            this, handle,
+            runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize,
+            arena.parent.threadCache());
+    }
+```
+
 
 
 

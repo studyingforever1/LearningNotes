@@ -1876,6 +1876,68 @@ public class FastThreadLocalThread extends Thread {
 
 ##### FastThreadLocal
 
+```java
+package io.netty.util.concurrent;
+
+
+public class FastThreadLocal<V> {
+
+
+    //get方法 通过FastThreadLocalThread内部的InternalThreadLocalMap来get
+ 	public final V get() {
+        return get(InternalThreadLocalMap.get());
+    }
+
+    /**
+     * Returns the current value for the specified thread local map.
+     * The specified thread local map must be for the current thread.
+     */
+    @SuppressWarnings("unchecked")
+    public final V get(InternalThreadLocalMap threadLocalMap) {
+        //如果get到了指定的值 直接返回
+        Object v = threadLocalMap.indexedVariable(index);
+        if (v != InternalThreadLocalMap.UNSET) {
+            return (V) v;
+        }
+		//否则进行一下初始化赋值
+        return initialize(threadLocalMap);
+    }
+
+    private V initialize(InternalThreadLocalMap threadLocalMap) {
+        V v = null;
+        try {
+            //初始化赋值 调用子类的initialValue()方法
+            v = initialValue();
+        } catch (Exception e) {
+            PlatformDependent.throwException(e);
+        }
+
+        //将值设置进入线程本地缓存的map中去
+        threadLocalMap.setIndexedVariable(index, v);
+        addToVariablesToRemove(threadLocalMap, this);
+        return v;
+    }
+
+
+
+
+
+
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #### Chooser相关类
@@ -4560,6 +4622,63 @@ Netty 中的内存池可以看作一个 Java 版本的 jemalloc 实现，并结�
 
 
 
+
+
+###### AbstractByteBufAllocator
+
+
+
+```java
+public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
+
+    //申请内存时的统一方法
+    @Override
+    public ByteBuf buffer(int initialCapacity) {
+        if (directByDefault) {
+            return directBuffer(initialCapacity);
+        }
+        return heapBuffer(initialCapacity);
+    }
+    
+
+    //堆内空间分配的方法
+    @Override
+    public ByteBuf heapBuffer(int initialCapacity, int maxCapacity) {
+        if (initialCapacity == 0 && maxCapacity == 0) {
+            return emptyBuf;
+        }
+        validate(initialCapacity, maxCapacity);
+        //调用子类重写的方法 PooledByteBufAllocator
+        return newHeapBuffer(initialCapacity, maxCapacity);
+    }
+
+     /**
+     * Create a heap {@link ByteBuf} with the given initialCapacity and maxCapacity.
+     */
+    protected abstract ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity);
+
+    /**
+     * Create a direct {@link ByteBuf} with the given initialCapacity and maxCapacity.
+     */
+    protected abstract ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity);
+
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ##### 非缓存的内存分配
 
 ###### Unpooled
@@ -4704,11 +4823,245 @@ netty维护了一个大的内存池进行内存分配和回收管理
 
 ###### PooledByteBufAllocator
 
+带缓存的内存分配器 
+
+```java
+package io.netty.buffer;
+
+
+public class PooledByteBufAllocator extends AbstractByteBufAllocator {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
+    //默认的heapArena的大小
+    private static final int DEFAULT_NUM_HEAP_ARENA;
+    //默认的directArena的大小
+    private static final int DEFAULT_NUM_DIRECT_ARENA;
+	//默认的页大小
+    private static final int DEFAULT_PAGE_SIZE;
+    //默认的二叉树的最大层级 0 - 11 高度为12的二叉树
+    private static final int DEFAULT_MAX_ORDER; // 8192 << 11 = 16 MiB per chunk
+    
+    //PoolThreadCache相关属性
+    //分别代表tiny、small、normal规格下相同的内存块的数量限制
+    private static final int DEFAULT_TINY_CACHE_SIZE;
+    private static final int DEFAULT_SMALL_CACHE_SIZE;
+    private static final int DEFAULT_NORMAL_CACHE_SIZE;
+    //代表normal规格下缓存区的最大容量
+    private static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
+    //代表当超过此数字的空闲内存 进行一次缓存释放
+    private static final int DEFAULT_CACHE_TRIM_INTERVAL;
+
+    //最小的页大小
+    private static final int MIN_PAGE_SIZE = 4096;
+    //chunkSize的最大大小
+    private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
+
+    static {
+        //获取io.netty.allocator.pageSize的值 没有就设置为8192
+        int defaultPageSize = SystemPropertyUtil.getInt("io.netty.allocator.pageSize", 8192);
+        Throwable pageSizeFallbackCause = null;
+        try {
+            validateAndCalculatePageShifts(defaultPageSize);
+        } catch (Throwable t) {
+            pageSizeFallbackCause = t;
+            defaultPageSize = 8192;
+        }
+        DEFAULT_PAGE_SIZE = defaultPageSize;
+
+        //获取io.netty.allocator.maxOrder的值 没有就设置为11
+        int defaultMaxOrder = SystemPropertyUtil.getInt("io.netty.allocator.maxOrder", 11);
+        Throwable maxOrderFallbackCause = null;
+        try {
+            validateAndCalculateChunkSize(DEFAULT_PAGE_SIZE, defaultMaxOrder);
+        } catch (Throwable t) {
+            maxOrderFallbackCause = t;
+            defaultMaxOrder = 11;
+        }
+        DEFAULT_MAX_ORDER = defaultMaxOrder;
+
+        // Determine reasonable default for nHeapArena and nDirectArena.
+        // Assuming each arena has 3 chunks, the pool should not consume more than 50% of max memory.
+        //确定 nHeapArena 和 nDirectArena 的合理默认值。假设每个竞技场有 3 个块，则池消耗的最大内存不应超过 50%。
+        final Runtime runtime = Runtime.getRuntime();
+
+        // Use 2 * cores by default to reduce condition as we use 2 * cores for the number of EventLoops
+        // in NIO and EPOLL as well. If we choose a smaller number we will run into hotspots as allocation and
+        // deallocation needs to be synchronized on the PoolArena.
+        // See https://github.com/netty/netty/issues/3888
+        //默认设置为核心数*2 和EventLoopGroup的设置相同 因为要保证一个EventLoop可以分配到一个Arena 多线程下效率更高
+        final int defaultMinNumArena = runtime.availableProcessors() * 2;
+        //默认的chunkSize = 2^11 * 8192 
+        final int defaultChunkSize = DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER;
+        
+        //确定 nHeapArena 和 nDirectArena 的合理默认值。假设每个竞技场有 3 个块，则池消耗的最大内存不应超过 50%。
+        DEFAULT_NUM_HEAP_ARENA = Math.max(0,
+                SystemPropertyUtil.getInt(
+                        "io.netty.allocator.numHeapArenas",
+                        (int) Math.min(
+                                defaultMinNumArena,
+                                runtime.maxMemory() / defaultChunkSize / 2 / 3)));
+        DEFAULT_NUM_DIRECT_ARENA = Math.max(0,
+                SystemPropertyUtil.getInt(
+                        "io.netty.allocator.numDirectArenas",
+                        (int) Math.min(
+                                defaultMinNumArena,
+                                PlatformDependent.maxDirectMemory() / defaultChunkSize / 2 / 3)));
+
+        // cache sizes
+        DEFAULT_TINY_CACHE_SIZE = SystemPropertyUtil.getInt("io.netty.allocator.tinyCacheSize", 512);
+        DEFAULT_SMALL_CACHE_SIZE = SystemPropertyUtil.getInt("io.netty.allocator.smallCacheSize", 256);
+        DEFAULT_NORMAL_CACHE_SIZE = SystemPropertyUtil.getInt("io.netty.allocator.normalCacheSize", 64);
+
+        // 32 kb is the default maximum capacity of the cached buffer. Similar to what is explained in
+        // 'Scalable memory allocation using jemalloc'
+        DEFAULT_MAX_CACHED_BUFFER_CAPACITY = SystemPropertyUtil.getInt(
+                "io.netty.allocator.maxCachedBufferCapacity", 32 * 1024);
+
+        // the number of threshold of allocations when cached entries will be freed up if not frequently used
+        DEFAULT_CACHE_TRIM_INTERVAL = SystemPropertyUtil.getInt(
+                "io.netty.allocator.cacheTrimInterval", 8192);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
+            logger.debug("-Dio.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
+            if (pageSizeFallbackCause == null) {
+                logger.debug("-Dio.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE);
+            } else {
+                logger.debug("-Dio.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE, pageSizeFallbackCause);
+            }
+            if (maxOrderFallbackCause == null) {
+                logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER);
+            } else {
+                logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER, maxOrderFallbackCause);
+            }
+            logger.debug("-Dio.netty.allocator.chunkSize: {}", DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
+            logger.debug("-Dio.netty.allocator.tinyCacheSize: {}", DEFAULT_TINY_CACHE_SIZE);
+            logger.debug("-Dio.netty.allocator.smallCacheSize: {}", DEFAULT_SMALL_CACHE_SIZE);
+            logger.debug("-Dio.netty.allocator.normalCacheSize: {}", DEFAULT_NORMAL_CACHE_SIZE);
+            logger.debug("-Dio.netty.allocator.maxCachedBufferCapacity: {}", DEFAULT_MAX_CACHED_BUFFER_CAPACITY);
+            logger.debug("-Dio.netty.allocator.cacheTrimInterval: {}", DEFAULT_CACHE_TRIM_INTERVAL);
+        }
+    }
+
+    public static final PooledByteBufAllocator DEFAULT =
+            new PooledByteBufAllocator(PlatformDependent.directBufferPreferred());
+
+    //heapArea的数组
+    private final PoolArena<byte[]>[] heapArenas;
+    //directArena的数组
+    private final PoolArena<ByteBuffer>[] directArenas;
+    private final int tinyCacheSize;
+    private final int smallCacheSize;
+    private final int normalCacheSize;
+    //heapArea的监视器
+    private final List<PoolArenaMetric> heapArenaMetrics;
+    //directArena的监视器
+    private final List<PoolArenaMetric> directArenaMetrics;
+    //线程本地缓存的对象
+    private final PoolThreadLocalCache threadCache;
+
+    public PooledByteBufAllocator() {
+        this(false);
+    }
+
+    public PooledByteBufAllocator(boolean preferDirect) {
+        this(preferDirect, DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER);
+    }
+
+    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
+        this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder,
+                DEFAULT_TINY_CACHE_SIZE, DEFAULT_SMALL_CACHE_SIZE, DEFAULT_NORMAL_CACHE_SIZE);
+    }
+
+    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
+                                  int tinyCacheSize, int smallCacheSize, int normalCacheSize) {
+        //设置是否首选堆外内存
+        super(preferDirect);
+        //实例化PoolThreadLocalCache对象 只是简单的创建了对象 内部什么都没初始化
+        threadCache = new PoolThreadLocalCache();
+        //?????
+        this.tinyCacheSize = tinyCacheSize;
+        this.smallCacheSize = smallCacheSize;
+        this.normalCacheSize = normalCacheSize;
+        
+        //计算chunkSize大小 2^11 * 8192 = 16M
+        final int chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
+
+        if (nHeapArena < 0) {
+            throw new IllegalArgumentException("nHeapArena: " + nHeapArena + " (expected: >= 0)");
+        }
+        if (nDirectArena < 0) {
+            throw new IllegalArgumentException("nDirectArea: " + nDirectArena + " (expected: >= 0)");
+        }
+		//计算页面偏移 log2(8192) = 13 
+        int pageShifts = validateAndCalculatePageShifts(pageSize);
+
+        //接下来就是对heapArena的创建工作
+        if (nHeapArena > 0) {
+            //创建一个nHeapArena大小的数组
+            heapArenas = newArenaArray(nHeapArena);
+            List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(heapArenas.length);
+            //对每个HeapArena创建对象 加入到监视器中
+            for (int i = 0; i < heapArenas.length; i ++) {
+                PoolArena.HeapArena arena = new PoolArena.HeapArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+                heapArenas[i] = arena;
+                metrics.add(arena);
+            }
+            heapArenaMetrics = Collections.unmodifiableList(metrics);
+        } else {
+            heapArenas = null;
+            heapArenaMetrics = Collections.emptyList();
+        }
+
+        if (nDirectArena > 0) {
+            directArenas = newArenaArray(nDirectArena);
+            List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(directArenas.length);
+            for (int i = 0; i < directArenas.length; i ++) {
+                PoolArena.DirectArena arena = new PoolArena.DirectArena(
+                        this, pageSize, maxOrder, pageShifts, chunkSize);
+                directArenas[i] = arena;
+                metrics.add(arena);
+            }
+            directArenaMetrics = Collections.unmodifiableList(metrics);
+        } else {
+            directArenas = null;
+            directArenaMetrics = Collections.emptyList();
+        }
+    }
+    
+    
+    //分配堆内空间
+    @Override
+    protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+        //通过PoolThreadLocalCache来获取当前线程的PoolThreadCache
+        PoolThreadCache cache = threadCache.get();
+        //获取heapArena进行分配
+        PoolArena<byte[]> heapArena = cache.heapArena;
+
+        ByteBuf buf;
+        if (heapArena != null) {
+            buf = heapArena.allocate(cache, initialCapacity, maxCapacity);
+        } else {
+            buf = new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+        }
+
+        return toLeakAwareBuffer(buf);
+    }
+    
+    
+    
+    
+    
+}
+```
 
 
 
 
-###### PoolThreadCache
+
+
+
+
 
 
 
@@ -4717,7 +5070,131 @@ netty维护了一个大的内存池进行内存分配和回收管理
 
 
 ```java
+package io.netty.buffer;
 
+abstract class PoolArena<T> implements PoolArenaMetric {
+    static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
+
+    //内存规格的枚举
+    enum SizeClass {
+        //在 Tiny 场景下，最小的划分单位为 16B，按 16B 依次递增，16B、32B、48B …… 496B； 共32种情况
+        Tiny,
+        //在 Small 场景下，总共可以划分为 512B、1024B、2048B、4096B 4种情况。
+        Small,
+        //normal则代表8k以上直到chunkSize大小
+        Normal
+    }
+
+    //计算tinySubpage的缓存子页数组大小 512/16 = 32种情况
+    static final int numTinySubpagePools = 512 >>> 4;
+
+    //分配器
+    final PooledByteBufAllocator parent;
+
+    //最大的层级 11
+    private final int maxOrder;
+    //页面大小 8k
+    final int pageSize;
+    //页面偏移 13
+    final int pageShifts;
+    //chunk的大小 16M
+    final int chunkSize;
+    //快速计算是否满足分配tiny和small规格的掩码
+    final int subpageOverflowMask;
+    //small规格的subpage缓存子页数组的大小 4种情况
+    final int numSmallSubpagePools;
+    //tiny规格的子页缓存数组
+    private final PoolSubpage<T>[] tinySubpagePools;
+    //small规格的子页缓存数组
+    private final PoolSubpage<T>[] smallSubpagePools;
+
+    //管理使用率为50-100的Chunk列表
+    private final PoolChunkList<T> q050;
+    //管理使用率为25-75的Chunk列表
+    private final PoolChunkList<T> q025;
+    //管理使用率为1-50的Chunk列表
+    private final PoolChunkList<T> q000;
+    //管理使用率为0-25的Chunk列表
+    private final PoolChunkList<T> qInit;
+    //管理使用率为75-100的Chunk列表
+    private final PoolChunkList<T> q075;
+    //管理使用率为100的Chunk列表
+    private final PoolChunkList<T> q100;
+
+    //chunk的监视器列表
+    private final List<PoolChunkListMetric> chunkListMetrics;
+
+    // Metrics for allocations and deallocations
+    //分配normal的计数
+    private long allocationsNormal;
+    // We need to use the LongCounter here as this is not guarded via synchronized block.
+    //使用LongCounter进行不同内存规格的分配计数
+    private final LongCounter allocationsTiny = PlatformDependent.newLongCounter();
+    private final LongCounter allocationsSmall = PlatformDependent.newLongCounter();
+    private final LongCounter allocationsHuge = PlatformDependent.newLongCounter();
+    private final LongCounter activeBytesHuge = PlatformDependent.newLongCounter();
+
+    //不同内存规格释放的计数
+    private long deallocationsTiny;
+    private long deallocationsSmall;
+    private long deallocationsNormal;
+
+    // We need to use the LongCounter here as this is not guarded via synchronized block.
+    private final LongCounter deallocationsHuge = PlatformDependent.newLongCounter();
+
+    // Number of thread caches backed by this arena.
+    //当前arena支持的线程缓存数量
+    final AtomicInteger numThreadCaches = new AtomicInteger();
+
+    protected PoolArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+        this.parent = parent;
+        this.pageSize = pageSize;
+        this.maxOrder = maxOrder;
+        this.pageShifts = pageShifts;
+        this.chunkSize = chunkSize;
+        //这里取出来是-8192 前面为1 后面为0 便于后面进行快速位运算判断
+        subpageOverflowMask = ~(pageSize - 1);
+        //基于numTinySubpagePools = 32种情况来创建tinySubpagePools数组
+        tinySubpagePools = newSubpagePoolArray(numTinySubpagePools);
+        for (int i = 0; i < tinySubpagePools.length; i ++) {
+            //每个subpage只创建一个head
+            tinySubpagePools[i] = newSubpagePoolHead(pageSize);
+        }
+
+        //13-9 = 4 对应small的四种情况
+        numSmallSubpagePools = pageShifts - 9;
+        smallSubpagePools = newSubpagePoolArray(numSmallSubpagePools);
+        for (int i = 0; i < smallSubpagePools.length; i ++) {
+            //每个subpage只创建一个head
+            smallSubpagePools[i] = newSubpagePoolHead(pageSize);
+        }
+
+        //对不同使用率的chunkList进行初始化 链式绑定起来 
+        q100 = new PoolChunkList<T>(null, 100, Integer.MAX_VALUE, chunkSize);
+        q075 = new PoolChunkList<T>(q100, 75, 100, chunkSize);
+        q050 = new PoolChunkList<T>(q075, 50, 100, chunkSize);
+        q025 = new PoolChunkList<T>(q050, 25, 75, chunkSize);
+        q000 = new PoolChunkList<T>(q025, 1, 50, chunkSize);
+        //init的存在是为了即使chunk不再被使用 也不会立即回收 放在init里面可以避免重复创建对象
+        qInit = new PoolChunkList<T>(q000, Integer.MIN_VALUE, 25, chunkSize);
+
+        q100.prevList(q075);
+        q075.prevList(q050);
+        q050.prevList(q025);
+        q025.prevList(q000);
+        q000.prevList(null);
+        qInit.prevList(qInit);
+
+        //把chunkList加入到指标监视器里面
+        List<PoolChunkListMetric> metrics = new ArrayList<PoolChunkListMetric>(6);
+        metrics.add(qInit);
+        metrics.add(q000);
+        metrics.add(q025);
+        metrics.add(q050);
+        metrics.add(q075);
+        metrics.add(q100);
+        chunkListMetrics = Collections.unmodifiableList(metrics);
+    }
 
 	//确定当前申请容量是否是Tiny或者Small规格的
   	// capacity < pageSize
@@ -4776,7 +5253,57 @@ netty维护了一个大的内存池进行内存分配和回收管理
 		//找到最接近的16的倍数
         return (reqCapacity & ~15) + 16;
     }
+}
 ```
+
+
+
+
+
+###### PoolSubpage
+
+
+
+```java
+
+package io.netty.buffer;
+
+//chunk设置为T泛型 因为其内部可能是byte[] 也可能是ByteBuffer
+final class PoolSubpage<T> implements PoolSubpageMetric {
+
+    //所属的chunk
+    final PoolChunk<T> chunk;
+    //所属chunk的内存下标
+    private final int memoryMapIdx;
+    //？？？？???
+    private final int runOffset;
+    //页面大小
+    private final int pageSize;
+    //子页的使用的位图
+    private final long[] bitmap;
+
+    //
+    PoolSubpage<T> prev;
+    PoolSubpage<T> next;
+
+    boolean doNotDestroy;
+    int elemSize;
+    private int maxNumElems;
+    private int bitmapLength;
+    private int nextAvail;
+    private int numAvail;
+}
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4815,6 +5342,240 @@ netty维护了一个大的内存池进行内存分配和回收管理
             arena.parent.threadCache());
     }
 ```
+
+
+
+
+
+
+
+###### PoolThreadLocalCache
+
+
+
+```java
+//PooledByteBufAllocator的内部类 
+//PooledByteBufAllocator中封装了一个PoolThreadLocalCache属性threadCache
+//本身就是一个threadLocal 线程本地变量
+//只不过在第一次获取时会进行initialValue() 调用子类方法进行对线程本地变量内部填充
+//释放threadLocal时也会调用子类onRemoval() 来释放响应的内存
+
+final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
+
+    	//调用threadCache.get()方法时会调用此方法进行初始化
+        @Override
+        protected synchronized PoolThreadCache initialValue() {
+            //获取最少使用的heapArena 
+            final PoolArena<byte[]> heapArena = leastUsedArena(heapArenas);
+            //获取最少使用的directArena
+            final PoolArena<ByteBuffer> directArena = leastUsedArena(directArenas);
+
+            //创建PoolThreadCache对象 真正的线程本地的内存缓存
+            return new PoolThreadCache(
+                    heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
+                    DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
+        }
+
+        @Override
+        protected void onRemoval(PoolThreadCache threadCache) {
+            threadCache.free();
+        }
+
+    	//获取最少使用的arena
+        private <T> PoolArena<T> leastUsedArena(PoolArena<T>[] arenas) {
+            if (arenas == null || arenas.length == 0) {
+                return null;
+            }
+			
+            //根据numThreadCaches来获取最少被线程绑定的arena
+            PoolArena<T> minArena = arenas[0];
+            for (int i = 1; i < arenas.length; i++) {
+                PoolArena<T> arena = arenas[i];
+                if (arena.numThreadCaches.get() < minArena.numThreadCaches.get()) {
+                    minArena = arena;
+                }
+            }
+
+            return minArena;
+        }
+    }
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+###### PoolThreadCache
+
+
+
+```java
+package io.netty.buffer;
+
+//线程本地的内存缓存
+final class PoolThreadCache {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PoolThreadCache.class);
+
+    //缓存的heapArena
+    final PoolArena<byte[]> heapArena;
+    //缓存的directArena
+    final PoolArena<ByteBuffer> directArena;
+
+    //堆内/堆外空间的tiny、small、normal规格的子页缓存
+    // Hold the caches for the different size classes, which are tiny, small and normal.
+    private final MemoryRegionCache<byte[]>[] tinySubPageHeapCaches;
+    private final MemoryRegionCache<byte[]>[] smallSubPageHeapCaches;
+    private final MemoryRegionCache<ByteBuffer>[] tinySubPageDirectCaches;
+    private final MemoryRegionCache<ByteBuffer>[] smallSubPageDirectCaches;
+    private final MemoryRegionCache<byte[]>[] normalHeapCaches;
+    private final MemoryRegionCache<ByteBuffer>[] normalDirectCaches;
+
+    // Used for bitshifting when calculate the index of normal caches later
+    private final int numShiftsNormalDirect;
+    private final int numShiftsNormalHeap;
+    //表示当缓存中的空闲缓冲区数量超过此阈值时，会触发一次缓存清理操作，释放不再需要的缓冲区，以便回收内存。
+    private final int freeSweepAllocationThreshold;
+
+    private int allocations;
+
+    //当前PoolThreadCache绑定的线程
+    private final Thread thread = Thread.currentThread();
+    
+    private final Runnable freeTask = new Runnable() {
+        @Override
+        public void run() {
+            free0();
+        }
+    };
+
+    PoolThreadCache(PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
+                    int tinyCacheSize, int smallCacheSize, int normalCacheSize,
+                    int maxCachedBufferCapacity, int freeSweepAllocationThreshold) {
+        if (maxCachedBufferCapacity < 0) {
+            throw new IllegalArgumentException("maxCachedBufferCapacity: "
+                    + maxCachedBufferCapacity + " (expected: >= 0)");
+        }
+        if (freeSweepAllocationThreshold < 1) {
+            throw new IllegalArgumentException("freeSweepAllocationThreshold: "
+                    + freeSweepAllocationThreshold + " (expected: > 0)");
+        }
+        
+        
+        
+        //表示当缓存中的空闲缓冲区数量超过此阈值时，会触发一次缓存清理操作，释放不再需要的缓冲区，以便回收内存。
+        this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
+        this.heapArena = heapArena;
+        this.directArena = directArena;
+        
+        if (directArena != null) {
+            tinySubPageDirectCaches = createSubPageCaches(
+                    tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);
+            smallSubPageDirectCaches = createSubPageCaches(
+                    smallCacheSize, directArena.numSmallSubpagePools, SizeClass.Small);
+
+            numShiftsNormalDirect = log2(directArena.pageSize);
+            normalDirectCaches = createNormalCaches(
+                    normalCacheSize, maxCachedBufferCapacity, directArena);
+
+            directArena.numThreadCaches.getAndIncrement();
+        } else {
+            // No directArea is configured so just null out all caches
+            tinySubPageDirectCaches = null;
+            smallSubPageDirectCaches = null;
+            normalDirectCaches = null;
+            numShiftsNormalDirect = -1;
+        }
+       	
+        //direct和heap的分配一样 只分析heap
+        if (heapArena != null) {
+            // Create the caches for the heap allocations
+            //创建tiny规格的subpage缓存数组
+            tinySubPageHeapCaches = createSubPageCaches(
+                    tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);
+            //创建small规格的subpage缓存数组
+            smallSubPageHeapCaches = createSubPageCaches(
+                    smallCacheSize, heapArena.numSmallSubpagePools, SizeClass.Small);
+			
+            //13
+            numShiftsNormalHeap = log2(heapArena.pageSize);
+            
+            //创建normal的缓存
+            normalHeapCaches = createNormalCaches(
+                    normalCacheSize, maxCachedBufferCapacity, heapArena);
+
+            //当前heapArena的线程使用数量+1
+            heapArena.numThreadCaches.getAndIncrement();
+        } else {
+            // No heapArea is configured so just null out all caches
+            tinySubPageHeapCaches = null;
+            smallSubPageHeapCaches = null;
+            normalHeapCaches = null;
+            numShiftsNormalHeap = -1;
+        }
+
+        // The thread-local cache will keep a list of pooled buffers which must be returned to
+        // the pool when the thread is not alive anymore.
+        ThreadDeathWatcher.watch(thread, freeTask);
+    }
+
+    //创建tiny和small类型内存规格的缓存
+    private static <T> MemoryRegionCache<T>[] createSubPageCaches(
+            int cacheSize, int numCaches, SizeClass sizeClass) {
+        if (cacheSize > 0) {
+            @SuppressWarnings("unchecked")
+            //numCaches使用32、4 代表tiny和small规格的情况
+            MemoryRegionCache<T>[] cache = new MemoryRegionCache[numCaches];
+            for (int i = 0; i < cache.length; i++) {
+                // TODO: maybe use cacheSize / cache.length
+                //每个情况下分别能存放512、个相同规格的内存
+                cache[i] = new SubPageMemoryRegionCache<T>(cacheSize, sizeClass);
+            }
+            return cache;
+        } else {
+            return null;
+        }
+    }
+
+    private static <T> MemoryRegionCache<T>[] createNormalCaches(
+            int cacheSize, int maxCachedBufferCapacity, PoolArena<T> area) {
+        if (cacheSize > 0) {
+            int max = Math.min(area.chunkSize, maxCachedBufferCapacity);
+            int arraySize = Math.max(1, log2(max / area.pageSize) + 1);
+
+            @SuppressWarnings("unchecked")
+            MemoryRegionCache<T>[] cache = new MemoryRegionCache[arraySize];
+            for (int i = 0; i < cache.length; i++) {
+                cache[i] = new NormalMemoryRegionCache<T>(cacheSize);
+            }
+            return cache;
+        } else {
+            return null;
+        }
+    }
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

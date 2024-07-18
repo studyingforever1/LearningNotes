@@ -11,14 +11,11 @@ public class MemoryTest {
 
     public static void main(String[] args) throws Exception {
 
-        ByteBuf buffer = Unpooled.directBuffer();
-
-
+//        ByteBuf buffer = Unpooled.directBuffer();
+//
         PooledByteBufAllocator pooledByteBufAllocator = new PooledByteBufAllocator();
         ByteBuf byteBuf = pooledByteBufAllocator.buffer(1);
         byteBuf.release();
-
-
     }
 
 

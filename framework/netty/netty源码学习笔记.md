@@ -4556,29 +4556,163 @@ Netty 中的内存池可以看作一个 Java 版本的 jemalloc 实现，并结�
 
 #### netty内存管理相关类
 
-
-
-##### Unpooled
-
+内存分配分为pooled内存池缓存的 和 unpooled 直接分配内存 不做缓存的两种
 
 
 
+##### 非缓存的内存分配
+
+###### Unpooled
+
+不做缓存直接分配的通常使用此类进行快速分配
+
+```java
+package io.netty.buffer;
+
+public final class Unpooled {
+
+    //核心分配类就是UnpooledByteBufAllocator 用于内存的分配工作
+    private static final ByteBufAllocator ALLOC = UnpooledByteBufAllocator.DEFAULT;
+
+    /**
+     * Big endian byte order. 大端序
+     */
+    public static final ByteOrder BIG_ENDIAN = ByteOrder.BIG_ENDIAN;
+
+    /**
+     * Little endian byte order. 小端序
+     */
+    public static final ByteOrder LITTLE_ENDIAN = ByteOrder.LITTLE_ENDIAN;
+
+    /**
+     * A buffer whose capacity is {@code 0}. 空的ByteBuf
+     */
+    public static final ByteBuf EMPTY_BUFFER = ALLOC.buffer(0, 0);
+    
+    
+        /**
+     * Creates a new big-endian Java heap buffer with reasonably small initial capacity, which
+     * expands its capacity boundlessly on demand.
+     创建一个新的 big-endian Java 堆缓冲区，该缓冲区具有相当小的初始容量，可根据需要无限扩展其容量。
+     */
+    public static ByteBuf buffer() {
+        return ALLOC.heapBuffer();
+    }
+
+    /**
+     * Creates a new big-endian direct buffer with reasonably small initial capacity, which
+     * expands its capacity boundlessly on demand.
+     创建一个具有相当小的初始容量的新的大端序直接缓冲区，该缓冲区可根据需要无限扩展其容量。
+     */
+    public static ByteBuf directBuffer() {
+        return ALLOC.directBuffer();
+    }
+
+}
+```
+
+
+
+###### UnpooledByteBufAllocator
+
+
+
+```java
+package io.netty.buffer;
+
+/**
+ * Simplistic {@link ByteBufAllocator} implementation that does not pool anything.
+   不做缓存池的内存分配器
+ */
+public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
+
+        /**
+     * Default instance which uses leak-detection for direct buffers.
+     默认实例，对直接缓冲区使用泄漏检测。
+     */
+    public static final UnpooledByteBufAllocator DEFAULT =
+            new UnpooledByteBufAllocator(PlatformDependent.directBufferPreferred());
+    
+    
+    
+    //分配堆内的空间
+	@Override
+    protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+        //通过判断是否能获取到sun.misc.Unsafe类来返回hasUnsafe
+        return PlatformDependent.hasUnsafe() ? new UnpooledUnsafeHeapByteBuf(this, initialCapacity, maxCapacity)
+                : new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+    }
+
+    //分配堆外空间
+    @Override
+    protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+         //通过判断是否能获取到sun.misc.Unsafe类来返回hasUnsafe
+        ByteBuf buf = PlatformDependent.hasUnsafe() ?
+                UnsafeByteBufUtil.newUnsafeDirectByteBuf(this, initialCapacity, maxCapacity) :
+                new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+
+        return disableLeakDetector ? buf : toLeakAwareBuffer(buf);
+    }
+    
+
+}
+```
+
+
+
+###### UnsafeByteBufUtil
+
+```java
+package io.netty.buffer;
+
+final class UnsafeByteBufUtil {
+    private static final boolean UNALIGNED = PlatformDependent.isUnaligned();
+    private static final byte ZERO = 0;
+
+    static UnpooledUnsafeDirectByteBuf newUnsafeDirectByteBuf(
+            ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        
+        //如果没有cleaner 那么就自己释放堆外空间
+        if (PlatformDependent.useDirectBufferNoCleaner()) {
+            return new UnpooledUnsafeNoCleanerDirectByteBuf(alloc, initialCapacity, maxCapacity);
+        }
+        //否则用自带的cleaner自动释放
+        return new UnpooledUnsafeDirectByteBuf(alloc, initialCapacity, maxCapacity);
+    }
+}
+```
 
 
 
 
 
-##### PooledByteBufAllocator
 
 
 
 
 
-##### PoolThreadCache
 
 
 
-##### PoolArena
+
+
+##### 缓存的内存分配
+
+netty维护了一个大的内存池进行内存分配和回收管理
+
+
+
+###### PooledByteBufAllocator
+
+
+
+
+
+###### PoolThreadCache
+
+
+
+###### PoolArena
 
 
 
@@ -4646,7 +4780,7 @@ Netty 中的内存池可以看作一个 Java 版本的 jemalloc 实现，并结�
 
 
 
-##### PoolChunk
+###### PoolChunk
 
 
 
@@ -4681,6 +4815,216 @@ Netty 中的内存池可以看作一个 Java 版本的 jemalloc 实现，并结�
             arena.parent.threadCache());
     }
 ```
+
+
+
+
+
+##### ByteBuf相关类
+
+
+
+
+
+###### ByteBuf
+
+
+
+###### UnpooledHeapByteBuf
+
+```java
+package io.netty.buffer;
+
+//Big endian Java 堆缓冲区实现
+public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
+
+    //分配器
+    private final ByteBufAllocator alloc;
+    //堆内开辟的空间
+    byte[] array;
+    private ByteBuffer tmpNioBuf;
+    
+    //通过new byte[] 的方式开辟堆内空间
+     protected UnpooledHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        this(alloc, new byte[initialCapacity], 0, 0, maxCapacity);
+    }
+
+    //操作数组时更多采用System的工具类来操作
+    @Override
+    public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
+        checkDstIndex(index, length, dstIndex, dst.length);
+        System.arraycopy(array, index, dst, dstIndex, length);
+        return this;
+    }
+}    
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+###### UnpooledUnsafeHeapByteBuf
+
+
+
+```java
+package io.netty.buffer;
+
+import io.netty.util.internal.PlatformDependent;
+
+//使用unsafe类来操作堆内存数组的类
+final class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
+
+    UnpooledUnsafeHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        super(alloc, initialCapacity, maxCapacity);
+    }
+
+    //和UnpooledHeapByteBuf的区别就是操作数组用的是unsafe类
+    @Override
+    public byte getByte(int index) {
+        checkIndex(index);
+        return _getByte(index);
+    }
+
+    @Override
+    protected byte _getByte(int index) {
+        return UnsafeByteBufUtil.getByte(array, index);
+    }
+
+}
+```
+
+
+
+###### UnpooledDirectByteBuf
+
+
+
+```java
+package io.netty.buffer;
+
+
+public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
+
+    private final ByteBufAllocator alloc;
+
+    //包装了Nio的ByteBuffer 这里就是DirectByteBuffer
+    private ByteBuffer buffer;
+    private ByteBuffer tmpNioBuf;
+    private int capacity;
+    private boolean doNotFree;
+    
+    
+    protected UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        super(maxCapacity);
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
+        if (initialCapacity < 0) {
+            throw new IllegalArgumentException("initialCapacity: " + initialCapacity);
+        }
+        if (maxCapacity < 0) {
+            throw new IllegalArgumentException("maxCapacity: " + maxCapacity);
+        }
+        if (initialCapacity > maxCapacity) {
+            throw new IllegalArgumentException(String.format(
+                    "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
+        }
+
+        this.alloc = alloc;
+        //实际的内存分配采用的是ByteBuffer.allocateDirect的内存分配方式
+        setByteBuffer(ByteBuffer.allocateDirect(initialCapacity));
+    }
+}   
+```
+
+
+
+###### UnpooledUnsafeDirectByteBuf
+
+
+
+```java
+public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf {
+
+    private final ByteBufAllocator alloc;
+
+    //和UnpooledDirectByteBuf不同的是记录了分配堆外空间内存的地址
+    private long memoryAddress;
+    private ByteBuffer tmpNioBuf;
+    private int capacity;
+    private boolean doNotFree;
+    ByteBuffer buffer;
+	
+    protected UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        super(maxCapacity);
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
+        if (initialCapacity < 0) {
+            throw new IllegalArgumentException("initialCapacity: " + initialCapacity);
+        }
+        if (maxCapacity < 0) {
+            throw new IllegalArgumentException("maxCapacity: " + maxCapacity);
+        }
+        if (initialCapacity > maxCapacity) {
+            throw new IllegalArgumentException(String.format(
+                    "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
+        }
+
+        this.alloc = alloc;
+        //依然是通过ByteBuffer.allocateDirect来分配堆外空间
+        setByteBuffer(allocateDirect(initialCapacity), false);
+    }
+    
+    protected ByteBuffer allocateDirect(int initialCapacity) {
+        return ByteBuffer.allocateDirect(initialCapacity);
+    }
+}
+```
+
+
+
+###### UnpooledUnsafeNoCleanerDirectByteBuf
+
+
+
+```java
+package io.netty.buffer;
+
+final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
+
+    UnpooledUnsafeNoCleanerDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        super(alloc, initialCapacity, maxCapacity);
+    }
+
+    //分配内存的时候使用unsafe分配
+    @Override
+    protected ByteBuffer allocateDirect(int initialCapacity) {
+        return PlatformDependent.allocateDirectNoCleaner(initialCapacity);
+    }
+
+    //释放内存的时候手动释放 不依靠cleaner
+    @Override
+    protected void freeDirect(ByteBuffer buffer) {
+        PlatformDependent.freeDirectNoCleaner(buffer);
+    }
+}
+```
+
+
+
+
+
+
 
 
 

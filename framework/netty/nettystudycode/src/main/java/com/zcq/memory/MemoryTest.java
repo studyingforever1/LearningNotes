@@ -2,13 +2,31 @@ package com.zcq.memory;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import sun.misc.Unsafe;
+
+import java.lang.reflect.Field;
 
 public class MemoryTest {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+
+        ByteBuf buffer = Unpooled.directBuffer();
+
+
         PooledByteBufAllocator pooledByteBufAllocator = new PooledByteBufAllocator();
         ByteBuf byteBuf = pooledByteBufAllocator.buffer(1);
         byteBuf.release();
+
+
+    }
+
+
+
+    public static Unsafe getUnsafe() throws Exception {
+        Field field = Unsafe.class.getDeclaredField("theUnsafe");
+        field.setAccessible(true);
+        return (Unsafe) field.get(null);
     }
 
 

@@ -5798,25 +5798,6 @@ final class PoolChunk<T> implements PoolChunkMetric {
 	private int subpageIdx(int memoryMapIdx) {
         return memoryMapIdx ^ maxSubpageAllocs; // remove highest set bit, to get offset
     }
-
-
-
-   
-   private void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int bitmapIdx, int reqCapacity) {
-        assert bitmapIdx != 0;
-
-        int memoryMapIdx = memoryMapIdx(handle);
-
-        PoolSubpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
-        assert subpage.doNotDestroy;
-        assert reqCapacity <= subpage.elemSize;
-		
-        //?????? runOffset的计算???
-        buf.init(
-            this, handle,
-            runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize,
-            arena.parent.threadCache());
-    }
 }
 ```
 

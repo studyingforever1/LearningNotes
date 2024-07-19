@@ -5264,7 +5264,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             allocateNormal(buf, reqCapacity, normCapacity);
             return;
         }
+        //如果normCapacity属于normal规格
         if (normCapacity <= chunkSize) {
+            //尝试在线程本地缓存中分配normal
             if (cache.allocateNormal(this, buf, reqCapacity, normCapacity)) {
                 // was able to allocate out of the cache so move on
                 return;
@@ -5967,7 +5969,7 @@ final class PoolThreadCache {
             //13
             numShiftsNormalHeap = log2(heapArena.pageSize);
             
-            //创建normal的缓存
+            //创建normal的缓存  设置cacheSize大小 设置最大缓存区容量
             normalHeapCaches = createNormalCaches(
                     normalCacheSize, maxCachedBufferCapacity, heapArena);
 
@@ -6007,12 +6009,19 @@ final class PoolThreadCache {
     private static <T> MemoryRegionCache<T>[] createNormalCaches(
             int cacheSize, int maxCachedBufferCapacity, PoolArena<T> area) {
         if (cacheSize > 0) {
+            //取chunkSize和maxCachedBufferCapacity更小值
             int max = Math.min(area.chunkSize, maxCachedBufferCapacity);
+            //算出数组的长度  通过log2计算出
+            // 0 ---> 1个页面 8k
+            // 1 ---> 2个页面 16k
+            // 2 ---> 3个页面 24k
+            //........
             int arraySize = Math.max(1, log2(max / area.pageSize) + 1);
-
+		   
             @SuppressWarnings("unchecked")
             MemoryRegionCache<T>[] cache = new MemoryRegionCache[arraySize];
             for (int i = 0; i < cache.length; i++) {
+                //对每个NormalMemoryRegionCache设置64的cacheSize大小
                 cache[i] = new NormalMemoryRegionCache<T>(cacheSize);
             }
             return cache;
@@ -6027,6 +6036,11 @@ final class PoolThreadCache {
         return allocate(cacheForTiny(area, normCapacity), buf, reqCapacity);
     }
     
+    //利用cache分配normal大小的内存
+    boolean allocateNormal(PoolArena<?> area, PooledByteBuf<?> buf, int reqCapacity, int normCapacity) {
+        return allocate(cacheForNormal(area, normCapacity), buf, reqCapacity);
+    }
+    
     //根据规格大小计算所属的MemoryRegionCache
     private MemoryRegionCache<?> cacheForTiny(PoolArena<?> area, int normCapacity) {
         //通过normCapacity计算当前规格所在的MemoryRegionCache
@@ -6037,6 +6051,23 @@ final class PoolThreadCache {
         }
         //通过tinySubPageHeapCaches和下标索引找到对应的缓存
         return cache(tinySubPageHeapCaches, idx);
+    }
+    
+    //计算所属的MemoryRegionCache
+    private MemoryRegionCache<?> cacheForNormal(PoolArena<?> area, int normCapacity) {
+        if (area.isDirect()) {
+            int idx = log2(normCapacity >> numShiftsNormalDirect);
+            return cache(normalDirectCaches, idx);
+        }
+        //计算MemoryRegionCache的下标
+        //算出数组的长度  通过log2计算出
+        // 0 ---> 1个页面 8k
+        // 1 ---> 2个页面 16k
+        // 2 ---> 3个页面 24k
+        //........
+        int idx = log2(normCapacity >> numShiftsNormalHeap);
+        //取下标位idx的MemoryRegionCache
+        return cache(normalHeapCaches, idx);
     }
     
     private static <T> MemoryRegionCache<T> cache(MemoryRegionCache<T>[] cache, int idx) {

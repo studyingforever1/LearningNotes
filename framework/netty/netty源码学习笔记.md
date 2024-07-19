@@ -5040,6 +5040,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
         ByteBuf buf;
         if (heapArena != null) {
+            //分配内存
             buf = heapArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
             buf = new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
@@ -5219,8 +5220,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 //用线程本地的cache分配一下试试看
                 if (cache.allocateTiny(this, buf, reqCapacity, normCapacity)) {
                     // was able to allocate out of the cache so move on
+                    //缓存分配成功直接返回
                     return;
                 }
+                //计算normCapacity在tinySubpagePools的下标位置 16在1下标
                 tableIdx = tinyIdx(normCapacity);
                 table = tinySubpagePools;
             } else {
@@ -5231,15 +5234,18 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 tableIdx = smallIdx(normCapacity);
                 table = smallSubpagePools;
             }
-
+		   
+            //取到poolArena的tinySubpage对应下标的head节点
             final PoolSubpage<T> head = table[tableIdx];
 
+            //加锁取poolArena中的子页池
             /**
              * Synchronize on the head. This is needed as {@link PoolChunk#allocateSubpage(int)} and
              * {@link PoolChunk#free(long)} may modify the doubly linked list as well.
              */
             synchronized (head) {
                 final PoolSubpage<T> s = head.next;
+                //如果只有head一个元素 也就是没有对应的子页
                 if (s != head) {
                     assert s.doNotDestroy && s.elemSize == normCapacity;
                     long handle = s.allocate();
@@ -5254,6 +5260,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     return;
                 }
             }
+            //那么就需要从正常的8k normal规格的页面中分割出多个子页面来
             allocateNormal(buf, reqCapacity, normCapacity);
             return;
         }
@@ -5270,7 +5277,81 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
     
     
+   	private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+        //尝试从不同使用率的chunkList中分配
+        if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
+            q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
+            q075.allocate(buf, reqCapacity, normCapacity)) {
+            //分配normal的次数+1
+            ++allocationsNormal;
+            return;
+        }
+        //一个chunk都没有就需要新建chunk
 
+        // Add a new chunk.
+        PoolChunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
+        //利用chunk来分配内存 返回地址
+        long handle = c.allocate(normCapacity);
+        //分配normal页数量+1
+        ++allocationsNormal;
+        assert handle > 0;
+        //初始化buf
+        c.initBuf(buf, handle, reqCapacity);
+        //加入qInit队列
+        qInit.add(c);
+    }
+    
+    
+
+    
+    
+    //通过内存规格 找到对应的subpage的head
+    PoolSubpage<T> findSubpagePoolHead(int elemSize) {
+        int tableIdx;
+        PoolSubpage<T>[] table;
+        //如果是tiny类型
+        if (isTiny(elemSize)) { // < 512
+            // 16B -> 对应下标1
+            tableIdx = elemSize >>> 4;
+            table = tinySubpagePools;
+        } else {
+            // 512B ——> 0
+            // 1024B -> 1
+            // 2048B -> 2
+            // 4096 -> 3
+            tableIdx = 0;
+            elemSize >>>= 10;
+            while (elemSize != 0) {
+                elemSize >>>= 1;
+                tableIdx ++;
+            }
+            table = smallSubpagePools;
+        }
+	    //返回对应规格的head
+        return table[tableIdx];
+    }
+    
+    
+	static final class HeapArena extends PoolArena<byte[]> {
+
+        HeapArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+            super(parent, pageSize, maxOrder, pageShifts, chunkSize);
+        }
+
+        @Override
+        boolean isDirect() {
+            return false;
+        }
+		
+        //新建一个chunk
+        @Override
+        protected PoolChunk<byte[]> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+            return new PoolChunk<byte[]>(this, new byte[chunkSize], pageSize, maxOrder, pageShifts, chunkSize);
+        }
+	}
+    
+    
+    
 	//确定当前申请容量是否是Tiny或者Small规格的
   	// capacity < pageSize
     boolean isTinyOrSmall(int normCapacity) {
@@ -5350,23 +5431,107 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     final PoolChunk<T> chunk;
     //所属chunk的内存下标
     private final int memoryMapIdx;
-    //？？？？???
+    //当前页面在chunk.memory中的偏移量
     private final int runOffset;
     //页面大小
     private final int pageSize;
     //子页的使用的位图
     private final long[] bitmap;
 
-    //
+   
     PoolSubpage<T> prev;
     PoolSubpage<T> next;
 
     boolean doNotDestroy;
+    //子页面的大小
     int elemSize;
+    //子页面的数量
     private int maxNumElems;
+    //位图的实际使用长度
     private int bitmapLength;
+    //下一个可用的位图索引
     private int nextAvail;
+    //整个可用的位图索引数量
     private int numAvail;
+    
+    
+    
+    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int memoryMapIdx, int runOffset, int pageSize, int elemSize) {
+        this.chunk = chunk;
+        this.memoryMapIdx = memoryMapIdx;
+        this.runOffset = runOffset;
+        this.pageSize = pageSize;
+        //按照最小规格16B的位图 一个bit占16B 记录当前子页面的哪些子页面被使用了 这里是直接设置的最大长度 实际长度需要看bitmapLength
+        bitmap = new long[pageSize >>> 10]; // pageSize / 16 / 64
+        
+        init(head, elemSize);
+    }
+
+    void init(PoolSubpage<T> head, int elemSize) {
+        doNotDestroy = true;
+        //划分的子页面大小
+        this.elemSize = elemSize;
+        if (elemSize != 0) {
+            //计算一个page能被切分成多少个elemSize大小的子页面
+            maxNumElems = numAvail = pageSize / elemSize;
+            //下一个可用的位图索引设置为0
+            nextAvail = 0;
+            //实际的bitmap的长度 占几个long 
+            bitmapLength = maxNumElems >>> 6;
+            if ((maxNumElems & 63) != 0) {
+                bitmapLength ++;
+            }
+
+            //bitmap全初始化为0
+            for (int i = 0; i < bitmapLength; i ++) {
+                bitmap[i] = 0;
+            }
+        }
+        //加入到arena的tinySubpagePool或者smallSubpagePool
+        addToPool(head);
+    }
+    
+    //加入到arena的tinySubpagePool或者smallSubpagePool
+    private void addToPool(PoolSubpage<T> head) {
+        assert prev == null && next == null;
+        prev = head;
+        next = head.next;
+        next.prev = this;
+        head.next = this;
+    }
+    
+    
+     long allocate() {
+        if (elemSize == 0) {
+            return toHandle(0);
+        }
+
+        if (numAvail == 0 || !doNotDestroy) {
+            return -1;
+        }
+
+         //获取下一个可用的位图索引 nextAvail
+        final int bitmapIdx = getNextAvail();
+        int q = bitmapIdx >>> 6;
+        int r = bitmapIdx & 63;
+        assert (bitmap[q] >>> r & 1) == 0;
+         //设置位图下标为q的为已用
+        bitmap[q] |= 1L << r;
+
+         //可用的位图数量-1
+        if (-- numAvail == 0) {
+            //如果为0了 那么就从arena的subpagePool中移除 代表整个page都被分配完了 没有子页面了
+            removeFromPool();
+        }
+		
+         //计算出地址
+        return toHandle(bitmapIdx);
+    }
+    
+    //高32位是bitmapId 低32位是memoryId
+    private long toHandle(int bitmapIdx) {
+        return 0x4000000000000000L | (long) bitmapIdx << 32 | memoryMapIdx;
+    }
 }
 ```
 
@@ -5387,13 +5552,249 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
 
 ```java
-   
+package io.netty.buffer;
+
+final class PoolChunk<T> implements PoolChunkMetric {
+
+    private static final int INTEGER_SIZE_MINUS_ONE = Integer.SIZE - 1;
+	
+    //所属的arena
+    final PoolArena<T> arena;
+    //分配的内存
+    final T memory;
+    //是否缓存
+    final boolean unpooled;
+
+    //标记二叉树上 以当前节点为根节点的子树 可以分配的内存块位于哪个层级
+    private final byte[] memoryMap;
+    //记录二叉树每个节点的深度
+    private final byte[] depthMap;
+    
+    //所有叶子节点的数组 2048个  记录哪个叶子结点被拆分成子页面了
+    private final PoolSubpage<T>[] subpages;
+    /** Used to determine if the requested capacity is equal to or greater than pageSize. */
+    //用于判断大小是否超过normal的掩码
+    private final int subpageOverflowMask;
+    //页面大小 8k
+    private final int pageSize;
+    // 13 
+    private final int pageShifts;
+    // 0 - 11 层级
+    private final int maxOrder;
+    //chunk的大小
+    private final int chunkSize;
+    //取对数 log2(16M) = 24
+    private final int log2ChunkSize;
+    private final int maxSubpageAllocs;
+    /** Used to mark memory as unusable */
+    
+    //标记当前二叉树结点 不可用的标记 12 
+    private final byte unusable;
+
+    //空闲内存大小
+    private int freeBytes;
+
+    //所在的chunkList
+    PoolChunkList<T> parent;
+    //前一个结点
+    PoolChunk<T> prev;
+    //后一个
+    PoolChunk<T> next;
+
+    PoolChunk(PoolArena<T> arena, T memory, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+        //标记是缓存的
+        unpooled = false;
+        this.arena = arena;
+        this.memory = memory;
+        this.pageSize = pageSize;
+        this.pageShifts = pageShifts;
+        this.maxOrder = maxOrder;
+        this.chunkSize = chunkSize;
+        //标记当前二叉树结点 不可用的标记 12 
+        unusable = (byte) (maxOrder + 1);
+        log2ChunkSize = log2(chunkSize);
+        subpageOverflowMask = ~(pageSize - 1);
+        freeBytes = chunkSize;
+
+        assert maxOrder < 30 : "maxOrder should be < 30, but is: " + maxOrder;
+        // 2^11 = 2048 全部叶子节点的数量
+        maxSubpageAllocs = 1 << maxOrder;
+
+        // Generate the memory map.
+        // 2048 * 2 = 4096 整个二叉树一共4096个节点
+        memoryMap = new byte[maxSubpageAllocs << 1];
+        depthMap = new byte[memoryMap.length];
+        
+        //给memoryMap进行初始化赋值 以当前节点为根节点的子树 可以分配的内存块位于哪个层级
+        //当 当前节点的memoryMap[memoryMapIndex] = 当前的层级时 代表以这个节点为根的子树的内存都是空闲的
+        //当 当前节点的memoryMap[memoryMapIndex] > 当前的层级时 代表当前节点不可被分配 最近可以被分配的子节点在memoryMap[memoryMapIndex]层
+        //当 当前节点的memoryMap[memoryMapIndex] = unusable时 代表以当前节点为根的子树已经全部分配完了 不可分配
+        int memoryMapIndex = 1;
+        for (int d = 0; d <= maxOrder; ++ d) { // move down the tree one level at a time
+            int depth = 1 << d;
+            for (int p = 0; p < depth; ++ p) {
+                // in each level traverse left to right and set value to the depth of subtree
+                memoryMap[memoryMapIndex] = (byte) d;
+                depthMap[memoryMapIndex] = (byte) d;
+                memoryMapIndex ++;
+            }
+        }
+
+        //所有叶子结点的数组 2048个   记录哪个叶子结点被拆分成子页面了
+        subpages = newSubpageArray(maxSubpageAllocs);
+    }
+    
+    
+    
+    //分配normCapacity大小的内存 返回地址
+    long allocate(int normCapacity) {
+        //如果normCapacity属于normal规格
+        if ((normCapacity & subpageOverflowMask) != 0) { // >= pageSize
+            return allocateRun(normCapacity);
+        } else {
+            //否则切分tiny/small规格的子页面
+            return allocateSubpage(normCapacity);
+        }
+    }
+    
+    
+   private long allocateSubpage(int normCapacity) {
+        // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
+        // This is need as we may add it back and so alter the linked-list structure.
+        //因为要切分tiny/small规格的子页面了 所以肯定把多余的子页面加入到arena的subpage池中 
+        //获取对应规格的subpagePoolHead
+        PoolSubpage<T> head = arena.findSubpagePoolHead(normCapacity);
+        synchronized (head) {
+            //d代表层级 子页面只能从叶子节点的页面切分出来 所以 d = 11 
+            int d = maxOrder; // subpages are only be allocated from pages i.e., leaves
+            //取d = 11 层级的叶子页面 返回值是当前层级上的空闲页面id 也就是memoryMap的id
+            int id = allocateNode(d);
+            if (id < 0) {
+                return id;
+            }
+			
+            //获取叶子结点的页面集合 记录哪个叶子结点被拆分成子页面了
+            final PoolSubpage<T>[] subpages = this.subpages;
+            final int pageSize = this.pageSize;
+
+            //更新空闲空间的大小
+            freeBytes -= pageSize;
+			
+            //把memoryMapId转换成叶子结点集合的下标
+            int subpageIdx = subpageIdx(id);
+            //通过下标取出来操作的是哪个叶子结点
+            PoolSubpage<T> subpage = subpages[subpageIdx];
+            if (subpage == null) {
+                //新建subpage 将arena的tinyHead或者smallHead放进去 内部会挂上head
+                // runOffset(id) 当前page在chunk.memory的偏移量
+                subpage = new PoolSubpage<T>(head, this, id, runOffset(id), pageSize, normCapacity);
+                //记录哪个叶子结点被拆分成子页面了
+                subpages[subpageIdx] = subpage;
+            } else {
+                subpage.init(head, normCapacity);
+            }
+            //subpage的对象初始化完了 接下来该分配内存了
+            return subpage.allocate();
+        }
+    }
+    
+    
+    private int allocateNode(int d) {
+        //取id = 1的二叉树结点 也就是整个二叉树的根
+        int id = 1;
+        int initial = - (1 << d); // has last d bits = 0 and rest all = 1
+        //取id下标的memoryMap的值 
+        byte val = value(id);
+        //如果根节点的值>想要查找的层级 那么证明 整棵树都没有d层级那么大的整内存块了 返回-1
+        if (val > d) { // unusable
+            return -1;
+        }
+        
+        //否则进入循环
+        while (val < d || (id & initial) == 0) { // id & initial == 1 << d for all ids at depth d, for < d it is 0
+            //通过 * 2 不断向下移动层级
+            id <<= 1;
+            //获取以当前节点为根的 可以分配内存的子树的层级
+            val = value(id);
+            //如果当前节点存储的层级比查找层级要大 证明这个节点的子树分配不了d层的内存大小了
+            if (val > d) {
+                //找它的兄弟节点
+                id ^= 1;
+                val = value(id);
+            }
+        }
+        //最终当val = d 的时候跳出 代表当前节点就是d层的 可以满足d层的内存分配需求
+        byte value = value(id);
+        assert value == d && (id & initial) == 1 << d : String.format("val = %d, id & initial = %d, d = %d",
+                value, id & initial, d);
+        //标记这个节点为unusable 被使用了
+        setValue(id, unusable); // mark as unusable
+        //递归更新父节点的val值 
+        updateParentsAlloc(id);
+        return id;
+    }
+    
+    
+    
+    private void updateParentsAlloc(int id) {
+        //更新到id为1的根节点跳出
+        while (id > 1) {
+            //获取父节点的id
+            int parentId = id >>> 1;
+            //当前节点的val1
+            byte val1 = value(id);
+            //兄弟节点的val2
+            byte val2 = value(id ^ 1);
+            byte val = val1 < val2 ? val1 : val2;
+            //设置给父节点两个子节点中更小的
+            setValue(parentId, val);
+            //父节点设置为当前节点
+            id = parentId;
+        }
+    }
+
+  
+    void initBuf(PooledByteBuf<T> buf, long handle, int reqCapacity) {
+        //取低32位的memoryMapId
+        int memoryMapIdx = memoryMapIdx(handle);
+        //取高32位的bitmapId
+        int bitmapIdx = bitmapIdx(handle);
+        if (bitmapIdx == 0) {
+            byte val = value(memoryMapIdx);
+            assert val == unusable : String.valueOf(val);
+            buf.init(this, handle, runOffset(memoryMapIdx), reqCapacity, runLength(memoryMapIdx),
+                     arena.parent.threadCache());
+        } else {
+            //以子页面的形式初始化buf
+            initBufWithSubpage(buf, handle, bitmapIdx, reqCapacity);
+        }
+    }
+    
+    
+    private void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int bitmapIdx, int reqCapacity) {
+        assert bitmapIdx != 0;
+	    //取低32位的memoryMapId
+        int memoryMapIdx = memoryMapIdx(handle);
+	    //以memoryMapId转换成叶子节点的集合下标 
+        PoolSubpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
+        assert subpage.doNotDestroy;
+        assert reqCapacity <= subpage.elemSize;
+
+        //计算子页面在chunk.memory中的偏移量
+        // runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize
+        // 指定memoryMapIdx的page在chunk.memory的下标起始地址 + bitmap中已经被使用的子页面数量 * 子页面大小 = 当前子页面在chunk.memory的起始地址
+        buf.init(
+            this, handle,
+            runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize,
+            arena.parent.threadCache());
+    }
+    
 
 	//如果两个比特相同（都是0或都是1），那么异或的结果为0。
     //如果两个比特不同（一个是0，另一个是1），那么异或的结果为1。
 	//通过memoryMapIdx的下标计算subpage的下标位置 
 	//因为maxSubpageAllocs = 2048 
-	//异或运算在这里被用作一种技巧来清除 memoryMapIdx 最高位的设置位。当 maxSubpageAllocs 是一个2的幂次方时，它的二进制表示只有一个位是1，其余都是0。进行异或运算时，如果 memoryMapIdx 的最高位也是1，则通过异或会将这一位清零，而不会影响到其他位。返回值是处理后的 memoryMapIdx，此时最高位的1已经被清除，剩下的部分可以看作是在子页面内的相对偏移量或索引。
+	//异或运算在这里被用作一种技巧来清除 memoryMapIdx 最高位的设置位。当 maxSubpageAllocs 是一个2的幂次方时，它的二进制表示只有一个位是1，其余都是0。进行异或运算时，如果 memoryMapIdx 的最高位也是1，则通过异或会将这一位清零，而不会影响到其他位。返回值是处理后的 memoryMapIdx，此时最高位的1已经被清除，剩下的部分可以看作是在叶子页面集合内的索引。
 	private int subpageIdx(int memoryMapIdx) {
         return memoryMapIdx ^ maxSubpageAllocs; // remove highest set bit, to get offset
     }
@@ -5416,6 +5817,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             runOffset(memoryMapIdx) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize,
             arena.parent.threadCache());
     }
+}
 ```
 
 
@@ -5474,6 +5876,7 @@ final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
             return minArena;
         }
     }
+}
 ```
 
 
@@ -5517,7 +5920,7 @@ final class PoolThreadCache {
     // Used for bitshifting when calculate the index of normal caches later
     private final int numShiftsNormalDirect;
     private final int numShiftsNormalHeap;
-    //表示当缓存中的空闲缓冲区数量超过此阈值时，会触发一次缓存清理操作，释放不再需要的缓冲区，以便回收内存。
+    //表示当缓存中的分配次数超过此阈值时，会触发一次缓存清理操作，释放不再需要的缓冲区，以便回收内存。
     private final int freeSweepAllocationThreshold;
 
     private int allocations;
@@ -5546,8 +5949,8 @@ final class PoolThreadCache {
         
         
         
-        //表示当缓存中的空闲缓冲区数量超过此阈值时，会触发一次缓存清理操作，释放不再需要的缓冲区，以便回收内存。
-        this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
+        //表示当缓存中的分配次数超过此阈值时，会触发一次缓存清理操作，释放不再需要的缓冲区，以便回收内存。
+        this.freeSweepAllocationThreshold =freeSweepAllocationThreshold;
         this.heapArena = heapArena;
         this.directArena = directArena;
         
@@ -5651,10 +6054,67 @@ final class PoolThreadCache {
         if (area.isDirect()) {
             return cache(tinySubPageDirectCaches, idx);
         }
+        //通过tinySubPageHeapCaches和下标索引找到对应的缓存
         return cache(tinySubPageHeapCaches, idx);
     }
     
+    private static <T> MemoryRegionCache<T> cache(MemoryRegionCache<T>[] cache, int idx) {
+        if (cache == null || idx > cache.length - 1) {
+            return null;
+        }
+        //直接返回对应的下标缓存
+        return cache[idx];
+    }
     
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private boolean allocate(MemoryRegionCache<?> cache, PooledByteBuf buf, int reqCapacity) {
+        if (cache == null) {
+            // no cache found so just return false here
+            return false;
+        }
+        //利用cache来分配缓存
+        boolean allocated = cache.allocate(buf, reqCapacity);
+        //如果分配次数超过了阈值 那么进行一次清理
+        if (++ allocations >= freeSweepAllocationThreshold) {
+            allocations = 0;
+            trim();
+        }
+        return allocated;
+    }
+    
+	private abstract static class MemoryRegionCache<T> {
+        //相同内存大小的子页的数量上限
+        private final int size;
+        //相同内存大小的子页的队列
+        private final Queue<Entry<T>> queue;
+        //内存规格
+        private final SizeClass sizeClass;
+        //分配次数
+        private int allocations;
+
+        MemoryRegionCache(int size, SizeClass sizeClass) {
+            this.size = MathUtil.findNextPositivePowerOfTwo(size);
+            queue = PlatformDependent.newFixedMpscQueue(this.size);
+            this.sizeClass = sizeClass;
+        }
+    
+        public final boolean allocate(PooledByteBuf<T> buf, int reqCapacity) {
+            //从队列中拿出一个子页
+            Entry<T> entry = queue.poll();
+            //如果没有直接返回空
+            if (entry == null) {
+                return false;
+            }
+            //否则进行分配 初始化buf
+            initBuf(entry.chunk, entry.handle, buf, reqCapacity);
+            //回收这个子页
+            entry.recycle();
+		   //分配次数+1
+            // allocations is not thread-safe which is fine as this is only called from the same thread all time.
+            ++ allocations;
+            return true;
+        }
+    }
     
 
 

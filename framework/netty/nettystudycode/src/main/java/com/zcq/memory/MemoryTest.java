@@ -14,7 +14,7 @@ public class MemoryTest {
 //        ByteBuf buffer = Unpooled.directBuffer();
 //
         PooledByteBufAllocator pooledByteBufAllocator = new PooledByteBufAllocator();
-        ByteBuf byteBuf = pooledByteBufAllocator.buffer(8192 * 2);
+        ByteBuf byteBuf = pooledByteBufAllocator.buffer(8192 * 2048 + 8192); //分配16M+ 8K
         ByteBuf byteBuf1 = pooledByteBufAllocator.buffer(8192 * 2);
         ByteBuf byteBuf2 = pooledByteBufAllocator.buffer(1);
         ByteBuf byteBuf3 = pooledByteBufAllocator.buffer(1);

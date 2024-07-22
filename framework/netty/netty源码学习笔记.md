@@ -5274,8 +5274,21 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             allocateNormal(buf, reqCapacity, normCapacity);
         } else {
             // Huge allocations are never served via the cache so just call allocateHuge
+            //分配超过16M的内存 不缓存直接分配
             allocateHuge(buf, reqCapacity);
         }
+    }
+    
+    
+    private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
+        //新建一个不缓存的chunk
+        PoolChunk<T> chunk = newUnpooledChunk(reqCapacity);
+        //加入统计
+        activeBytesHuge.add(chunk.chunkSize());
+        //初始化buf
+        buf.initUnpooled(chunk, reqCapacity);
+       	//分配huge的数量+1
+        allocationsHuge.increment();
     }
     
     

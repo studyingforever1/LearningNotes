@@ -5652,11 +5652,32 @@ final class PoolChunk<T> implements PoolChunkMetric {
     long allocate(int normCapacity) {
         //如果normCapacity属于normal规格
         if ((normCapacity & subpageOverflowMask) != 0) { // >= pageSize
+            //分配>8k的整页
             return allocateRun(normCapacity);
         } else {
             //否则切分tiny/small规格的子页面
             return allocateSubpage(normCapacity);
         }
+    }
+    
+    //分配>8k的整页
+    private long allocateRun(int normCapacity) {
+        //计算出需要的内存大小在二叉树的哪一层
+        int d = maxOrder - (log2(normCapacity) - pageShifts);
+        //在二叉树上分配d层的节点
+        int id = allocateNode(d);
+        if (id < 0) {
+            return id;
+        }
+        //减少可用空间
+        freeBytes -= runLength(id);
+        return id;
+    }
+    
+    //指定id的节点占用内存的大小
+    private int runLength(int id) {
+        // represents the size in #bytes supported by node 'id' in the tree
+        return 1 << log2ChunkSize - depth(id);
     }
     
     

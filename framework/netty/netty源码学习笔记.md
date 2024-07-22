@@ -4483,6 +4483,8 @@ DMA 是从一整块内存中按需分配，对于分配出的内存会记录元�
 
 由此可见，伙伴算法有效地减少了外部碎片，但是有可能会造成非常严重的内部碎片，最严重的情况会带来 50% 的内存碎片。
 
+> 二叉树的第𝑖![{\displaystyle i}](https://wikimedia.org/api/rest_v1/media/math/render/svg/add78d8608ad86e54951b8c8bd6c8d8416533d20)层至多拥有2𝑖−1![{\displaystyle 2^{i-1}}](https://wikimedia.org/api/rest_v1/media/math/render/svg/de838b503259acc792dd682654445984ea6e4c6d)个节点；深度为𝑘![{\displaystyle k}](https://wikimedia.org/api/rest_v1/media/math/render/svg/c3c9a2c7b599b37105512c5d570edc034056dd40)的二叉树至多总共有2𝑘+1−1![{\displaystyle 2^{\begin{aligned}k+1\end{aligned}}-1}](https://wikimedia.org/api/rest_v1/media/math/render/svg/f24729d4eae59094b7ed114e09dcbf142f32cde8)个节点（定义根节点所在深度 𝑘0=0![{\displaystyle k_{0}=0}](https://wikimedia.org/api/rest_v1/media/math/render/svg/93e97ea5847aa5aa81c2ecaca22b04c612a72c05))
+
 
 
 ##### Slab 算法
@@ -5544,6 +5546,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     }
     
     //高32位是bitmapId 低32位是memoryId
+    //0x4000000000000000L 是为了避免bitmapIdx为0 造成不知道到底有没有bitmapIdx
     private long toHandle(int bitmapIdx) {
         return 0x4000000000000000L | (long) bitmapIdx << 32 | memoryMapIdx;
     }
@@ -5580,7 +5583,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     //是否缓存
     final boolean unpooled;
 
-    //标记二叉树上 以当前节点为根节点的子树 可以分配的内存块位于哪个层级
+    //标记二叉树上 以当前节点为根节点的子树 最近的可以分配的内存块位于哪个层级
     private final byte[] memoryMap;
     //记录二叉树每个节点的深度
     private final byte[] depthMap;
@@ -5675,7 +5678,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
     
     //分配>8k的整页
     private long allocateRun(int normCapacity) {
-        //计算出需要的内存大小在二叉树的哪一层
+        //计算出需要的内存大小在二叉树的哪一层 等同于用log2(normCapacity) - log(8k) = 算出normCapacity是8k的几个2倍
+        //正好二叉树一层就是2倍 maxOrder 减 就是normCapacity所在的层数
         int d = maxOrder - (log2(normCapacity) - pageShifts);
         //在二叉树上分配d层的节点
         int id = allocateNode(d);

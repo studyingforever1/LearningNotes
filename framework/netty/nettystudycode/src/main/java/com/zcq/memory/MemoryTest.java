@@ -11,15 +11,26 @@ public class MemoryTest {
 
     public static void main(String[] args) throws Exception {
 
-//        ByteBuf buffer = Unpooled.directBuffer();
-//
+        ByteBuf buffer = Unpooled.directBuffer();
+
         PooledByteBufAllocator pooledByteBufAllocator = new PooledByteBufAllocator();
         ByteBuf byteBuf = pooledByteBufAllocator.buffer(8192 * 2048 + 8192); //分配16M+ 8K
         ByteBuf byteBuf1 = pooledByteBufAllocator.buffer(8192 * 2);
         ByteBuf byteBuf2 = pooledByteBufAllocator.buffer(1);
         ByteBuf byteBuf3 = pooledByteBufAllocator.buffer(1);
+
+        computeF();
     }
 
+
+
+    public static void computeF() throws Exception {
+        System.out.println(0x80000000);
+        System.out.println(Integer.MAX_VALUE);
+        System.out.println(Integer.MIN_VALUE);
+        System.out.println(Integer.toBinaryString(0x10000000));
+        System.out.println(Integer.toBinaryString(0xffffffff).length());
+    }
 
 
     public static Unsafe getUnsafe() throws Exception {

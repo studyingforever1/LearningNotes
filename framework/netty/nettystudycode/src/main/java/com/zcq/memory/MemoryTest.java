@@ -15,7 +15,9 @@ public class MemoryTest {
 //
         PooledByteBufAllocator pooledByteBufAllocator = new PooledByteBufAllocator();
         ByteBuf byteBuf = pooledByteBufAllocator.buffer(8192 * 2);
-        byteBuf.release();
+        ByteBuf byteBuf1 = pooledByteBufAllocator.buffer(8192 * 2);
+        ByteBuf byteBuf2 = pooledByteBufAllocator.buffer(1);
+        ByteBuf byteBuf3 = pooledByteBufAllocator.buffer(1);
     }
 
 

@@ -5828,6 +5828,81 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
 
 
+###### PoolChunkList
+
+```java
+
+package io.netty.buffer;
+
+
+final class PoolChunkList<T> implements PoolChunkListMetric {
+    private static final Iterator<PoolChunkMetric> EMPTY_METRICS = Collections.<PoolChunkMetric>emptyList().iterator();
+    
+    //下一个PoolChunkList
+    private final PoolChunkList<T> nextList;
+    //最小使用率
+    private final int minUsage;
+    //最大使用率
+    private final int maxUsage;
+    //列表最大容量
+    private final int maxCapacity;
+
+    //chunk的head
+    private PoolChunk<T> head;
+
+    //前一个PoolChunkList
+    // This is only update once when create the linked like list of PoolChunkList in PoolArena constructor.
+    private PoolChunkList<T> prevList;
+
+    // TODO: Test if adding padding helps under contention
+    //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
+
+    PoolChunkList(PoolChunkList<T> nextList, int minUsage, int maxUsage, int chunkSize) {
+        assert minUsage <= maxUsage;
+        this.nextList = nextList;
+        this.minUsage = minUsage;
+        this.maxUsage = maxUsage;
+        maxCapacity = calculateMaxCapacity(minUsage, chunkSize);
+    }
+    
+    //从PoolChunkList中分配
+    boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+        if (head == null || normCapacity > maxCapacity) {
+            // Either this PoolChunkList is empty or the requested capacity is larger then the capacity which can
+            // be handled by the PoolChunks that are contained in this PoolChunkList.
+            return false;
+        }
+
+        //取head的chunk
+        for (PoolChunk<T> cur = head;;) {
+            //利用chunk进行分配内存
+            long handle = cur.allocate(normCapacity);
+            //分配不成功 用下一个PoolChunk分配
+            if (handle < 0) {
+                cur = cur.next;
+                if (cur == null) {
+                    return false;
+                }
+            } else {
+                //否则初始化buf
+                cur.initBuf(buf, handle, reqCapacity);
+                //重新计算使用率
+                if (cur.usage() >= maxUsage) {
+                    //超过最大使用率 移动到下一个链表
+                    remove(cur);
+                    nextList.add(cur);
+                }
+                return true;
+            }
+        }
+    }
+}
+```
+
+
+
+
+
 
 
 ###### PoolThreadLocalCache

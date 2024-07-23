@@ -4280,37 +4280,7 @@ kmem_cache 中包含三个 Slab 链表：**完全分配使用 slab_full**、**�
 
 单个 Slab 可以在不同的链表之间移动，例如当一个 Slab 被分配完，就会从 slab_partial 移动到 slabs_full，当一个 Slab 中有对象被释放后，就会从 slab_full 再次回到 slab_partial，所有对象都被释放完的话，就会从 slab_partial 移动到 slab_empty。
 
-#### jemalloc 
-
-在了解了常用的内存分配算法之后，再理解 jemalloc 的架构设计会相对轻松一些。下图是 jemalloc 的架构图，我们一起学习下它的核心设计理念。
-
-<img src=".\images\jemalloc架构设计.png" style="zoom: 33%;" />
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#### 
 
 #### netty内存管理设计
 
@@ -4360,42 +4330,6 @@ Subpage 负责 Page 内的内存分配，假如我们分配的内存大小远小
 Netty 中的内存池可以看作一个 Java 版本的 jemalloc 实现，并结合 JVM 的诸多特性做了部分优化。如下图所示，我们首先从全局视角看下 Netty 内存池的整体布局，对它有一个宏观的认识。
 
 <img src=".\images\Netty内存池架构设计.png" style="zoom:50%;" />
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #### netty内存管理相关类
 
@@ -4849,7 +4783,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
 ###### PoolArena
 
-
+![](.\images\PoolArena.png)
 
 ```java
 package io.netty.buffer;
@@ -5214,7 +5148,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
 ###### PoolSubpage
 
+<img src=".\images\PoolSubpage.png" style="zoom: 67%;" />
 
+<img src=".\images\PoolSubpage02.png" alt="PoolSubpage02" style="zoom: 33%;" />
 
 ```java
 
@@ -5346,7 +5282,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
 ###### PoolChunk
 
-
+<img src=".\images\PoolChunk.png" style="zoom:50%;" />
 
 ```java
 package io.netty.buffer;
@@ -5626,6 +5562,10 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
 ###### PoolChunkList
 
+<img src=".\images\PoolChunkList.png" style="zoom:50%;" />
+
+<img src=".\images\PoolChunkList02.png" style="zoom:50%;" />
+
 ```java
 
 package io.netty.buffer;
@@ -5777,7 +5717,9 @@ final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
 
 ###### PoolThreadCache
 
+<img src=".\images\MemoryRegionCache.png" style="zoom: 33%;" />
 
+<img src=".\images\MemoryRegionCache02.png" alt="MemoryRegionCache02" style="zoom: 50%;" />
 
 ```java
 package io.netty.buffer;

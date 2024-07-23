@@ -1711,227 +1711,6 @@ private void processSelectedKeysOptimized() {
 
 
 
-#### 线程创建相关类
-
-##### ThreadPerTaskExecutor
-
-封装了线程工厂创造线程的执行器
-
-```java
-package io.netty.util.concurrent;
-
-//继承了Executor 这样就能把所有执行的操作都抽象到Executor层
-//调用Executor.execute(Runnable command)方法的时候 子类可能是执行器组 可能是执行器 也可能是 线程工厂执行器
-public final class ThreadPerTaskExecutor implements Executor {
-    
-    //线程工厂
-    private final ThreadFactory threadFactory;
-
-    public ThreadPerTaskExecutor(ThreadFactory threadFactory) {
-        this.threadFactory = ObjectUtil.checkNotNull(threadFactory, "threadFactory");
-    }
-
-    @Override
-    public void execute(Runnable command) {
-        //线程工厂新建一个线程来执行command 启动线程
-        threadFactory.newThread(command).start();
-    }
-}
-```
-
-##### DefaultThreadFactory
-
-```java
-package io.netty.util.concurrent;
-
-
-//具有 ThreadFactory 简单命名规则的实现。
-public class DefaultThreadFactory implements ThreadFactory {
-
-    private static final AtomicInteger poolId = new AtomicInteger();
-
-    //自增id 用于生成线程名称
-    private final AtomicInteger nextId = new AtomicInteger();
-    //线程名称前缀
-    private final String prefix;
-    //是否守护进程
-    private final boolean daemon;
-    //线程优先级 默认5
-    private final int priority;
-    //线程组
-    protected final ThreadGroup threadGroup;
-    
-    
-    //生成poolType首字母小写的线程名称
-    public static String toPoolName(Class<?> poolType) {
-        ObjectUtil.checkNotNull(poolType, "poolType");
-
-        //获取类名
-        String poolName = StringUtil.simpleClassName(poolType);
-        switch (poolName.length()) {
-            case 0:
-                return "unknown";
-            case 1:
-                return poolName.toLowerCase(Locale.US);
-            default:
-                if (Character.isUpperCase(poolName.charAt(0)) && Character.isLowerCase(poolName.charAt(1))) {
-                    return Character.toLowerCase(poolName.charAt(0)) + poolName.substring(1);
-                } else {
-                    return poolName;
-                }
-        }
-    }
-
-    public DefaultThreadFactory(String poolName, boolean daemon, int priority, ThreadGroup threadGroup) {
-        ObjectUtil.checkNotNull(poolName, "poolName");
-
-        if (priority < Thread.MIN_PRIORITY || priority > Thread.MAX_PRIORITY) {
-            throw new IllegalArgumentException(
-                    "priority: " + priority + " (expected: Thread.MIN_PRIORITY <= priority <= Thread.MAX_PRIORITY)");
-        }
-		
-        //线程名称前缀 nioEventLoop-1-
-        prefix = poolName + '-' + poolId.incrementAndGet() + '-';
-        this.daemon = daemon;
-        this.priority = priority;
-        this.threadGroup = threadGroup;
-    }
-
-    public DefaultThreadFactory(String poolName, boolean daemon, int priority) {
-        this(poolName, daemon, priority, System.getSecurityManager() == null ?
-                Thread.currentThread().getThreadGroup() : System.getSecurityManager().getThreadGroup());
-    }
-
-    //创建线程的方法
-    @Override
-    public Thread newThread(Runnable r) {
-        Thread t = newThread(FastThreadLocalRunnable.wrap(r), prefix + nextId.incrementAndGet());
-        try {
-            //设置守护线程
-            if (t.isDaemon() != daemon) {
-                t.setDaemon(daemon);
-            }
-			//设置优先级
-            if (t.getPriority() != priority) {
-                t.setPriority(priority);
-            }
-        } catch (Exception ignored) {
-            // Doesn't matter even if failed to set.
-        }
-        //返回该线程 此时还没启动
-        return t;
-    }
-	
-    //创建一个FastThreadLocalThread线程
-    protected Thread newThread(Runnable r, String name) {
-        return new FastThreadLocalThread(threadGroup, r, name);
-    }
-    
-    
-}
-```
-
-
-
-
-
-
-
-
-
-##### FastThreadLocalThread
-
-```java
-package io.netty.util.concurrent;
-
-//提供对FastThreadLocal变量的快速访问的特殊Thread
-public class FastThreadLocalThread extends Thread {
-
-
-
-}
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-##### InternalThreadLocalMap
-
-
-
-##### UnpaddedInternalThreadLocalMap
-
-
-
-
-
-##### FastThreadLocal
-
-```java
-package io.netty.util.concurrent;
-
-
-public class FastThreadLocal<V> {
-
-
-    //get方法 通过FastThreadLocalThread内部的InternalThreadLocalMap来get
- 	public final V get() {
-        return get(InternalThreadLocalMap.get());
-    }
-
-    /**
-     * Returns the current value for the specified thread local map.
-     * The specified thread local map must be for the current thread.
-     */
-    @SuppressWarnings("unchecked")
-    public final V get(InternalThreadLocalMap threadLocalMap) {
-        //如果get到了指定的值 直接返回
-        Object v = threadLocalMap.indexedVariable(index);
-        if (v != InternalThreadLocalMap.UNSET) {
-            return (V) v;
-        }
-		//否则进行一下初始化赋值
-        return initialize(threadLocalMap);
-    }
-
-    private V initialize(InternalThreadLocalMap threadLocalMap) {
-        V v = null;
-        try {
-            //初始化赋值 调用子类的initialValue()方法
-            v = initialValue();
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
-        }
-
-        //将值设置进入线程本地缓存的map中去
-        threadLocalMap.setIndexedVariable(index, v);
-        addToVariablesToRemove(threadLocalMap, this);
-        return v;
-    }
-
-
-
-
-
-
-}
-```
-
-
-
-
-
-
-
 
 
 
@@ -5882,6 +5661,15 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         maxCapacity = calculateMaxCapacity(minUsage, chunkSize);
     }
     
+    void add(PoolChunk<T> chunk) {
+        //chunk的使用率超过当前chunkList的最大值 移动到下一个chunkList
+        if (chunk.usage() >= maxUsage) {
+            nextList.add(chunk);
+            return;
+        }
+        add0(chunk);
+    }
+    
     //从PoolChunkList中分配
     boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         if (head == null || normCapacity > maxCapacity) {
@@ -6273,6 +6061,30 @@ final class PoolThreadCache {
 
 
 
+```java
+package io.netty.buffer;
+
+public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
+
+
+
+}
+```
+
+
+
+###### AbstractByteBuf
+
+
+
+
+
+
+
+
+
+
+
 ###### UnpooledHeapByteBuf
 
 ```java
@@ -6486,6 +6298,239 @@ final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByt
 CPU在读取缓存的时候，因为缓存具有空间局部性，所以会将目标地址及其周围的数据都加载到缓存中，当多个线程修改同一个缓存行内的数据时，根据缓存一致性原则，会通知其他CPU的缓存行失效，所以造成了性能下降，这就是缓存行对齐的必要性。
 
 <img src=".\images\f3e479fee2e60c7d4412d9fe30030569.png" alt="img" style="zoom:50%;" />
+
+### 7.线程
+
+#### 线程创建相关类
+
+##### ThreadPerTaskExecutor
+
+封装了线程工厂创造线程的执行器
+
+```java
+package io.netty.util.concurrent;
+
+//继承了Executor 这样就能把所有执行的操作都抽象到Executor层
+//调用Executor.execute(Runnable command)方法的时候 子类可能是执行器组 可能是执行器 也可能是 线程工厂执行器
+public final class ThreadPerTaskExecutor implements Executor {
+    
+    //线程工厂
+    private final ThreadFactory threadFactory;
+
+    public ThreadPerTaskExecutor(ThreadFactory threadFactory) {
+        this.threadFactory = ObjectUtil.checkNotNull(threadFactory, "threadFactory");
+    }
+
+    @Override
+    public void execute(Runnable command) {
+        //线程工厂新建一个线程来执行command 启动线程
+        threadFactory.newThread(command).start();
+    }
+}
+```
+
+##### DefaultThreadFactory
+
+```java
+package io.netty.util.concurrent;
+
+
+//具有 ThreadFactory 简单命名规则的实现。
+public class DefaultThreadFactory implements ThreadFactory {
+
+    private static final AtomicInteger poolId = new AtomicInteger();
+
+    //自增id 用于生成线程名称
+    private final AtomicInteger nextId = new AtomicInteger();
+    //线程名称前缀
+    private final String prefix;
+    //是否守护进程
+    private final boolean daemon;
+    //线程优先级 默认5
+    private final int priority;
+    //线程组
+    protected final ThreadGroup threadGroup;
+    
+    
+    //生成poolType首字母小写的线程名称
+    public static String toPoolName(Class<?> poolType) {
+        ObjectUtil.checkNotNull(poolType, "poolType");
+
+        //获取类名
+        String poolName = StringUtil.simpleClassName(poolType);
+        switch (poolName.length()) {
+            case 0:
+                return "unknown";
+            case 1:
+                return poolName.toLowerCase(Locale.US);
+            default:
+                if (Character.isUpperCase(poolName.charAt(0)) && Character.isLowerCase(poolName.charAt(1))) {
+                    return Character.toLowerCase(poolName.charAt(0)) + poolName.substring(1);
+                } else {
+                    return poolName;
+                }
+        }
+    }
+
+    public DefaultThreadFactory(String poolName, boolean daemon, int priority, ThreadGroup threadGroup) {
+        ObjectUtil.checkNotNull(poolName, "poolName");
+
+        if (priority < Thread.MIN_PRIORITY || priority > Thread.MAX_PRIORITY) {
+            throw new IllegalArgumentException(
+                    "priority: " + priority + " (expected: Thread.MIN_PRIORITY <= priority <= Thread.MAX_PRIORITY)");
+        }
+		
+        //线程名称前缀 nioEventLoop-1-
+        prefix = poolName + '-' + poolId.incrementAndGet() + '-';
+        this.daemon = daemon;
+        this.priority = priority;
+        this.threadGroup = threadGroup;
+    }
+
+    public DefaultThreadFactory(String poolName, boolean daemon, int priority) {
+        this(poolName, daemon, priority, System.getSecurityManager() == null ?
+                Thread.currentThread().getThreadGroup() : System.getSecurityManager().getThreadGroup());
+    }
+
+    //创建线程的方法
+    @Override
+    public Thread newThread(Runnable r) {
+        Thread t = newThread(FastThreadLocalRunnable.wrap(r), prefix + nextId.incrementAndGet());
+        try {
+            //设置守护线程
+            if (t.isDaemon() != daemon) {
+                t.setDaemon(daemon);
+            }
+			//设置优先级
+            if (t.getPriority() != priority) {
+                t.setPriority(priority);
+            }
+        } catch (Exception ignored) {
+            // Doesn't matter even if failed to set.
+        }
+        //返回该线程 此时还没启动
+        return t;
+    }
+	
+    //创建一个FastThreadLocalThread线程
+    protected Thread newThread(Runnable r, String name) {
+        return new FastThreadLocalThread(threadGroup, r, name);
+    }
+    
+    
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+#### 线程及线程本地缓存
+
+##### Thread
+
+
+
+##### ThreadLocal
+
+
+
+
+
+
+
+##### FastThreadLocalThread
+
+```java
+package io.netty.util.concurrent;
+
+//提供对FastThreadLocal变量的快速访问的特殊Thread
+public class FastThreadLocalThread extends Thread {
+
+
+
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+##### InternalThreadLocalMap
+
+
+
+##### UnpaddedInternalThreadLocalMap
+
+
+
+
+
+##### FastThreadLocal
+
+```java
+package io.netty.util.concurrent;
+
+
+public class FastThreadLocal<V> {
+
+
+    //get方法 通过FastThreadLocalThread内部的InternalThreadLocalMap来get
+ 	public final V get() {
+        return get(InternalThreadLocalMap.get());
+    }
+
+    /**
+     * Returns the current value for the specified thread local map.
+     * The specified thread local map must be for the current thread.
+     */
+    @SuppressWarnings("unchecked")
+    public final V get(InternalThreadLocalMap threadLocalMap) {
+        //如果get到了指定的值 直接返回
+        Object v = threadLocalMap.indexedVariable(index);
+        if (v != InternalThreadLocalMap.UNSET) {
+            return (V) v;
+        }
+		//否则进行一下初始化赋值
+        return initialize(threadLocalMap);
+    }
+
+    private V initialize(InternalThreadLocalMap threadLocalMap) {
+        V v = null;
+        try {
+            //初始化赋值 调用子类的initialValue()方法
+            v = initialValue();
+        } catch (Exception e) {
+            PlatformDependent.throwException(e);
+        }
+
+        //将值设置进入线程本地缓存的map中去
+        threadLocalMap.setIndexedVariable(index, v);
+        addToVariablesToRemove(threadLocalMap, this);
+        return v;
+    }
+
+
+
+
+
+
+}
+```
 
 
 

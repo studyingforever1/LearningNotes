@@ -6606,9 +6606,57 @@ public class ThreadLocal<T> {
 package io.netty.util.concurrent;
 
 //提供对FastThreadLocal变量的快速访问的特殊Thread
+//继承了Thread
 public class FastThreadLocalThread extends Thread {
 
+    //内部仿照Thread 设计了一个InternalThreadLocalMap 用于存放FastThreadLocal的值
+  private InternalThreadLocalMap threadLocalMap;
 
+    public FastThreadLocalThread() { }
+
+    public FastThreadLocalThread(Runnable target) {
+        super(target);
+    }
+
+    public FastThreadLocalThread(ThreadGroup group, Runnable target) {
+        super(group, target);
+    }
+
+    public FastThreadLocalThread(String name) {
+        super(name);
+    }
+
+    public FastThreadLocalThread(ThreadGroup group, String name) {
+        super(group, name);
+    }
+
+    public FastThreadLocalThread(Runnable target, String name) {
+        super(target, name);
+    }
+
+    public FastThreadLocalThread(ThreadGroup group, Runnable target, String name) {
+        super(group, target, name);
+    }
+
+    public FastThreadLocalThread(ThreadGroup group, Runnable target, String name, long stackSize) {
+        super(group, target, name, stackSize);
+    }
+
+    /**
+     * Returns the internal data structure that keeps the thread-local variables bound to this thread.
+     * Note that this method is for internal use only, and thus is subject to change at any time.
+     */
+    public final InternalThreadLocalMap threadLocalMap() {
+        return threadLocalMap;
+    }
+
+    /**
+     * Sets the internal data structure that keeps the thread-local variables bound to this thread.
+     * Note that this method is for internal use only, and thus is subject to change at any time.
+     */
+    public final void setThreadLocalMap(InternalThreadLocalMap threadLocalMap) {
+        this.threadLocalMap = threadLocalMap;
+    }
 
 }
 ```
@@ -6625,14 +6673,6 @@ public class FastThreadLocalThread extends Thread {
 
 
 
-##### InternalThreadLocalMap
-
-
-
-##### UnpaddedInternalThreadLocalMap
-
-
-
 
 
 ##### FastThreadLocal
@@ -6640,9 +6680,63 @@ public class FastThreadLocalThread extends Thread {
 ```java
 package io.netty.util.concurrent;
 
-
+//netty的threadlocal 比jdk的threadlocal更快
 public class FastThreadLocal<V> {
 
+    
+    // 下标为0 用于存放所有FastThreadLocal Set集合的位置
+    private static final int variablesToRemoveIndex = InternalThreadLocalMap.nextVariableIndex();
+    
+    //当前FastThreadLocal被分配的下标 
+    //一个FastThreadLocal会被分配一个固定的下标
+    private final int index;
+
+    public FastThreadLocal() {
+        //获取下标
+        index = InternalThreadLocalMap.nextVariableIndex();
+    }
+    
+    
+    public final void set(V value) {
+        //当前值如果不是unset 那么就设置
+        if (value != InternalThreadLocalMap.UNSET) {
+            //获取当前线程的InternalThreadLocalMap
+            set(InternalThreadLocalMap.get(), value);
+        } else {
+            remove();
+        }
+    }
+    
+    
+    public final void set(InternalThreadLocalMap threadLocalMap, V value) {
+        if (value != InternalThreadLocalMap.UNSET) {
+            //拿到InternalThreadLocalMap 直接在对应的index中存放value
+            if (threadLocalMap.setIndexedVariable(index, value)) {
+                //存放成功后 在0下标的Set集合中加上当前这个FastThreadLocal
+                addToVariablesToRemove(threadLocalMap, this);
+            }
+        } else {
+            remove(threadLocalMap);
+        }
+    }
+    
+    //在0下标的Set集合中加FastThreadLocal
+    private static void addToVariablesToRemove(InternalThreadLocalMap threadLocalMap, FastThreadLocal<?> variable) {
+        //获取0下标的集合
+        Object v = threadLocalMap.indexedVariable(variablesToRemoveIndex);
+        Set<FastThreadLocal<?>> variablesToRemove;
+        //没有就创建一个Set集合
+        if (v == InternalThreadLocalMap.UNSET || v == null) {
+            variablesToRemove = Collections.newSetFromMap(new IdentityHashMap<FastThreadLocal<?>, Boolean>());
+            threadLocalMap.setIndexedVariable(variablesToRemoveIndex, variablesToRemove);
+        } else {
+            variablesToRemove = (Set<FastThreadLocal<?>>) v;
+        }
+		//加上FastThreadLocal
+        variablesToRemove.add(variable);
+    }
+    
+    
 
     //get方法 通过FastThreadLocalThread内部的InternalThreadLocalMap来get
  	public final V get() {
@@ -6679,12 +6773,263 @@ public class FastThreadLocal<V> {
         return v;
     }
 
+    
+   	public final void remove() {
+        remove(InternalThreadLocalMap.getIfSet());
+    }
+    
+    public final void remove(InternalThreadLocalMap threadLocalMap) {
+        if (threadLocalMap == null) {
+            return;
+        }
 
+        //从当前InternalThreadLocalMap中移除当前FastThreadLocal
+        Object v = threadLocalMap.removeIndexedVariable(index);
+        //从0下标的Set集合中移除当前FastThreadLocal
+        removeFromVariablesToRemove(threadLocalMap, this);
 
+        if (v != InternalThreadLocalMap.UNSET) {
+            try {
+                //调用FastThreadLocal的onRemoval()方法
+                onRemoval((V) v);
+            } catch (Exception e) {
+                PlatformDependent.throwException(e);
+            }
+        }
+    }
 
+    //移除0下标集合中的FastThreadLocal
+    private static void removeFromVariablesToRemove(
+            InternalThreadLocalMap threadLocalMap, FastThreadLocal<?> variable) {
+
+        Object v = threadLocalMap.indexedVariable(variablesToRemoveIndex);
+
+        if (v == InternalThreadLocalMap.UNSET || v == null) {
+            return;
+        }
+
+        @SuppressWarnings("unchecked")
+        Set<FastThreadLocal<?>> variablesToRemove = (Set<FastThreadLocal<?>>) v;
+        variablesToRemove.remove(variable);
+    }
+    
+    
+    //子类继承的初始化value的方法
+    protected V initialValue() throws Exception {
+        return null;
+    }
+
+    //子类继承的移除方法
+    /**
+     * Invoked when this thread local variable is removed by {@link #remove()}.
+     */
+    protected void onRemoval(@SuppressWarnings("UnusedParameters") V value) throws Exception { }
+
+    
+    
+    //移除当前线程的所有FastThreadLocal的方法
+    public static void removeAll() {
+        //获取当前线程的InternalThreadLocalMap
+        InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.getIfSet();
+        if (threadLocalMap == null) {
+            return;
+        }
+
+        try {
+            //拿出0下标集合
+            Object v = threadLocalMap.indexedVariable(variablesToRemoveIndex);
+            if (v != null && v != InternalThreadLocalMap.UNSET) {
+                @SuppressWarnings("unchecked")
+                Set<FastThreadLocal<?>> variablesToRemove = (Set<FastThreadLocal<?>>) v;
+                FastThreadLocal<?>[] variablesToRemoveArray =
+                        variablesToRemove.toArray(new FastThreadLocal[variablesToRemove.size()]);
+                //对每一个FastThreadLocal调用remove方法进行移除
+                for (FastThreadLocal<?> tlv: variablesToRemoveArray) {
+                    tlv.remove(threadLocalMap);
+                }
+            }
+        } finally {
+            //最后移除整个InternalThreadLocalMap
+            InternalThreadLocalMap.remove();
+        }
+    }
 
 
 }
+```
+
+
+
+
+
+
+
+##### InternalThreadLocalMap
+
+```java
+package io.netty.util.internal;
+
+//FastThreadLocalThread内部存放FastThreadLocal的map
+public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap {
+
+    private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
+
+    //标志填充空闲空间的对象
+    public static final Object UNSET = new Object();
+    
+    
+    public static InternalThreadLocalMap get() {
+        //获取当前线程
+        Thread thread = Thread.currentThread();
+        if (thread instanceof FastThreadLocalThread) {
+            //如果是FastThreadLocalThread
+            return fastGet((FastThreadLocalThread) thread);
+        } else {
+            //普通Thread
+            return slowGet();
+        }
+    }
+    
+    
+    private static InternalThreadLocalMap fastGet(FastThreadLocalThread thread) {
+        //获取FastThreadLocalThread中的InternalThreadLocalMap
+        InternalThreadLocalMap threadLocalMap = thread.threadLocalMap();
+        if (threadLocalMap == null) {
+            //如果没有 进行创建
+            thread.setThreadLocalMap(threadLocalMap = new InternalThreadLocalMap());
+        }
+        //返回
+        return threadLocalMap;
+    }
+
+    private static InternalThreadLocalMap slowGet() {
+        //使用父类UnpaddedInternalThreadLocalMap中存放的ThreadLocal<InternalThreadLocalMap>
+        ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = UnpaddedInternalThreadLocalMap.slowThreadLocalMap;
+        //通过jdk的ThreadLocal来获取存放的InternalThreadLocalMap
+        InternalThreadLocalMap ret = slowThreadLocalMap.get();
+        if (ret == null) {
+            ret = new InternalThreadLocalMap();
+            slowThreadLocalMap.set(ret);
+        }
+        return ret;
+    }
+    
+    
+    public boolean setIndexedVariable(int index, Object value) {
+        //获取存放FastThreadLocal的value的集合
+        Object[] lookup = indexedVariables;
+        //如果下标在数组len内 直接存放
+        if (index < lookup.length) {
+            Object oldValue = lookup[index];
+            lookup[index] = value;
+            return oldValue == UNSET;
+        } else {
+            //否则进行扩容
+            expandIndexedVariableTableAndSet(index, value);
+            return true;
+        }
+    }
+    
+    //扩容
+    private void expandIndexedVariableTableAndSet(int index, Object value) {
+        Object[] oldArray = indexedVariables;
+        final int oldCapacity = oldArray.length;
+        //根据index来算新扩容的大小 最接近index的2的幂次
+        int newCapacity = index;
+        newCapacity |= newCapacity >>>  1;
+        newCapacity |= newCapacity >>>  2;
+        newCapacity |= newCapacity >>>  4;
+        newCapacity |= newCapacity >>>  8;
+        newCapacity |= newCapacity >>> 16;
+        newCapacity ++;
+
+        //数据迁移
+        Object[] newArray = Arrays.copyOf(oldArray, newCapacity);
+        Arrays.fill(newArray, oldCapacity, newArray.length, UNSET);
+        newArray[index] = value;
+        indexedVariables = newArray;
+    }
+    
+    
+    //移除指定下标的value
+    public Object removeIndexedVariable(int index) {
+        Object[] lookup = indexedVariables;
+        if (index < lookup.length) {
+            Object v = lookup[index];
+            lookup[index] = UNSET;
+            return v;
+        } else {
+            return UNSET;
+        }
+    }
+    
+    
+    public static void remove() {
+        Thread thread = Thread.currentThread();
+        if (thread instanceof FastThreadLocalThread) {
+            //移除InternalThreadLocalMap
+            ((FastThreadLocalThread) thread).setThreadLocalMap(null);
+        } else {
+            //移除InternalThreadLocalMap
+            slowThreadLocalMap.remove();
+        }
+    }
+    
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+##### UnpaddedInternalThreadLocalMap
+
+
+
+```java
+package io.netty.util.internal;
+
+
+class UnpaddedInternalThreadLocalMap {
+
+    //jdk的ThreadLocal 兼容不是FastThreadLocalThread的情况
+    static final ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = new ThreadLocal<InternalThreadLocalMap>();
+    //全局自增的索引下标
+    static final AtomicInteger nextIndex = new AtomicInteger();
+
+    //存放value的数组
+    /** Used by {@link FastThreadLocal} */
+    Object[] indexedVariables;
+
+    //下面就是缓存了各种各样的线程本地变量 减少线程冲突用的
+    // Core thread-locals
+    int futureListenerStackDepth;
+    int localChannelReaderStackDepth;
+    Map<Class<?>, Boolean> handlerSharableCache;
+    IntegerHolder counterHashCode;
+    ThreadLocalRandom random;
+    Map<Class<?>, TypeParameterMatcher> typeParameterMatcherGetCache;
+    Map<Class<?>, Map<String, TypeParameterMatcher>> typeParameterMatcherFindCache;
+
+    // String-related thread-locals
+    StringBuilder stringBuilder;
+    Map<Charset, CharsetEncoder> charsetEncoderCache;
+    Map<Charset, CharsetDecoder> charsetDecoderCache;
+
+    // ArrayList-related thread-locals
+    ArrayList<Object> arrayList;
+
+    UnpaddedInternalThreadLocalMap(Object[] indexedVariables) {
+        this.indexedVariables = indexedVariables;
+    }
+}
+
 ```
 
 

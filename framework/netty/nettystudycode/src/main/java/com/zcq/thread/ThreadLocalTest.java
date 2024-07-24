@@ -1,12 +1,37 @@
 package com.zcq.thread;
 
+import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.FastThreadLocalThread;
+
 public class ThreadLocalTest {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception{
 
+        testFastThreadLocal();
     }
-    public static void testFastThreadLocal() {
+    public static void testFastThreadLocal() throws Exception {
 
+        DefaultThreadFactory defaultThreadFactory = new DefaultThreadFactory("test");
+        FastThreadLocalThread fastThreadLocalThread = (FastThreadLocalThread) defaultThreadFactory.newThread(() -> {
+
+            FastThreadLocal fastThreadLocal = new FastThreadLocal<>();
+            fastThreadLocal.set("abc");
+            System.out.println(fastThreadLocal.get());
+
+            fastThreadLocal.remove();
+
+            FastThreadLocal.removeAll();
+
+
+
+            while (true){
+
+            }
+
+        });
+        fastThreadLocalThread.start();
+        fastThreadLocalThread.join();
     }
     public static void testThreadLocal() {
         Thread thread = Thread.currentThread();

@@ -6433,7 +6433,7 @@ public class Thread implements Runnable {
 
 ##### ThreadLocal
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\ThreadLocal.png" style="zoom:33%;" />
+<img src=".\images\ThreadLocal.png" style="zoom:33%;" />
 
 当调用 ThreadLocal.set() 添加 Entry 对象时，是如何解决 Hash 冲突的呢？
 
@@ -6652,7 +6652,7 @@ public class ThreadLocal<T> {
 
 ##### FastThreadLocalThread
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\FastThreadLocalThread.png" style="zoom: 50%;" />
+<img src=".\images\FastThreadLocalThread.png" style="zoom: 50%;" />
 
 ```java
 package io.netty.util.concurrent;
@@ -6920,13 +6920,13 @@ public class FastThreadLocal<V> {
 
 从 InternalThreadLocalMap 内部实现来看，与 ThreadLocalMap 一样都是采用数组的存储方式。但是 InternalThreadLocalMap 并没有使用线性探测法来解决 Hash 冲突，而是在 FastThreadLocal 初始化的时候分配一个数组索引 index，index 的值采用原子类 AtomicInteger 保证顺序递增，通过调用 InternalThreadLocalMap.nextVariableIndex() 方法获得。然后在读写数据的时候通过数组下标 index 直接定位到 FastThreadLocal 的位置，时间复杂度为 O(1)。如果数组下标递增到非常大，那么数组也会比较大，所以 FastThreadLocal 是通过空间换时间的思想提升读写性能。下面通过一幅图描述 InternalThreadLocalMap、index 和 FastThreadLocal 之间的关系。
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\InternalThreadLocalMap.png" style="zoom: 33%;" />
+<img src=".\images\InternalThreadLocalMap.png" style="zoom: 33%;" />
 
 通过上面 FastThreadLocal 的内部结构图，我们对比下与 ThreadLocal 有哪些区别呢？FastThreadLocal 使用 Object 数组替代了 Entry 数组，Object[0] 存储的是一个Set> 集合，从数组下标 1 开始都是直接存储的 value 数据，不再采用 ThreadLocal 的键值对形式进行存储。
 
 假设现在我们有一批数据需要添加到数组中，分别为 value1、value2、value3、value4，对应的 FastThreadLocal 在初始化的时候生成的数组索引分别为 1、2、3、4。如下图所示。
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\InternalThreadLocalMap02.png" style="zoom: 33%;" />
+<img src=".\images\InternalThreadLocalMap02.png" style="zoom: 33%;" />
 
 
 

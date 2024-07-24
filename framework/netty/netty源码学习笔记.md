@@ -6379,7 +6379,220 @@ public class DefaultThreadFactory implements ThreadFactory {
 
 
 
+```java
+package java.lang;
+
+public class Thread implements Runnable {
+
+    /* ThreadLocal values pertaining to this thread. This map is maintained
+     * by the ThreadLocal class. */
+    //线程本地管理的ThreadLocalMap
+    ThreadLocal.ThreadLocalMap threadLocals = null;
+
+
+
+
+}
+```
+
+
+
+
+
 ##### ThreadLocal
+
+```java
+package java.lang;
+
+
+public class ThreadLocal<T> {
+
+    //计算ThreadLocal的hashCode
+    private final int threadLocalHashCode = nextHashCode();
+
+ 
+    private static AtomicInteger nextHashCode =
+        new AtomicInteger();
+
+    private static final int HASH_INCREMENT = 0x61c88647;
+
+    //通过加一个HASH_INCREMENT来初始化hashCode值
+    private static int nextHashCode() {
+        return nextHashCode.getAndAdd(HASH_INCREMENT);
+    }
+
+    //给子类用于继承初始化value
+    protected T initialValue() {
+        return null;
+    }
+
+    public static <S> ThreadLocal<S> withInitial(Supplier<? extends S> supplier) {
+        return new SuppliedThreadLocal<>(supplier);
+    }
+
+    /**
+     * Creates a thread local variable.
+     * @see #withInitial(java.util.function.Supplier)
+     */
+    public ThreadLocal() {
+    }
+    
+    //存放value
+    public void set(T value) {
+        //从当前线程中取出ThreadLocalMap
+        Thread t = Thread.currentThread();
+        ThreadLocalMap map = getMap(t);
+        if (map != null) {
+            //存放threadLocal和value
+            map.set(this, value);
+        } else {
+            createMap(t, value);
+        }
+    }
+    
+
+    //获取当前ThreadLocal的value
+    public T get() {
+        //获取当前线程
+        Thread t = Thread.currentThread();
+        //从当前线程中取出ThreadLocalMap
+        ThreadLocalMap map = getMap(t);
+        if (map != null) {
+            ThreadLocalMap.Entry e = map.getEntry(this);
+            if (e != null) {
+                @SuppressWarnings("unchecked")
+                T result = (T)e.value;
+                return result;
+            }
+        }
+        //没找到 调用初始化方法
+        return setInitialValue();
+    }
+    
+    
+    //获取当前线程的ThreadLocalMap
+   	ThreadLocalMap getMap(Thread t) {
+        return t.threadLocals;
+    }
+    
+    
+    
+    
+    static class ThreadLocalMap {
+
+        //继承WeakReference 弱引用 一旦用户的强引用ThreadLocal不再使用 就会回收ThreadLocal
+        //但value必须手动remove()方法释放
+        static class Entry extends WeakReference<ThreadLocal<?>> {
+            /** The value associated with this ThreadLocal. */
+            Object value;
+
+            Entry(ThreadLocal<?> k, Object v) {
+                super(k);
+                value = v;
+            }
+        }
+
+        //初始化容量
+        private static final int INITIAL_CAPACITY = 16;
+
+        //放置Entry的数组
+        private Entry[] table;
+
+        //数组里存放的threadLocal的数量
+        private int size = 0;
+
+        //扩容阈值 当size达到这个值 进行扩容
+        private int threshold; // Default to 0
+        
+        
+        private void set(ThreadLocal<?> key, Object value) {
+
+            // We don't use a fast path as with get() because it is at
+            // least as common to use set() to create new entries as
+            // it is to replace existing ones, in which case, a fast
+            // path would fail more often than not.
+
+            //获取当前table
+            Entry[] tab = table;
+            int len = tab.length;
+            //计算新增Entry的下标 hashCode对len取余
+            int i = key.threadLocalHashCode & (len-1);
+
+            //使用线性探测法 当hashCode产生冲突时 顺序+1尝试存放 直到数组尽头或者e==null有空闲位置
+            for (Entry e = tab[i];
+                 e != null;
+                 e = tab[i = nextIndex(i, len)]) {
+                ThreadLocal<?> k = e.get();
+
+                if (k == key) {
+                    e.value = value;
+                    return;
+                }
+
+                if (k == null) {
+                    replaceStaleEntry(key, value, i);
+                    return;
+                }
+            }
+
+            //将Entry放在这个位置
+            tab[i] = new Entry(key, value);
+            int sz = ++size;
+            //尝试清理掉一些threadLocal已经释放 但是没有释放value的Entry
+            //size>threshold 扩容
+            if (!cleanSomeSlots(i, sz) && sz >= threshold)
+                rehash();
+        }
+        
+        //i++
+        private static int nextIndex(int i, int len) {
+            return ((i + 1 < len) ? i + 1 : 0);
+        }
+        
+        //获取对应的Entry
+        private Entry getEntry(ThreadLocal<?> key) {
+            //根据threadLocal计算hash值
+            int i = key.threadLocalHashCode & (table.length - 1);
+            Entry e = table[i];
+            //如果这个位置上的Entry就是存的ThreadLocal的Entry
+            if (e != null && e.get() == key)
+                return e;
+            else
+                //否则有hash冲突 继续顺序向下找
+                return getEntryAfterMiss(key, i, e);
+        }
+        
+        private Entry getEntryAfterMiss(ThreadLocal<?> key, int i, Entry e) {
+            Entry[] tab = table;
+            int len = tab.length;
+
+            //顺序从i不停找
+            while (e != null) {
+                ThreadLocal<?> k = e.get();
+                //直到找到这个threadLocal才返回
+                if (k == key)
+                    return e;
+                if (k == null)
+                    //顺带清理一下threadLocal = null的Entry
+                    expungeStaleEntry(i);
+                else
+                    //i++
+                    i = nextIndex(i, len);
+                e = tab[i];
+            }
+            return null;
+        }
+     
+
+    }
+}
+```
+
+
+
+
+
+
 
 
 

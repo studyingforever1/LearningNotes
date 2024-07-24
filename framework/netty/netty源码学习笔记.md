@@ -6031,25 +6031,172 @@ final class PoolThreadCache {
 
 
 
+###### ReferenceCounted
+
+
+
+```java
+package io.netty.util;
+
+/**
+需要显式释放的引用计数对象。
+当实例化新的 ReferenceCounted 时，其引用计数从 1 开始。retain() 会增加引用计数，release() 会减少引用计数。如果引用计数减少到 0，则将显式释放该对象，而访问已释放的对象通常会导致访问冲突。
+如果实现 ReferenceCounted 的对象是其他实现 ReferenceCounted 的对象的容器，则当容器的引用计数变为 0 时，所包含的对象也将通过 release() 释放。
+**/
+public interface ReferenceCounted {
+    /**
+     * Returns the reference count of this object.  If {@code 0}, it means this object has been deallocated.
+     返回此对象的引用计数。如果 0，则表示此对象已解除分配。
+     */
+    int refCnt();
+
+    /**
+     * Increases the reference count by {@code 1}.
+     将引用计数增加1 。
+     */
+    ReferenceCounted retain();
+
+    /**
+     * Increases the reference count by the specified {@code increment}.
+     将引用计数增加指定的 increment。
+     */
+    ReferenceCounted retain(int increment);
+
+    /**
+     * Records the current access location of this object for debugging purposes.
+     * If this object is determined to be leaked, the information recorded by this operation will be provided to you
+     * via {@link ResourceLeakDetector}.  This method is a shortcut to {@link #touch(Object) touch(null)}.
+     */
+    ReferenceCounted touch();
+
+    /**
+     * Records the current access location of this object with an additonal arbitrary information for debugging
+     * purposes.  If this object is determined to be leaked, the information recorded by this operation will be
+     * provided to you via {@link ResourceLeakDetector}.
+     */
+    ReferenceCounted touch(Object hint);
+
+    /**
+     * Decreases the reference count by {@code 1} and deallocates this object if the reference count reaches at
+     * {@code 0}.
+     如果引用计数达到0，则减少引用计数1并解除分配此对象。
+     *
+     * @return {@code true} if and only if the reference count became {@code 0} and this object has been deallocated
+     当且仅当引用计数变为 0 且此对象已被释放时，才为 true
+     */
+    boolean release();
+
+    /**
+     * Decreases the reference count by the specified {@code decrement} and deallocates this object if the reference
+     * count reaches at {@code 0}.
+     如果引用计数达到0，则减少引用计数decrement并解除分配此对象。
+     *
+     * @return {@code true} if and only if the reference count became {@code 0} and this object has been deallocated
+     当且仅当引用计数变为 0 且此对象已被释放时，才为 true
+     */
+    boolean release(int decrement);
+}
+```
+
+
+
+
+
+
+
 ###### ByteBuf
+
+ByteBuf 提供两个指针变量来支持顺序读取和写入操作 - readerIndex 分别用于读取操作和 writerIndex 写入操作。下图显示了缓冲区如何通过两个指针划分为三个区域：
+
+<img src=".\images\ByteBuf.png" alt="image-20240724165809395" style="zoom: 67%;" />
+
+> 可读字节（实际内容）
+> 此段是实际数据存储的位置。任何名称以 read 或 skip 开头的操作都将获取或跳过当前 readerIndex 处的数据并将其增加读取的字节数。如果读取操作的参数也是 ByteBuf 并且未指定目标索引，则指定缓冲区的 writerIndex 也会一起增加。
+>
+> 可写字节
+> 此段是未定义的空间，需要填充。任何以 write 开头的操作都会将数据写入当前 writerIndex，并将其增加写入的字节数。如果 write 操作的参数也是 ByteBuf，并且未指定源索引，则指定缓冲区的 readerIndex 也会一起增加。
+
+此段包含已由读取操作读取的字节。最初，此段的大小为 0，但随着读取操作的执行，其大小会增加到 writerIndex。可以通过调用 discardReadBytes() 丢弃读取的字节，以回收未使用的区域，如下图所示：
+
+<img src=".\images\ByteBuf01.png" alt="image-20240724171111546" style="zoom:50%;" />
+
+> 派生缓冲区
+> 您可以通过调用以下方法之一来创建现有缓冲区的视图：
+>
+> - duplicate()
+> - slice()
+> - slice(int, int)
+> - readSlice(int)
+> - retainedDuplicate()
+> - retainedSlice()
+> - retainedSlice(int, int)
+> - readRetainedSlice(int)
+>
+> 派生缓冲区将具有独立的 readerIndex、writerIndex 和标记索引，同时它共享其他内部数据表示，就像 NIO 缓冲区一样。
+> 如果需要现有缓冲区的全新副本，请改为调用 copy() 方法。
+>
+> 非保留和保留派生缓冲区
+> 请注意，duplicate()、slice()、slice(int, int) 和 readSlice(int) 不会在返回的派生缓冲区上调用 retain()，因此其引用计数不会增加。如果您需要创建具有增加的引用计数的派生缓冲区，请考虑使用 retainedDuplicate()、retainedSlice()、retainedSlice(int, int) 和 readRetainedSlice(int)，它们可能会返回产生更少垃圾的缓冲区实现。
+
+
 
 
 
 ```java
 package io.netty.buffer;
 
-public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
-
-
-
-}
+//具体的方法查看源码
+public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {}
 ```
 
 
 
 ###### AbstractByteBuf
 
+```java
+package io.netty.buffer;
 
+//缓冲区的骨架实现。
+//对readlerIndex和writerIndex的操作基本实现 没有实际存储数据的区域 依靠子类实现读写方法进行读写数据
+public abstract class AbstractByteBuf extends ByteBuf {
+    //核心属性
+    int readerIndex;
+    int writerIndex;
+    private int markedReaderIndex;
+    private int markedWriterIndex;
+    private int maxCapacity;
+
+}
+```
+
+
+
+###### AbstractReferenceCountedByteBuf
+
+
+
+```java
+package io.netty.buffer;
+
+//对引用进行计数的实现的抽象基类 ByteBuf 。 只对引用计数功能进行了实现
+public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
+
+    //核心属性
+    private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater;
+
+    static {
+        AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> updater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
+        if (updater == null) {
+            updater = AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
+        }
+        refCntUpdater = updater;
+    }
+
+    private volatile int refCnt = 1;
+}
+
+```
 
 
 
@@ -6087,14 +6234,6 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 }    
 ```
-
-
-
-
-
-
-
-
 
 
 
@@ -6182,6 +6321,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
 
 ```java
+package io.netty.buffer;
+
 public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     private final ByteBufAllocator alloc;
@@ -6248,18 +6389,6 @@ final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByt
     }
 }
 ```
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

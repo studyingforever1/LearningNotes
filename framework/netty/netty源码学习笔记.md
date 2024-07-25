@@ -5641,6 +5641,22 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
             }
         }
     }
+    
+    //netty中链表大都采用头插法 因为再次使用的时候会从head开始 
+    //此时head可能还在cpu的缓存行中 时间局部性原理
+    void add0(PoolChunk<T> chunk) {
+        chunk.parent = this;
+        if (head == null) {
+            head = chunk;
+            chunk.prev = null;
+            chunk.next = null;
+        } else {
+            chunk.prev = null;
+            chunk.next = head;
+            head.prev = chunk;
+            head = chunk;
+        }
+    }
 }
 ```
 
@@ -6389,6 +6405,49 @@ final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByt
     }
 }
 ```
+
+
+
+
+
+###### Recycler
+
+
+
+```java
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

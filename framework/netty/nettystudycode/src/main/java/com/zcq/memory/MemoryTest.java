@@ -21,9 +21,27 @@ public class MemoryTest {
 
         byteBuf2.release();
 //        ReferenceCountUtil.release(byteBuf2);
-
+        testFree();
     }
 
+
+    public static void testFree() throws Exception {
+        PooledByteBufAllocator pooledByteBufAllocator = new PooledByteBufAllocator();
+        ByteBuf byteBuf2 = pooledByteBufAllocator.buffer(8);
+        //不调用这个会怎么样呢？
+//        byteBuf2.release();
+        //并没有gc把占用的内存空间释放回poolArena
+        byteBuf2 = null;
+        System.gc();
+        System.gc();
+        System.gc();
+        System.gc();
+        System.gc();
+
+
+        System.out.println(pooledByteBufAllocator);
+
+    }
 
 
     public static void computeF() throws Exception {

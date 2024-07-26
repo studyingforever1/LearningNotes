@@ -26,6 +26,7 @@ public class RecyclerTest {
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
+                    allocator.buffer(1);
                 }
             }
         });
@@ -37,10 +38,7 @@ public class RecyclerTest {
 
             System.out.println("主线程开始");
             childThreadBuf.get().release();
-            allocator.buffer(1);
-
             System.out.println("主线程完成，打断子线程");
-            thread.interrupt();
             allocator.notifyAll();
         }
     }

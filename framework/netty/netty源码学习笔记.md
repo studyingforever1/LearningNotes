@@ -6461,6 +6461,136 @@ CPU在读取缓存的时候，因为缓存具有空间局部性，所以会将�
 
 <img src=".\images\f3e479fee2e60c7d4412d9fe30030569.png" alt="img" style="zoom:50%;" />
 
+##### 强软弱虚
+
+强引用 StrongReference、软引用 SoftReference、弱引用 WeakReference 和虚引用 PhantomReference
+
+###### 强引用
+
+```java
+//这种就是强引用了，是不是在代码中随处可见，最亲切。 只要某个对象有强引用与之关联，这个对象永远不会被回收，即使内存不足，JVM宁愿抛出OOM，也不会去回收。
+Object o = new Object();
+//那么什么时候才可以被回收呢？当强引用和对象之间的关联被中断了，就可以被回收了。
+o = null;
+```
+
+###### 软引用
+
+```java
+       //当内存不足，会触发JVM的GC，如果GC后，内存还是不足，就会把软引用的包裹的对象给干掉，也就是只有在内存不足，JVM才会回收该对象。
+	    SoftReference<byte[]> softReference = new SoftReference<byte[]>(new byte[1024*1024*10]);
+        System.out.println(softReference.get());
+        System.gc();
+        System.out.println(softReference.get());
+
+        byte[] bytes = new byte[1024 * 1024 * 10];
+        System.out.println(softReference.get());
+```
+
+###### 弱引用
+
+```java
+        //弱引用的特点是不管内存是否足够，只要发生GC，都会被回收：
+	    WeakReference<byte[]> weakReference = new WeakReference<byte[]>(new byte[1]);
+        System.out.println(weakReference.get());
+        System.gc();
+        System.out.println(weakReference.get());
+```
+
+###### 虚引用
+
+```java
+      //无法通过虚引用来获取对一个对象的真实引用。
+
+      //虚引用必须与ReferenceQueue一起使用，当GC准备回收一个对象，如果发现它还有虚引用，就会在回收之前，把这个虚引用加入到与之关联的ReferenceQueue中。
+	    ReferenceQueue queue = new ReferenceQueue();
+        List<byte[]> bytes = new ArrayList<>();
+        PhantomReference<Student> reference = new PhantomReference<Student>(new Student(),queue);
+        new Thread(() -> {
+            for (int i = 0; i < 100;i++ ) {
+                bytes.add(new byte[1024 * 1024]);
+            }
+        }).start();
+
+        new Thread(() -> {
+            while (true) {
+                Reference poll = queue.poll();
+                if (poll != null) {
+                    System.out.println("虚引用被回收了：" + poll);
+                }
+            }
+        }).start();
+        Scanner scanner = new Scanner(System.in);
+        scanner.hasNext();
+```
+
+
+
+实际对虚引用和Cleaner处理的类在Reference中
+
+```java
+package java.lang.ref;
+
+
+public abstract class Reference<T> {
+    
+    
+    //在对象被JVM回收后 在这里对cleaner和虚引用做处理
+    //只是调用cleaner的clean方法 以及把当前虚引用加入到绑定的引用队列中而已
+ static boolean tryHandlePending(boolean waitForNotify) {
+        Reference<Object> r;
+        Cleaner c;
+        try {
+            synchronized (lock) {
+                if (pending != null) {
+                    r = pending;
+                    // 'instanceof' might throw OutOfMemoryError sometimes
+                    // so do this before un-linking 'r' from the 'pending' chain...
+                    c = r instanceof Cleaner ? (Cleaner) r : null;
+                    // unlink 'r' from 'pending' chain
+                    pending = r.discovered;
+                    r.discovered = null;
+                } else {
+                    // The waiting on the lock may cause an OutOfMemoryError
+                    // because it may try to allocate exception objects.
+                    if (waitForNotify) {
+                        lock.wait();
+                    }
+                    // retry if waited
+                    return waitForNotify;
+                }
+            }
+        } catch (OutOfMemoryError x) {
+            // Give other threads CPU time so they hopefully drop some live references
+            // and GC reclaims some space.
+            // Also prevent CPU intensive spinning in case 'r instanceof Cleaner' above
+            // persistently throws OOME for some time...
+            Thread.yield();
+            // retry
+            return true;
+        } catch (InterruptedException x) {
+            // retry
+            return true;
+        }
+
+     	
+        // Fast path for cleaners
+        if (c != null) {
+            c.clean();
+            return true;
+        }
+
+        ReferenceQueue<? super Object> q = r.queue;
+        if (q != ReferenceQueue.NULL) q.enqueue(r);
+        return true;
+    }   
+}
+```
+
+
+
+
+
 ### 7.线程
 
 #### 线程创建相关类

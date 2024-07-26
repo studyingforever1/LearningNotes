@@ -6412,11 +6412,11 @@ final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByt
 
 ###### Recycler
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Recycler.png" style="zoom: 33%;" />
+<img src=".\images\Recycler.png" style="zoom: 33%;" />
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Recycler01.png" style="zoom:50%;" />
+<img src=".\images\Recycler01.png" style="zoom:50%;" />
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Recycler02.png" style="zoom:50%;" />
+<img src=".\images\Recycler02.png" style="zoom:50%;" />
 
 ```java
 package io.netty.util;

@@ -22,5 +22,12 @@
             <version>4.1.4.Final</version>
         </dependency>
 
+
+
+        <dependency>
+            <groupId>org.jctools</groupId>
+            <artifactId>jctools-core</artifactId>
+            <version>4.0.5</version>
+        </dependency>
     </dependencies>
 </project>

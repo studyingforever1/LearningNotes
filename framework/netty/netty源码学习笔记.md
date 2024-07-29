@@ -4195,6 +4195,228 @@ private static final AtomicReferenceFieldUpdater<SingleThreadEventExecutor, Thre
 
 
 
+
+
+##### MpscArrayQueue
+
+###### JDK 原生并发队列
+
+JDK 并发队列按照实现方式可以分为阻塞队列和非阻塞队列两种类型，阻塞队列是基于锁实现的，非阻塞队列是基于 CAS 操作实现的。
+
+<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Mpsc Queue.png" style="zoom: 50%;" />
+
+###### 阻塞队列
+
+阻塞队列在队列为空或者队列满时，都会发生阻塞。阻塞队列自身是线程安全的，使用者无需关心线程安全问题，降低了多线程开发难度。阻塞队列主要分为以下几种：
+
+- **ArrayBlockingQueue**：最基础且开发中最常用的阻塞队列，底层采用数组实现的有界队列，初始化需要指定队列的容量。ArrayBlockingQueue 是如何保证线程安全的呢？它内部是使用了一个重入锁 ReentrantLock，并搭配 notEmpty、notFull 两个条件变量 Condition 来控制并发访问。从队列读取数据时，如果队列为空，那么会阻塞等待，直到队列有数据了才会被唤醒。如果队列已经满了，也同样会进入阻塞状态，直到队列有空闲才会被唤醒。
+- **LinkedBlockingQueue**：内部采用的数据结构是链表，队列的长度可以是有界或者无界的，初始化不需要指定队列长度，默认是 Integer.MAX_VALUE。LinkedBlockingQueue 内部使用了 takeLock、putLock两个重入锁 ReentrantLock，以及 notEmpty、notFull 两个条件变量 Condition 来控制并发访问。采用读锁和写锁的好处是可以避免读写时相互竞争锁的现象，所以相比于 ArrayBlockingQueue，LinkedBlockingQueue 的性能要更好。
+- **PriorityBlockingQueue**：采用最小堆实现的优先级队列，队列中的元素按照优先级进行排列，每次出队都是返回优先级最高的元素。PriorityBlockingQueue 内部是使用了一个 ReentrantLock 以及一个条件变量 Condition notEmpty 来控制并发访问，不需要 notFull 是因为 PriorityBlockingQueue 是无界队列，所以每次 put 都不会发生阻塞。PriorityBlockingQueue 底层的最小堆是采用数组实现的，当元素个数大于等于最大容量时会触发扩容，在扩容时会先释放锁，保证其他元素可以正常出队，然后使用 CAS 操作确保只有一个线程可以执行扩容逻辑。
+- **DelayQueue**，一种支持延迟获取元素的阻塞队列，常用于缓存、定时任务调度等场景。DelayQueue 内部是采用优先级队列 PriorityQueue 存储对象。DelayQueue 中的每个对象都必须实现 Delayed 接口，并重写 compareTo 和 getDelay 方法。向队列中存放元素的时候必须指定延迟时间，只有延迟时间已满的元素才能从队列中取出。
+- **SynchronizedQueue**，又称无缓冲队列。比较特别的是 SynchronizedQueue 内部不会存储元素。与 ArrayBlockingQueue、LinkedBlockingQueue 不同，SynchronizedQueue 直接使用 CAS 操作控制线程的安全访问。其中 put 和 take 操作都是阻塞的，每一个 put 操作都必须阻塞等待一个 take 操作，反之亦然。所以 SynchronizedQueue 可以理解为生产者和消费者配对的场景，双方必须互相等待，直至配对成功。在 JDK 的线程池 Executors.newCachedThreadPool 中就存在 SynchronousQueue 的运用，对于新提交的任务，如果有空闲线程，将重复利用空闲线程处理任务，否则将新建线程进行处理。
+- **LinkedTransferQueue**，一种特殊的无界阻塞队列，可以看作 LinkedBlockingQueues、SynchronousQueue（公平模式）、ConcurrentLinkedQueue 的合体。与 SynchronousQueue 不同的是，LinkedTransferQueue 内部可以存储实际的数据，当执行 put 操作时，如果有等待线程，那么直接将数据交给对方，否则放入队列中。与 LinkedBlockingQueues 相比，LinkedTransferQueue 使用 CAS 无锁操作进一步提升了性能。
+
+###### 非阻塞队列
+
+说完阻塞队列，我们再来看下非阻塞队列。非阻塞队列不需要通过加锁的方式对线程阻塞，并发性能更好。JDK 中常用的非阻塞队列有以下几种：
+
+- **ConcurrentLinkedQueue**，它是一个采用双向链表实现的无界并发非阻塞队列，它属于 LinkedQueue 的安全版本。ConcurrentLinkedQueue 内部采用 CAS 操作保证线程安全，这是非阻塞队列实现的基础，相比 ArrayBlockingQueue、LinkedBlockingQueue 具备较高的性能。
+- **ConcurrentLinkedDeque**，也是一种采用双向链表结构的无界并发非阻塞队列。与 ConcurrentLinkedQueue 不同的是，ConcurrentLinkedDeque 属于双端队列，它同时支持 FIFO 和 FILO 两种模式，可以从队列的头部插入和删除数据，也可以从队列尾部插入和删除数据，适用于多生产者和多消费者的场景。
+
+###### Mpsc队列
+
+Mpsc 的全称是 Multi Producer Single Consumer，多生产者单消费者。Mpsc Queue 可以保证多个生产者同时访问队列是线程安全的，而且同一时刻只允许一个消费者从队列中读取数据。Netty Reactor 线程中任务队列 taskQueue 必须满足多个生产者可以同时提交任务，所以 JCTools 提供的 Mpsc Queue 非常适合 Netty Reactor 线程模型。
+
+<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Mpsc Queue01.png" style="zoom: 50%;" />
+
+除了顶层 JDK 原生的 AbstractCollection、AbstractQueue，MpscArrayQueue 还继承了很多类似于 MpscXxxPad 以及 MpscXxxField 的类。我们可以发现一个很有意思的规律，每个有包含属性的类后面都会被 MpscXxxPad 类隔开。MpscXxxPad 到底起到什么作用呢？我们自顶向下，将所有类的字段合并在一起，看下 MpscArrayQueue 的整体结构。
+
+```java
+// ConcurrentCircularArrayQueueL0Pad
+
+long p01, p02, p03, p04, p05, p06, p07;
+
+long p10, p11, p12, p13, p14, p15, p16, p17;
+
+// ConcurrentCircularArrayQueue
+
+protected final long mask;
+
+protected final E[] buffer;
+
+// MpmcArrayQueueL1Pad
+
+long p00, p01, p02, p03, p04, p05, p06, p07;
+
+long p10, p11, p12, p13, p14, p15, p16;
+
+// MpmcArrayQueueProducerIndexField
+
+private volatile long producerIndex;
+
+// MpscArrayQueueMidPad
+
+long p01, p02, p03, p04, p05, p06, p07;
+
+long p10, p11, p12, p13, p14, p15, p16, p17;
+
+// MpscArrayQueueProducerLimitField
+
+private volatile long producerLimit;
+
+// MpscArrayQueueL2Pad
+
+long p00, p01, p02, p03, p04, p05, p06, p07;
+
+long p10, p11, p12, p13, p14, p15, p16;
+
+// MpscArrayQueueConsumerIndexField
+
+protected long consumerIndex;
+
+// MpscArrayQueueL3Pad
+
+long p01, p02, p03, p04, p05, p06, p07;
+
+long p10, p11, p12, p13, p14, p15, p16, p17;
+```
+
+可以看出，MpscXxxPad 类中使用了大量 long 类型的变量，其命名没有什么特殊的含义，只是起到填充的作用。如果你也读过 Disruptor 的源码，会发现 Disruptor 也使用了类似的填充方法。Mpsc Queue 和 Disruptor 之所以填充这些无意义的变量，是为了解决伪共享（false sharing）问题。
+
+对于伪共享问题，我们应该如何解决呢？Disruptor 和 Mpsc Queue 都采取了空间换时间的策略，让不同线程共享的对象加载到不同的缓存行即可。下面我们通过一个简单的例子进行说明。
+
+```java
+public class FalseSharingPadding {
+
+    protected long p1, p2, p3, p4, p5, p6, p7;
+
+    protected volatile long value = 0L;
+
+    protected long p9, p10, p11, p12, p13, p14, p15;
+
+}
+```
+
+从上述代码中可以看出，变量 value 前后都填充了 7 个 long 类型的变量。这样不论在什么情况下，都可以保证在多线程访问 value 变量时，value 与其他不相关的变量处于不同的 Cache Line，如下图所示。
+
+<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Mpsc Queue03.png" style="zoom:50%;" />
+
+###### Mpsc Queue 源码分析
+
+```java
+package org.jctools.queues;
+
+public class MpscArrayQueue<E> extends MpscArrayQueueL3Pad<E>{
+
+    // ConcurrentCircularArrayQueue
+
+    protected final long mask; // 计算数组下标的掩码
+
+    protected final E[] buffer; // 存放队列数据的数组
+
+    // MpmcArrayQueueProducerIndexField
+
+    private volatile long producerIndex; // 生产者的索引
+
+    // MpscArrayQueueProducerLimitField
+
+    private volatile long producerLimit; // 生产者索引的最大值
+
+    // MpscArrayQueueConsumerIndexField
+
+    protected long consumerIndex; // 消费者索引
+    
+    
+    
+    @Override
+    public boolean offer(final E e)
+    {
+        if (null == e)
+        {
+            throw new NullPointerException();
+        }
+
+        // use a cached view on consumer index (potentially updated in loop)
+        final long mask = this.mask;
+        long producerLimit = lvProducerLimit();
+        long pIndex;
+        do
+        {
+            pIndex = lvProducerIndex();
+            if (pIndex >= producerLimit)
+            {
+                final long cIndex = lvConsumerIndex();
+                producerLimit = cIndex + mask + 1;
+
+                if (pIndex >= producerLimit)
+                {
+                    return false; // FULL :(
+                }
+                else
+                {
+                    // update producer limit to the next index that we must recheck the consumer index
+                    // this is racy, but the race is benign
+                    soProducerLimit(producerLimit);
+                }
+            }
+        }
+        while (!casProducerIndex(pIndex, pIndex + 1));
+        /*
+         * NOTE: the new producer index value is made visible BEFORE the element in the array. If we relied on
+         * the index visibility to poll() we would need to handle the case where the element is not visible.
+         */
+
+        // Won CAS, move on to storing
+        final long offset = calcCircularRefElementOffset(pIndex, mask);
+        soRefElement(buffer, offset, e);
+        return true; // AWESOME :)
+    }
+    
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### 6.内存管理
 
 本章参考资料：  [Netty 高性能内存管理设计](https://learn.lianglianglee.com/%e4%b8%93%e6%a0%8f/Netty%20%e6%a0%b8%e5%bf%83%e5%8e%9f%e7%90%86%e5%89%96%e6%9e%90%e4%b8%8e%20RPC%20%e5%ae%9e%e8%b7%b5-%e5%ae%8c/12%20%20%e4%bb%96%e5%b1%b1%e4%b9%8b%e7%9f%b3%ef%bc%9a%e9%ab%98%e6%80%a7%e8%83%bd%e5%86%85%e5%ad%98%e5%88%86%e9%85%8d%e5%99%a8%20jemalloc%20%e5%9f%ba%e6%9c%ac%e5%8e%9f%e7%90%86.md)
@@ -8099,8 +8321,6 @@ public final class ThreadDeathWatcher {
 
 
 ```
-
-
 
 
 

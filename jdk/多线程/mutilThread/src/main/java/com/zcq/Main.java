@@ -50,34 +50,63 @@ public class Main {
         //找了半天还是没找到getInt和getIntVolatile的区别
         //找了半天还是没找到setInt和setIntVolatile的区别
 
-        new Thread(() -> {
-            Thread.currentThread().setName("线程1");
-            int age = unsafe.getInt(user, ageOffset);
-            System.out.println(Thread.currentThread().getName() + ":" + age);
-            if (age == 0) {
-                unsafe.putInt(user, ageOffset, 18);
+        for (int i = 0; i < 9; i++) {
+            new Thread(() -> {
+                while (true) {
+                    int age = unsafe.getInt(user, ageOffset);
+                    if (age == 18){
+                        System.out.println(Thread.currentThread().getName() + ":" + age);
+                    }else {
+//                        System.out.println(Thread.currentThread().getName() + ":" + age);
+                    }
+                }
+            }).start();
+        }
+
+
+        new Thread(()->{
+            while (true) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                unsafe.putOrderedInt(user, ageOffset, 18);
                 System.out.println(Thread.currentThread().getName() + ":" + unsafe.getInt(user, ageOffset) + "设置完了");
             }
-            countDownLatch.countDown();
         }).start();
 
-        new Thread(() -> {
-            Thread.currentThread().setName("线程2");
-            int age = unsafe.getInt(user, ageOffset);
-            System.out.println(Thread.currentThread().getName() + ":" + age);
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-             age = unsafe.getInt(user, ageOffset);
-            System.out.println(Thread.currentThread().getName() + ":" + age);
-            if (age == 0) {
-                unsafe.putInt(user, ageOffset, 18);
-                System.out.println(Thread.currentThread().getName() + ":" + unsafe.getInt(user, ageOffset) + "设置完了");
-            }
-            countDownLatch.countDown();
-        }).start();
+
+
+
+//        new Thread(() -> {
+//            Thread.currentThread().setName("线程1");
+//            int age = unsafe.getInt(user, ageOffset);
+//            System.out.println(Thread.currentThread().getName() + ":" + age);
+//            if (age == 0) {
+//                unsafe.putInt(user, ageOffset, 18);
+//                System.out.println(Thread.currentThread().getName() + ":" + unsafe.getInt(user, ageOffset) + "设置完了");
+//            }
+//            countDownLatch.countDown();
+//        }).start();
+//
+//        new Thread(() -> {
+//            Thread.currentThread().setName("线程2");
+//            int age = unsafe.getInt(user, ageOffset);
+//            System.out.println(Thread.currentThread().getName() + ":" + age);
+//            try {
+//                Thread.sleep(1);
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+//             age = unsafe.getInt(user, ageOffset);
+//            System.out.println(Thread.currentThread().getName() + ":" + age);
+//            if (age == 0) {
+//                unsafe.putInt(user, ageOffset, 18);
+//                System.out.println(Thread.currentThread().getName() + ":" + unsafe.getInt(user, ageOffset) + "设置完了");
+//            }
+//            countDownLatch.countDown();
+//        }).start();
 
 
 
@@ -109,7 +138,7 @@ public class Main {
 //            }).start();
 //        }
 
-        countDownLatch.await();
+//        countDownLatch.await();
 
 
 //        System.out.println("主线程读的:" + user.age);

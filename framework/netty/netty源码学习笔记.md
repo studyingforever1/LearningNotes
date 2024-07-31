@@ -7329,7 +7329,7 @@ httpBuf.addComponents(true, header, body);
 
 CompositeByteBuf 通过调用 addComponents() 方法来添加多个 ByteBuf，但是底层的 byte 数组是复用的，不会发生内存拷贝。但对于用户来说，它可以当作一个整体进行操作。那么 CompositeByteBuf 内部是如何存放这些 ByteBuf，并且如何进行合并的呢？我们先通过一张图看下 CompositeByteBuf 的内部结构：
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Netty中的零拷贝.png" style="zoom: 33%;" />
+<img src=".\images\Netty中的零拷贝.png" style="zoom: 33%;" />
 
 从图上可以看出，CompositeByteBuf 内部维护了一个 Components 数组。在每个 Component 中存放着不同的 ByteBuf，各个 ByteBuf 独立维护自己的读写索引，而 CompositeByteBuf 自身也会单独维护一个读写索引。由此可见，Component 是实现 CompositeByteBuf 的关键所在，下面看下 Component 结构定义：
 
@@ -7355,13 +7355,13 @@ private static final class Component {
 
 为了方便理解上述 Component 中的属性含义，我同样以 HTTP 协议中 header 和 body 为示例，通过一张图来描述 CompositeByteBuf 组合后其中 Component 的布局情况，如下所示：
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Netty中的零拷贝01.png" style="zoom:33%;" />
+<img src=".\images\Netty中的零拷贝01.png" style="zoom:33%;" />
 
 从图中可以看出，header 和 body 分别对应两个 ByteBuf，假设 ByteBuf 的内容分别为 “header” 和 “body”，那么 header ByteBuf 中 offset~endOffset 为 0~6，body ByteBuf 对应的 offset~endOffset 为 0~10。由此可见，Component 中的 offset 和 endOffset 可以表示当前 ByteBuf 可以读取的范围，通过 offset 和 endOffset 可以将每一个 Component 所对应的 ByteBuf 连接起来，形成一个逻辑整体。
 
 此外 Component 中 srcAdjustment 和 adjustment 表示 CompositeByteBuf 起始索引相对于 ByteBuf 读索引的偏移。初始 adjustment = readIndex - offset，这样通过 CompositeByteBuf 的起始索引就可以直接定位到 Component 中 ByteBuf 的读索引位置。当 header ByteBuf 读取 1 个字节，body ByteBuf 读取 2 个字节，此时每个 Component 的属性又会发生什么变化呢？如下图所示。
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Netty中的零拷贝02.png" style="zoom:33%;" />
+<img src=".\images\Netty中的零拷贝02.png" style="zoom:33%;" />
 
 至此，CompositeByteBuf 的基本原理我们已经介绍完了，关于具体 CompositeByteBuf 数据操作的细节在这里就不做展开了，有兴趣的同学可以自己深入研究 CompositeByteBuf 的源码。
 
@@ -7371,7 +7371,7 @@ private static final class Component {
 
 Unpooled 提供了一系列用于包装数据源的 wrappedBuffer 方法，如下所示：
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Netty中的零拷贝03.png" style="zoom: 50%;" />
+<img src=".\images\Netty中的零拷贝03.png" style="zoom: 50%;" />
 
 Unpooled.wrappedBuffer 方法可以将不同的数据源的一个或者多个数据包装成一个大的 ByteBuf 对象，其中数据源的类型包括 byte[]、ByteBuf、ByteBuffer。包装的过程中不会发生数据拷贝操作，包装后生成的 ByteBuf 对象和原始 ByteBuf 对象是共享底层的 byte 数组。
 
@@ -7399,7 +7399,7 @@ ByteBuf body = httpBuf.slice(6, 4);
 
 通过 slice 切分后都会返回一个新的 ByteBuf 对象，而且新的对象有自己独立的 readerIndex、writerIndex 索引，如下图所示。由于新的 ByteBuf 对象与原始的 ByteBuf 对象数据是共享的，所以通过新的 ByteBuf 对象进行数据操作也会对原始 ByteBuf 对象生效。
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Netty中的零拷贝04.png" style="zoom:50%;" />
+<img src=".\images\Netty中的零拷贝04.png" style="zoom:50%;" />
 
 ###### 文件传输 FileRegion
 

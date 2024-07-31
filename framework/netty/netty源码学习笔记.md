@@ -7289,6 +7289,246 @@ public abstract class Reference<T> {
 
 
 
+##### Netty 的零拷贝技术
+
+介绍完传统 Linux 的零拷贝技术之后，我们再来学习下 Netty 中的零拷贝如何实现。Netty 中的零拷贝和传统 Linux 的零拷贝不太一样。Netty 中的零拷贝技术除了操作系统级别的功能封装，更多的是面向用户态的数据操作优化，主要体现在以下 5 个方面：
+
+- 堆外内存，避免 JVM 堆内存到堆外内存的数据拷贝。
+- CompositeByteBuf 类，可以组合多个 Buffer 对象合并成一个逻辑上的对象，避免通过传统内存拷贝的方式将几个 Buffer 合并成一个大的 Buffer。
+- 通过 Unpooled.wrappedBuffer 可以将 byte 数组包装成 ByteBuf 对象，包装过程中不会产生内存拷贝。
+- ByteBuf.slice 操作与 Unpooled.wrappedBuffer 相反，slice 操作可以将一个 ByteBuf 对象切分成多个 ByteBuf 对象，切分过程中不会产生内存拷贝，底层共享一个 byte 数组的存储空间。
+- Netty 使用 FileRegion 实现文件传输，FileRegion 底层封装了 FileChannel#transferTo() 方法，可以将文件缓冲区的数据直接传输到目标 Channel，避免内核缓冲区和用户态缓冲区之间的数据拷贝，这属于操作系统级别的零拷贝。
+
+下面我们从以上 5 个方面逐一进行介绍。
+
+###### 堆外内存
+
+如果在 JVM 内部执行 I/O 操作时，必须将数据拷贝到堆外内存，才能执行系统调用。这是所有 VM 语言都会存在的问题。那么为什么操作系统不能直接使用 JVM 堆内存进行 I/O 的读写呢？主要有两点原因：第一，操作系统并不感知 JVM 的堆内存，而且 JVM 的内存布局与操作系统所分配的是不一样的，操作系统并不会按照 JVM 的行为来读写数据。第二，同一个对象的内存地址随着 JVM GC 的执行可能会随时发生变化，例如 JVM GC 的过程中会通过压缩来减少内存碎片，这就涉及对象移动的问题了。
+
+Netty 在进行 I/O 操作时都是使用的堆外内存，可以避免数据从 JVM 堆内存到堆外内存的拷贝。
+
+###### CompositeByteBuf
+
+CompositeByteBuf 是 Netty 中实现零拷贝机制非常重要的一个数据结构，CompositeByteBuf 可以理解为一个虚拟的 Buffer 对象，它是由多个 ByteBuf 组合而成，但是在 CompositeByteBuf 内部保存着每个 ByteBuf 的引用关系，从逻辑上构成一个整体。比较常见的像 HTTP 协议数据可以分为**头部信息 header**和**消息体数据 body**，分别存在两个不同的 ByteBuf 中，通常我们需要将两个 ByteBuf 合并成一个完整的协议数据进行发送，可以使用如下方式完成：
+
+```java
+ByteBuf httpBuf = Unpooled.buffer(header.readableBytes() + body.readableBytes());
+
+httpBuf.writeBytes(header);
+
+httpBuf.writeBytes(body);
+```
+
+可以看出，如果想实现 header 和 body 这两个 ByteBuf 的合并，需要先初始化一个新的 httpBuf，然后再将 header 和 body 分别拷贝到新的 httpBuf。合并过程中涉及两次 CPU 拷贝，这非常浪费性能。如果使用 CompositeByteBuf 如何实现类似的需求呢？如下所示：
+
+```java
+CompositeByteBuf httpBuf = Unpooled.compositeBuffer();
+
+httpBuf.addComponents(true, header, body);
+```
+
+CompositeByteBuf 通过调用 addComponents() 方法来添加多个 ByteBuf，但是底层的 byte 数组是复用的，不会发生内存拷贝。但对于用户来说，它可以当作一个整体进行操作。那么 CompositeByteBuf 内部是如何存放这些 ByteBuf，并且如何进行合并的呢？我们先通过一张图看下 CompositeByteBuf 的内部结构：
+
+<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Netty中的零拷贝.png" style="zoom: 33%;" />
+
+从图上可以看出，CompositeByteBuf 内部维护了一个 Components 数组。在每个 Component 中存放着不同的 ByteBuf，各个 ByteBuf 独立维护自己的读写索引，而 CompositeByteBuf 自身也会单独维护一个读写索引。由此可见，Component 是实现 CompositeByteBuf 的关键所在，下面看下 Component 结构定义：
+
+```cpp
+private static final class Component {
+
+    final ByteBuf srcBuf; // 原始的 ByteBuf
+
+    final ByteBuf buf; // srcBuf 去除包装之后的 ByteBuf
+
+    int srcAdjustment; // CompositeByteBuf 的起始索引相对于 srcBuf 读索引的偏移
+
+    int adjustment; // CompositeByteBuf 的起始索引相对于 buf 的读索引的偏移
+
+    int offset; // Component 相对于 CompositeByteBuf 的起始索引位置
+
+    int endOffset; // Component 相对于 CompositeByteBuf 的结束索引位置
+
+    // 省略其他代码
+
+}
+```
+
+为了方便理解上述 Component 中的属性含义，我同样以 HTTP 协议中 header 和 body 为示例，通过一张图来描述 CompositeByteBuf 组合后其中 Component 的布局情况，如下所示：
+
+<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Netty中的零拷贝01.png" style="zoom:33%;" />
+
+从图中可以看出，header 和 body 分别对应两个 ByteBuf，假设 ByteBuf 的内容分别为 “header” 和 “body”，那么 header ByteBuf 中 offset~endOffset 为 0~6，body ByteBuf 对应的 offset~endOffset 为 0~10。由此可见，Component 中的 offset 和 endOffset 可以表示当前 ByteBuf 可以读取的范围，通过 offset 和 endOffset 可以将每一个 Component 所对应的 ByteBuf 连接起来，形成一个逻辑整体。
+
+此外 Component 中 srcAdjustment 和 adjustment 表示 CompositeByteBuf 起始索引相对于 ByteBuf 读索引的偏移。初始 adjustment = readIndex - offset，这样通过 CompositeByteBuf 的起始索引就可以直接定位到 Component 中 ByteBuf 的读索引位置。当 header ByteBuf 读取 1 个字节，body ByteBuf 读取 2 个字节，此时每个 Component 的属性又会发生什么变化呢？如下图所示。
+
+<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Netty中的零拷贝02.png" style="zoom:33%;" />
+
+至此，CompositeByteBuf 的基本原理我们已经介绍完了，关于具体 CompositeByteBuf 数据操作的细节在这里就不做展开了，有兴趣的同学可以自己深入研究 CompositeByteBuf 的源码。
+
+###### Unpooled.wrappedBuffer 操作
+
+介绍完 CompositeByteBuf 之后，再来理解 Unpooled.wrappedBuffer 操作就非常容易了，Unpooled.wrappedBuffer 同时也是创建 CompositeByteBuf 对象的另一种推荐做法。
+
+Unpooled 提供了一系列用于包装数据源的 wrappedBuffer 方法，如下所示：
+
+<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Netty中的零拷贝03.png" style="zoom: 50%;" />
+
+Unpooled.wrappedBuffer 方法可以将不同的数据源的一个或者多个数据包装成一个大的 ByteBuf 对象，其中数据源的类型包括 byte[]、ByteBuf、ByteBuffer。包装的过程中不会发生数据拷贝操作，包装后生成的 ByteBuf 对象和原始 ByteBuf 对象是共享底层的 byte 数组。
+
+###### ByteBuf.slice 操作
+
+ByteBuf.slice 和 Unpooled.wrappedBuffer 的逻辑正好相反，ByteBuf.slice 是将一个 ByteBuf 对象切分成多个共享同一个底层存储的 ByteBuf 对象。
+
+ByteBuf 提供了两个 slice 切分方法:
+
+```csharp
+public ByteBuf slice();
+
+public ByteBuf slice(int index, int length);
+```
+
+假设我们已经有一份完整的 HTTP 数据，可以通过 slice 方法切分获得 header 和 body 两个 ByteBuf 对象，对应的内容分别为 “header” 和 “body”，实现方式如下：
+
+```java
+ByteBuf httpBuf = ...
+
+ByteBuf header = httpBuf.slice(0, 6);
+
+ByteBuf body = httpBuf.slice(6, 4);
+```
+
+通过 slice 切分后都会返回一个新的 ByteBuf 对象，而且新的对象有自己独立的 readerIndex、writerIndex 索引，如下图所示。由于新的 ByteBuf 对象与原始的 ByteBuf 对象数据是共享的，所以通过新的 ByteBuf 对象进行数据操作也会对原始 ByteBuf 对象生效。
+
+<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Netty中的零拷贝04.png" style="zoom:50%;" />
+
+###### 文件传输 FileRegion
+
+在 Netty 源码的 example 包中，提供了 FileRegion 的使用示例，以下代码片段摘自 FileServerHandler.java。
+
+```java
+@Override
+
+public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+
+    RandomAccessFile raf = null;
+
+    long length = -1;
+
+    try {
+
+        raf = new RandomAccessFile(msg, "r");
+
+        length = raf.length();
+
+    } catch (Exception e) {
+
+        ctx.writeAndFlush("ERR: " + e.getClass().getSimpleName() + ": " + e.getMessage() + '\n');
+
+        return;
+
+    } finally {
+
+        if (length < 0 && raf != null) {
+
+            raf.close();
+
+        }
+
+    }
+
+    ctx.write("OK: " + raf.length() + '\n');
+
+    if (ctx.pipeline().get(SslHandler.class) == null) {
+
+        // SSL not enabled - can use zero-copy file transfer.
+
+        ctx.write(new DefaultFileRegion(raf.getChannel(), 0, length));
+
+    } else {
+
+        // SSL enabled - cannot use zero-copy file transfer.
+
+        ctx.write(new ChunkedFile(raf));
+
+    }
+
+    ctx.writeAndFlush("\n");
+
+}
+```
+
+从 FileRegion 的使用示例可以看出，Netty 使用 FileRegion 实现文件传输的零拷贝。FileRegion 的默认实现类是 DefaultFileRegion，通过 DefaultFileRegion 将文件内容写入到 NioSocketChannel。那么 FileRegion 是如何实现零拷贝的呢？我们通过源码看看 FileRegion 到底使用了什么黑科技。
+
+```java
+public class DefaultFileRegion extends AbstractReferenceCounted implements FileRegion {
+
+    private final File f; // 传输的文件
+
+    private final long position; // 文件的起始位置
+
+    private final long count; // 传输的字节数
+
+    private long transferred; // 已经写入的字节数
+
+    private FileChannel file; // 文件对应的 FileChannel
+    @Override
+
+    public long transferTo(WritableByteChannel target, long position) throws IOException {
+
+        long count = this.count - position;
+
+        if (count < 0 || position < 0) {
+
+            throw new IllegalArgumentException(
+
+                    "position out of range: " + position +
+
+                    " (expected: 0 - " + (this.count - 1) + ')');
+
+        }
+
+        if (count == 0) {
+
+            return 0L;
+
+        }
+
+        if (refCnt() == 0) {
+
+            throw new IllegalReferenceCountException(0);
+
+        }
+
+        open();
+
+        long written = file.transferTo(this.position + position, count, target);
+
+        if (written > 0) {
+
+            transferred += written;
+
+        } else if (written == 0) {
+
+            validate(this, position);
+
+        }
+
+        return written;
+
+    }
+    // 省略其他代码
+
+}
+```
+
+从源码可以看出，FileRegion 其实就是对 FileChannel 的包装，并没有什么特殊操作，底层使用的是 JDK NIO 中的 FileChannel#transferTo() 方法实现文件传输，所以 FileRegion 是操作系统级别的零拷贝，对于传输大文件会很有帮助。
+
+
+
+
+
+
+
 ### 7.线程
 
 #### 线程创建相关类

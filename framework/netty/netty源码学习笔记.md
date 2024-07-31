@@ -4203,7 +4203,7 @@ private static final AtomicReferenceFieldUpdater<SingleThreadEventExecutor, Thre
 
 JDK 并发队列按照实现方式可以分为阻塞队列和非阻塞队列两种类型，阻塞队列是基于锁实现的，非阻塞队列是基于 CAS 操作实现的。
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Mpsc Queue.png" style="zoom: 50%;" />
+<img src=".\images\Mpsc Queue.png" style="zoom: 50%;" />
 
 ###### 阻塞队列
 
@@ -4227,7 +4227,7 @@ JDK 并发队列按照实现方式可以分为阻塞队列和非阻塞队列两�
 
 Mpsc 的全称是 Multi Producer Single Consumer，多生产者单消费者。Mpsc Queue 可以保证多个生产者同时访问队列是线程安全的，而且同一时刻只允许一个消费者从队列中读取数据。Netty Reactor 线程中任务队列 taskQueue 必须满足多个生产者可以同时提交任务，所以 JCTools 提供的 Mpsc Queue 非常适合 Netty Reactor 线程模型。
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Mpsc Queue01.png" style="zoom: 50%;" />
+<img src=".\images\Mpsc Queue01.png" style="zoom: 50%;" />
 
 除了顶层 JDK 原生的 AbstractCollection、AbstractQueue，MpscArrayQueue 还继承了很多类似于 MpscXxxPad 以及 MpscXxxField 的类。我们可以发现一个很有意思的规律，每个有包含属性的类后面都会被 MpscXxxPad 类隔开。MpscXxxPad 到底起到什么作用呢？我们自顶向下，将所有类的字段合并在一起，看下 MpscArrayQueue 的整体结构。
 
@@ -4299,7 +4299,7 @@ public class FalseSharingPadding {
 
 从上述代码中可以看出，变量 value 前后都填充了 7 个 long 类型的变量。这样不论在什么情况下，都可以保证在多线程访问 value 变量时，value 与其他不相关的变量处于不同的 Cache Line，如下图所示。
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\netty\images\Mpsc Queue03.png" style="zoom:50%;" />
+<img src=".\images\Mpsc Queue03.png" style="zoom:50%;" />
 
 ###### Mpsc Queue 源码分析
 

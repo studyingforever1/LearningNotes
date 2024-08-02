@@ -1,5 +1,8 @@
 package com.zcq.memory;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+
 import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -10,7 +13,22 @@ public class ReferenceTest {
     public static void main(String[] args) {
 
 //        testWeakReference();
-        testPhantomReference();
+//        testPhantomReference();
+        testLeakLog();
+
+    }
+
+    public static void testLeakLog() {
+
+        System.setProperty("io.netty.leakDetection.level", "PARANOID");
+
+        PooledByteBufAllocator pooledByteBufAllocator = new PooledByteBufAllocator(false);
+        ByteBuf buffer = pooledByteBufAllocator.buffer(16);
+        buffer = null;
+        System.gc();
+        for (int i = 0; i < 1000; i++) {
+            ByteBuf buffer2 = pooledByteBufAllocator.buffer(16);
+        }
     }
 
 

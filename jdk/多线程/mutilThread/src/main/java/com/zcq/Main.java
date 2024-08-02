@@ -71,6 +71,7 @@ public class Main {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
+                //jit开启才有效 否则就是putIntVolatile
                 unsafe.putOrderedInt(user, ageOffset, 18);
                 System.out.println(Thread.currentThread().getName() + ":" + unsafe.getInt(user, ageOffset) + "设置完了");
             }

@@ -2195,6 +2195,53 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             safeSetSuccess(promise);
         }
          
+        @Override
+        public final void write(Object msg, ChannelPromise promise) {
+            assertEventLoop();
+
+            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            if (outboundBuffer == null) {
+                // If the outboundBuffer is null we know the channel was closed and so
+                // need to fail the future right away. If it is not null the handling of the rest
+                // will be done in flush0()
+                // See https://github.com/netty/netty/issues/2362
+                safeSetFailure(promise, WRITE_CLOSED_CHANNEL_EXCEPTION);
+                // release message now to prevent resource-leak
+                ReferenceCountUtil.release(msg);
+                return;
+            }
+
+            int size;
+            try {
+                //过滤处理一下消息
+                msg = filterOutboundMessage(msg);
+                size = pipeline.estimatorHandle().size(msg);
+                if (size < 0) {
+                    size = 0;
+                }
+            } catch (Throwable t) {
+                safeSetFailure(promise, t);
+                ReferenceCountUtil.release(msg);
+                return;
+            }
+		   //加入到outboundBuffer的列表中
+            outboundBuffer.addMessage(msg, size, promise);
+        }
+         
+         
+        @Override
+        public final void flush() {
+            assertEventLoop();
+
+            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            if (outboundBuffer == null) {
+                return;
+            }
+		   //调用outboundBuffer的flush方法
+            outboundBuffer.addFlush();
+            flush0();
+        }
+ 
          
                  /**
          * Marks the specified {@code promise} as success.  If the {@code promise} is done already, log a message.
@@ -2213,6 +2260,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
             }
         }
+         
+         
          
          
      }
@@ -2486,6 +2535,104 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         }
     }
+    
+    
+    @Override
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        int writeSpinCount = -1;
+
+        boolean setOpWrite = false;
+        //循环对ChannelOutboundBuffer中的挂起写出数据处理
+        for (;;) {
+            Object msg = in.current();
+            if (msg == null) {
+                // Wrote all messages.
+                clearOpWrite();
+                // Directly return here so incompleteWrite(...) is not called.
+                return;
+            }
+
+            //如果当前数据属于ByteBuf类型
+            if (msg instanceof ByteBuf) {
+                ByteBuf buf = (ByteBuf) msg;
+                int readableBytes = buf.readableBytes();
+                if (readableBytes == 0) {
+                    in.remove();
+                    continue;
+                }
+
+                boolean done = false;
+                long flushedAmount = 0;
+                if (writeSpinCount == -1) {
+                    writeSpinCount = config().getWriteSpinCount();
+                }
+                //自旋写出writeSpinCount次 如果writeSpinCount次后还没写出去就不写了
+                for (int i = writeSpinCount - 1; i >= 0; i --) {
+                    //写出buf
+                    int localFlushedAmount = doWriteBytes(buf);
+                    if (localFlushedAmount == 0) {
+                        setOpWrite = true;
+                        break;
+                    }
+
+                    flushedAmount += localFlushedAmount;
+                    if (!buf.isReadable()) {
+                        done = true;
+                        break;
+                    }
+                }
+
+                in.progress(flushedAmount);
+
+                if (done) {
+                    in.remove();
+                } else {
+                    // Break the loop and so incompleteWrite(...) is called.
+                    break;
+                }
+            } else if (msg instanceof FileRegion) {
+                //如果数据属于FileRegion类型
+                FileRegion region = (FileRegion) msg;
+                boolean done = region.transferred() >= region.count();
+
+                if (!done) {
+                    long flushedAmount = 0;
+                    if (writeSpinCount == -1) {
+                        writeSpinCount = config().getWriteSpinCount();
+                    }
+
+                    for (int i = writeSpinCount - 1; i >= 0; i--) {
+                        //做文件的零拷贝传输
+                        long localFlushedAmount = doWriteFileRegion(region);
+                        if (localFlushedAmount == 0) {
+                            setOpWrite = true;
+                            break;
+                        }
+
+                        flushedAmount += localFlushedAmount;
+                        if (region.transferred() >= region.count()) {
+                            done = true;
+                            break;
+                        }
+                    }
+
+                    in.progress(flushedAmount);
+                }
+
+                if (done) {
+                    in.remove();
+                } else {
+                    // Break the loop and so incompleteWrite(...) is called.
+                    break;
+                }
+            } else {
+                // Should not reach here.
+                throw new Error();
+            }
+        }
+        incompleteWrite(setOpWrite);
+    }
+
 
 }
 ```
@@ -2515,7 +2662,259 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
 
 
+##### NioSocketChannel
 
+```java
+package io.netty.channel.socket.nio;
+
+
+public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
+    private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
+    
+    
+    @Override
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        for (;;) {
+            int size = in.size();
+            if (size == 0) {
+                // All written so clear OP_WRITE
+                clearOpWrite();
+                break;
+            }
+            long writtenBytes = 0;
+            boolean done = false;
+            boolean setOpWrite = false;
+
+            // Ensure the pending writes are made of ByteBufs only.
+            ByteBuffer[] nioBuffers = in.nioBuffers();
+            int nioBufferCnt = in.nioBufferCount();
+            long expectedWrittenBytes = in.nioBufferSize();
+            SocketChannel ch = javaChannel();
+
+            // Always us nioBuffers() to workaround data-corruption.
+            // See https://github.com/netty/netty/issues/2761
+            switch (nioBufferCnt) {
+                case 0:
+                    // We have something else beside ByteBuffers to write so fallback to normal writes.
+                    //实际写出数据调用父类的doWrite方法 对应AbstractNioByteChannel
+                    super.doWrite(in);
+                    return;
+                case 1:
+                    // Only one ByteBuf so use non-gathering write
+                    ByteBuffer nioBuffer = nioBuffers[0];
+                    for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                        final int localWrittenBytes = ch.write(nioBuffer);
+                        if (localWrittenBytes == 0) {
+                            setOpWrite = true;
+                            break;
+                        }
+                        expectedWrittenBytes -= localWrittenBytes;
+                        writtenBytes += localWrittenBytes;
+                        if (expectedWrittenBytes == 0) {
+                            done = true;
+                            break;
+                        }
+                    }
+                    break;
+                default:
+                    for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                        final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
+                        if (localWrittenBytes == 0) {
+                            setOpWrite = true;
+                            break;
+                        }
+                        expectedWrittenBytes -= localWrittenBytes;
+                        writtenBytes += localWrittenBytes;
+                        if (expectedWrittenBytes == 0) {
+                            done = true;
+                            break;
+                        }
+                    }
+                    break;
+            }
+
+            // Release the fully written buffers, and update the indexes of the partially written buffer.
+            in.removeBytes(writtenBytes);
+
+            if (!done) {
+                // Did not write all buffers completely.
+                incompleteWrite(setOpWrite);
+                break;
+            }
+        }
+    }
+    
+    
+    @Override
+    protected int doWriteBytes(ByteBuf buf) throws Exception {
+        final int expectedWrittenBytes = buf.readableBytes();
+        //对应channel写出expectedWrittenBytes个字节
+        return buf.readBytes(javaChannel(), expectedWrittenBytes);
+    }
+
+
+}
+```
+
+
+
+
+
+
+
+##### ChannelOutboundBuffer
+
+<img src=".\images\ChannelOutboundBuffer.png" style="zoom: 50%;" />
+
+```java
+package io.netty.channel;
+
+//用于存储其挂起的出站写入请求的 AbstractChannel 内部数据结构。
+//ChannelOutboundBuffer 包含三个非常重要的指针：第一个被写到缓冲区的节点 flushedEntry、第一个未被写到缓冲区的节点 unflushedEntry和最后一个节点 tailEntry。
+public final class ChannelOutboundBuffer {
+    
+    
+    // Entry(flushedEntry) --> ... Entry(unflushedEntry) --> ... Entry(tailEntry)
+    //
+    // The Entry that is the first in the linked-list structure that was flushed
+    //第一个被写到缓冲区的节点 flushedEntry
+    private Entry flushedEntry;
+    // The Entry which is the first unflushed in the linked-list structure
+    //第一个未被写到缓冲区的节点 unflushedEntry
+    private Entry unflushedEntry;
+    // The Entry which represents the tail of the buffer
+    //unflushedEntry和最后一个节点 tailEntry
+    private Entry tailEntry;
+    // The number of flushed entries that are not written yet
+    private int flushed;
+
+    
+    
+    //将要写出的消息加到链表中
+    public void addMessage(Object msg, int size, ChannelPromise promise) {
+        Entry entry = Entry.newInstance(msg, size, total(msg), promise);
+        //将当前节点链接到tailEntry上，unflushedEntry指向此节点
+        if (tailEntry == null) {
+            flushedEntry = null;
+            tailEntry = entry;
+        } else {
+            Entry tail = tailEntry;
+            tail.next = entry;
+            tailEntry = entry;
+        }
+        if (unflushedEntry == null) {
+            unflushedEntry = entry;
+        }
+
+        //增加挂起等待写出的数量
+        // increment pending bytes after adding message to the unflushed arrays.
+        // See https://github.com/netty/netty/issues/1619
+        incrementPendingOutboundBytes(size, false);
+    }
+    
+    
+    public void addFlush() {
+        // There is no need to process all entries if there was already a flush before and no new messages
+        // where added in the meantime.
+        //
+        // See https://github.com/netty/netty/issues/2577
+        //从unflushedEntry开始进行遍历写出
+        Entry entry = unflushedEntry;
+        if (entry != null) {
+            if (flushedEntry == null) {
+                // there is no flushedEntry yet, so start with the entry
+                //刷新节点的指针更新
+                flushedEntry = entry;
+            }
+            do {
+                //写出一个计数+1
+                flushed ++;
+                //设置promise的不可取消
+                if (!entry.promise.setUncancellable()) {
+                    // Was cancelled so make sure we free up memory and notify about the freed bytes
+                    int pending = entry.cancel();
+                    //减少挂起的字节数量
+                    decrementPendingOutboundBytes(pending, false, true);
+                }
+                entry = entry.next;
+            } while (entry != null);
+
+            // All flushed so reset unflushedEntry
+            unflushedEntry = null;
+        }
+    }
+    
+    	
+    private void decrementPendingOutboundBytes(long size, boolean invokeLater, boolean notifyWritability) {
+        if (size == 0) {
+            return;
+        }
+		
+        //挂起的字节数量-size
+        long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
+        if (notifyWritability && (newWriteBufferSize == 0
+            || newWriteBufferSize <= channel.config().getWriteBufferLowWaterMark())) {
+            setWritable(invokeLater);
+        }
+    }
+    
+    
+        @SuppressWarnings("deprecation")
+        protected void flush0() {
+            if (inFlush0) {
+                // Avoid re-entrance
+                return;
+            }
+
+            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            if (outboundBuffer == null || outboundBuffer.isEmpty()) {
+                return;
+            }
+
+            inFlush0 = true;
+
+            // Mark all pending write requests as failure if the channel is inactive.
+            if (!isActive()) {
+                try {
+                    if (isOpen()) {
+                        outboundBuffer.failFlushed(FLUSH0_NOT_YET_CONNECTED_EXCEPTION, true);
+                    } else {
+                        // Do not trigger channelWritabilityChanged because the channel is closed already.
+                        outboundBuffer.failFlushed(FLUSH0_CLOSED_CHANNEL_EXCEPTION, false);
+                    }
+                } finally {
+                    inFlush0 = false;
+                }
+                return;
+            }
+
+            //实际的写出方法
+            try {
+                doWrite(outboundBuffer);
+            } catch (Throwable t) {
+                if (t instanceof IOException && config().isAutoClose()) {
+                    /**
+                     * Just call {@link #close(ChannelPromise, Throwable, boolean)} here which will take care of
+                     * failing all flushed messages and also ensure the actual close of the underlying transport
+                     * will happen before the promises are notified.
+                     *
+                     * This is needed as otherwise {@link #isActive()} , {@link #isOpen()} and {@link #isWritable()}
+                     * may still return {@code true} even if the channel should be closed as result of the exception.
+                     */
+                    close(voidPromise(), t, FLUSH0_CLOSED_CHANNEL_EXCEPTION, false);
+                } else {
+                    outboundBuffer.failFlushed(t, true);
+                }
+            } finally {
+                inFlush0 = false;
+            }
+        }
+
+
+    
+}
+```
 
 
 
@@ -2625,6 +3024,10 @@ public interface ChannelPipeline
     .........
 }
 ```
+
+
+
+
 
 
 
@@ -2805,6 +3208,143 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
     
+    
+    
+       final class HeadContext extends AbstractChannelHandlerContext
+            implements ChannelOutboundHandler, ChannelInboundHandler {
+
+        private final Unsafe unsafe;
+
+        HeadContext(DefaultChannelPipeline pipeline) {
+            super(pipeline, null, HEAD_NAME, false, true);
+            unsafe = pipeline.channel().unsafe();
+            setAddComplete();
+        }
+
+        @Override
+        public ChannelHandler handler() {
+            return this;
+        }
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            // NOOP
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            // NOOP
+        }
+
+        @Override
+        public void bind(
+                ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise)
+                throws Exception {
+            unsafe.bind(localAddress, promise);
+        }
+
+        @Override
+        public void connect(
+                ChannelHandlerContext ctx,
+                SocketAddress remoteAddress, SocketAddress localAddress,
+                ChannelPromise promise) throws Exception {
+            unsafe.connect(remoteAddress, localAddress, promise);
+        }
+
+        @Override
+        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            unsafe.disconnect(promise);
+        }
+
+        @Override
+        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            unsafe.close(promise);
+        }
+
+        @Override
+        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            unsafe.deregister(promise);
+        }
+
+        @Override
+        public void read(ChannelHandlerContext ctx) {
+            unsafe.beginRead();
+        }
+
+        @Override
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            //调用和channel绑定的unsafe的write方法
+            unsafe.write(msg, promise);
+        }
+
+        @Override
+        public void flush(ChannelHandlerContext ctx) throws Exception {
+            //调用和channel绑定的unsafe的flush方法
+            unsafe.flush();
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            ctx.fireExceptionCaught(cause);
+        }
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+            invokeHandlerAddedIfNeeded();
+            ctx.fireChannelRegistered();
+        }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireChannelUnregistered();
+
+            // Remove all handlers sequentially if channel is closed and unregistered.
+            if (!channel.isOpen()) {
+                destroy();
+            }
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireChannelActive();
+
+            readIfIsAutoRead();
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireChannelInactive();
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            ctx.fireChannelRead(msg);
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireChannelReadComplete();
+
+            readIfIsAutoRead();
+        }
+
+        private void readIfIsAutoRead() {
+            if (channel.config().isAutoRead()) {
+                channel.read();
+            }
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            ctx.fireUserEventTriggered(evt);
+        }
+
+        @Override
+        public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireChannelWritabilityChanged();
+        }
+    }
+
     
 
 }
@@ -3378,7 +3918,83 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
     }
     
+ 
+     //writeAndFlush实现
+    @Override
+    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+        if (msg == null) {
+            throw new NullPointerException("msg");
+        }
+
+        if (!validatePromise(promise, true)) {
+            ReferenceCountUtil.release(msg);
+            // cancelled
+            return promise;
+        }
+	
+        //调用write方法
+        write(msg, true, promise);
+
+        return promise;
+    }
     
+    
+    private void write(Object msg, boolean flush, ChannelPromise promise) {
+        //找到下一个实现了outbound的context
+        AbstractChannelHandlerContext next = findContextOutbound();
+        final Object m = pipeline.touch(msg, next);
+        EventExecutor executor = next.executor();
+        if (executor.inEventLoop()) {
+            if (flush) {
+                //调用writeAndFlush方法
+                next.invokeWriteAndFlush(m, promise);
+            } else {
+                next.invokeWrite(m, promise);
+            }
+        } else {
+            AbstractWriteTask task;
+            if (flush) {
+                task = WriteAndFlushTask.newInstance(next, m, promise);
+            }  else {
+                task = WriteTask.newInstance(next, m, promise);
+            }
+            safeExecute(executor, task, promise, m);
+        }
+    }
+    
+    
+    private void invokeWriteAndFlush(Object msg, ChannelPromise promise) {
+        if (invokeHandler()) {
+            //先调用write方法
+            invokeWrite0(msg, promise);
+            //然后调用flush方法
+            invokeFlush0();
+        } else {
+            writeAndFlush(msg, promise);
+        }
+    }
+    
+    
+    private void invokeWrite0(Object msg, ChannelPromise promise) {
+        try {
+            //这里就直接去DefaultChannelPipeline的HeadContext中去看
+            ((ChannelOutboundHandler) handler()).write(this, msg, promise);
+        } catch (Throwable t) {
+            notifyOutboundHandlerException(t, promise);
+        }
+    }
+    
+    private void invokeFlush0() {
+        try {
+            //这里就直接去DefaultChannelPipeline的HeadContext中去看
+            ((ChannelOutboundHandler) handler()).flush(this);
+        } catch (Throwable t) {
+            notifyHandlerException(t);
+        }
+    }
+
+    
+}
     
 
 ```

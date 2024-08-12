@@ -1990,9 +1990,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
 
 ##### AbstractChannel
 
-Channel的骨架实现
-
-//？？？？ 这里越过了部分内存buffer操作的代码 以事件循环的代码为主 后续再补
+Channel的骨架实现 每个channel中都包含着一个AbstractUnsafe类 在NIO其中服务端的子类是NioMessageUnsafe，客户端的子类是NioByteUnsafe
 
 ```java
 package io.netty.channel;
@@ -2230,7 +2228,294 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
 ##### AbstractNioChannel
 
+```java
+package io.netty.channel.nio;
+
+/**
+AbstractNioChannel的两个子类决定了不同的感兴趣事件注册
+用于客户端的AbstractNioByteChannel
+用于服务端的AbstractNioMessageChannel
+**/
+public abstract class AbstractNioChannel extends AbstractChannel {
+    
+    private final SelectableChannel ch;
+    protected final int readInterestOp;
+    volatile SelectionKey selectionKey;
+    boolean readPending;
+
+
+    /**
+     * The future of the current connection attempt.  If not null, subsequent
+     * connection attempts will fail.
+     */
+    private ChannelPromise connectPromise;
+    private ScheduledFuture<?> connectTimeoutFuture;
+    private SocketAddress requestedRemoteAddress;
+    
+    //初始化感兴趣的事件
+    protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
+        super(parent);
+        this.ch = ch;
+        this.readInterestOp = readInterestOp;
+        try {
+            ch.configureBlocking(false);
+        } catch (IOException e) {
+            try {
+                ch.close();
+            } catch (IOException e2) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "Failed to close a partially initialized socket.", e2);
+                }
+            }
+
+            throw new ChannelException("Failed to enter non-blocking mode.", e);
+        }
+    }
+}
+```
+
+##### AbstractNioMessageChannel
+
+```java
+package io.netty.channel.nio;
+
+
+//服务端的channel
+public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
+    boolean inputShutdown;
+    
+     protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
+        super(parent, ch, readInterestOp);
+    }
+
+    @Override
+    protected AbstractNioUnsafe newUnsafe() {
+        return new NioMessageUnsafe();
+    }
+    
+        private final class NioMessageUnsafe extends AbstractNioUnsafe {
+
+        private final List<Object> readBuf = new ArrayList<Object>();
+
+        @Override
+        public void read() {
+            assert eventLoop().inEventLoop();
+            final ChannelConfig config = config();
+            final ChannelPipeline pipeline = pipeline();
+            final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+            allocHandle.reset(config);
+
+            boolean closed = false;
+            Throwable exception = null;
+            try {
+                try {
+                    do {
+                        int localRead = doReadMessages(readBuf);
+                        if (localRead == 0) {
+                            break;
+                        }
+                        if (localRead < 0) {
+                            closed = true;
+                            break;
+                        }
+
+                        allocHandle.incMessagesRead(localRead);
+                    } while (allocHandle.continueReading());
+                } catch (Throwable t) {
+                    exception = t;
+                }
+
+                int size = readBuf.size();
+                for (int i = 0; i < size; i ++) {
+                    readPending = false;
+                    pipeline.fireChannelRead(readBuf.get(i));
+                }
+                readBuf.clear();
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
+
+                if (exception != null) {
+                    if (exception instanceof IOException && !(exception instanceof PortUnreachableException)) {
+                        // ServerChannel should not be closed even on IOException because it can often continue
+                        // accepting incoming connections. (e.g. too many open files)
+                        closed = !(AbstractNioMessageChannel.this instanceof ServerChannel);
+                    }
+
+                    pipeline.fireExceptionCaught(exception);
+                }
+
+                if (closed) {
+                    inputShutdown = true;
+                    if (isOpen()) {
+                        close(voidPromise());
+                    }
+                }
+            } finally {
+                // Check if there is a readPending which was not processed yet.
+                // This could be for two reasons:
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+                //
+                // See https://github.com/netty/netty/issues/2254
+                if (!readPending && !config.isAutoRead()) {
+                    removeReadOp();
+                }
+            }
+        }
+    }
+}
+```
+
+
+
+
+
+
+
+##### AbstractNioByteChannel
+
+```java
+package io.netty.channel.nio;
+
+//用于客户端的channel
+public abstract class AbstractNioByteChannel extends AbstractNioChannel {
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
+    private static final String EXPECTED_TYPES =
+            " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
+            StringUtil.simpleClassName(FileRegion.class) + ')';
+
+    private Runnable flushTask;
+
+    /**
+     * Create a new instance
+     *
+     * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
+     * @param ch                the underlying {@link SelectableChannel} on which it operates
+     */
+    protected AbstractNioByteChannel(Channel parent, SelectableChannel ch) {
+        //感兴趣事件为read
+        super(parent, ch, SelectionKey.OP_READ);
+    }
+    
+    @Override
+    protected AbstractNioUnsafe newUnsafe() {
+        return new NioByteUnsafe();
+    }
+
+    
+    protected class NioByteUnsafe extends AbstractNioUnsafe {
+
+        private void closeOnRead(ChannelPipeline pipeline) {
+            if (isOpen()) {
+                if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                    shutdownInput();
+                    SelectionKey key = selectionKey();
+                    key.interestOps(key.interestOps() & ~readInterestOp);
+                    pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                } else {
+                    close(voidPromise());
+                }
+            }
+        }
+
+        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
+                RecvByteBufAllocator.Handle allocHandle) {
+            if (byteBuf != null) {
+                if (byteBuf.isReadable()) {
+                    readPending = false;
+                    pipeline.fireChannelRead(byteBuf);
+                } else {
+                    byteBuf.release();
+                }
+            }
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+            pipeline.fireExceptionCaught(cause);
+            if (close || cause instanceof IOException) {
+                closeOnRead(pipeline);
+            }
+        }
+
+        @Override
+        public final void read() {
+            final ChannelConfig config = config();
+            final ChannelPipeline pipeline = pipeline();
+            final ByteBufAllocator allocator = config.getAllocator();
+            final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+            allocHandle.reset(config);
+
+            ByteBuf byteBuf = null;
+            boolean close = false;
+            try {
+                do {
+                    byteBuf = allocHandle.allocate(allocator);
+                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                    if (allocHandle.lastBytesRead() <= 0) {
+                        // nothing was read. release the buffer.
+                        byteBuf.release();
+                        byteBuf = null;
+                        close = allocHandle.lastBytesRead() < 0;
+                        break;
+                    }
+
+                    allocHandle.incMessagesRead(1);
+                    readPending = false;
+                    pipeline.fireChannelRead(byteBuf);
+                    byteBuf = null;
+                } while (allocHandle.continueReading());
+
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
+
+                if (close) {
+                    closeOnRead(pipeline);
+                }
+            } catch (Throwable t) {
+                handleReadException(pipeline, byteBuf, t, close, allocHandle);
+            } finally {
+                // Check if there is a readPending which was not processed yet.
+                // This could be for two reasons:
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+                //
+                // See https://github.com/netty/netty/issues/2254
+                if (!readPending && !config.isAutoRead()) {
+                    removeReadOp();
+                }
+            }
+        }
+    }
+
+}
+```
+
+
+
+
+
 ##### NioServerSocketChannel
+
+```java
+package io.netty.channel.socket.nio;
+
+public class NioServerSocketChannel extends AbstractNioMessageChannel
+                             implements io.netty.channel.socket.ServerSocketChannel {
+
+    
+    public NioServerSocketChannel(ServerSocketChannel channel) {
+        //感兴趣事件为accept
+        super(null, channel, SelectionKey.OP_ACCEPT);
+        config = new NioServerSocketChannelConfig(this, javaChannel().socket());
+    }
+
+
+}
+```
+
+
+
+
 
 
 
@@ -7372,11 +7657,13 @@ public class ResourceLeakDetector<T> {
 
 
 
+##### 接收缓存分配器
+
+###### RecvByteBufAllocator
 
 
-###### DefaultResourceLeak
 
-
+###### DefaultMaxBytesRecvByteBufAllocator
 
 
 
@@ -9207,6 +9494,548 @@ public final class ThreadDeathWatcher {
 
 
 ### 8.编解码器
+
+编解码器主要由以下四种类型组成
+
+- ByteToMessageDecoder 字节转换成实体的解码器
+- MessageToByteEncoder 实体转换成字节的编码器
+- MessageToMessageDecoder 实体转换成实体的解码器
+- MessageToMessageEncoder 实体转换成实体的编码器
+
+##### HttpServerCodec
+
+```java
+package io.netty.handler.codec.http;
+
+//服务端编解码器的组合 CombinedChannelDuplexHandler代表处理双工处理
+public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequestDecoder, HttpResponseEncoder>
+        implements HttpServerUpgradeHandler.SourceCodec {
+
+    //最大请求行大小、最大请求头大小、最大请求体大小
+    //使用默认解码器选项 （maxInitialLineLength (4096}、 maxHeaderSize (8192)和 maxChunkSize (8192)）创建新实例。
+    public HttpServerCodec() {
+        this(4096, 8192, 8192);
+    }
+    
+    //核心处理编解码的是HttpRequestDecoder和HttpResponseEncoder
+    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
+        super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize), new HttpResponseEncoder());
+    }
+}    
+```
+
+##### CombinedChannelDuplexHandler
+
+
+
+```java
+package io.netty.channel;
+
+//将 ChannelInboundHandler 和 ChannelOutboundHandler 合二为一 ChannelHandler。
+public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O extends ChannelOutboundHandler>
+        extends ChannelDuplexHandler {
+    
+     //实际上就是对outbound和inbound进行了封装
+    private DelegatingChannelHandlerContext inboundCtx;
+    private DelegatingChannelHandlerContext outboundCtx;
+    private volatile boolean handlerAdded;
+
+    //实际上就是对outbound和inbound进行了封装
+    private I inboundHandler;
+    private O outboundHandler;
+    
+    public CombinedChannelDuplexHandler(I inboundHandler, O outboundHandler) {
+        init(inboundHandler, outboundHandler);
+    }
+
+    //初始化赋值
+    protected final void init(I inboundHandler, O outboundHandler) {
+        validate(inboundHandler, outboundHandler);
+        this.inboundHandler = inboundHandler;
+        this.outboundHandler = outboundHandler;
+    }
+
+}
+```
+
+##### HttpRequestDecoder
+
+```java
+package io.netty.handler.codec.http;
+
+/**
+将 ByteBuf 解码为 HttpRequest 和 HttpContent
+
+maxInitialLineLength
+初始行的最大长度（例如“GET / HTTP/ 1.0”）如果初始行的长度超过此值，将引发 TooLongFrameException。
+
+maxHeaderSize
+所有标头的最大长度。如果每个标头的长度总和超过此值，将引发 TooLongFrameException。
+
+maxChunkSize
+内容或每个块的最大长度。如果内容长度超过此值，则解码请求的传输编码将转换为“分块”，内容将拆分为多个 HttpContents。如果 HTTP 请求的传输编码已经是“分块”，则如果块的长度超过此值，则每个块将被拆分为较小的块。如果您不想在处理程序中处理 HttpContents，请在 ChannelPipeline 中的此解码器之后插入 HttpObjectAggregator。
+
+**/
+
+public class HttpRequestDecoder extends HttpObjectDecoder {
+
+   public HttpRequestDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true);
+    }
+
+    //包装请求头的方法
+    @Override
+    protected HttpMessage createMessage(String[] initialLine) throws Exception {
+        return new DefaultHttpRequest(
+                HttpVersion.valueOf(initialLine[2]),
+                HttpMethod.valueOf(initialLine[0]), initialLine[1], validateHeaders);
+    }
+}
+```
+
+##### HttpObjectDecoder
+
+```java
+package io.netty.handler.codec.http;
+
+/**
+HttpRequestDecoder触发器生成 3 个对象：
+	一个 HttpRequest，
+	第一个 HttpContent 其内容是 'abcdefghijklmnopqrstuvwxyz'，
+	第二个 LastHttpContent 内容是 '1234567890abcdef'，它标志着内容的结束。
+**/
+
+public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
+    
+    private static final String EMPTY_VALUE = "";
+
+    private final int maxChunkSize;
+    private final boolean chunkedSupported;
+    protected final boolean validateHeaders;
+    //解析请求头的解析器
+    private final HeaderParser headerParser;
+    //解析请求行的解析器
+    private final LineParser lineParser;
+
+    //请求头
+    private HttpMessage message;
+    private long chunkSize;
+    private long contentLength = Long.MIN_VALUE;
+    private volatile boolean resetRequested;
+
+    //解析请求头时赋值的属性 
+    // These will be updated by splitHeader(...)
+    private CharSequence name;
+    private CharSequence value;
+
+    private LastHttpContent trailer;
+    
+    //用于处理状态机流转的状态
+    private enum State {
+        SKIP_CONTROL_CHARS,
+        READ_INITIAL,
+        READ_HEADER,
+        READ_VARIABLE_LENGTH_CONTENT,
+        READ_FIXED_LENGTH_CONTENT,
+        READ_CHUNK_SIZE,
+        READ_CHUNKED_CONTENT,
+        READ_CHUNK_DELIMITER,
+        READ_CHUNK_FOOTER,
+        BAD_MESSAGE,
+        UPGRADED
+    }
+
+    //当前状态
+    private State currentState = State.SKIP_CONTROL_CHARS;
+
+    protected HttpObjectDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean chunkedSupported) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, true);
+    }
+    
+    @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+        
+        //是否重置请求
+        if (resetRequested) {
+            resetNow();
+        }
+        
+		//基于状态机来处理http请求
+        switch (currentState) {
+            //如果是处理控制字符状态 
+            case SKIP_CONTROL_CHARS: {
+                //跳过所有的空白行和控制字符
+                if (!skipControlCharacters(buffer)) {
+                    return;
+                }
+                //状态更新为读取请求行
+                currentState = State.READ_INITIAL;
+            }
+            case READ_INITIAL: try {
+                //利用解析器进行解析请求行 本质是根据CRLF /r/n进行截取数据处理
+                AppendableCharSequence line = lineParser.parse(buffer);
+                //不足一行直接返回 等待上层更多数据到达聚合
+                if (line == null) {
+                    return;
+                }
+                //拆分成GET /xxx  HTTP/1.1这样的格式
+                String[] initialLine = splitInitialLine(line);
+                if (initialLine.length < 3) {
+                    // Invalid initial line - ignore.
+                    currentState = State.SKIP_CONTROL_CHARS;
+                    return;
+                }
+			   //创建DefaultHttpRequest包装请求行
+                message = createMessage(initialLine);
+                //状态设置为读请求头
+                currentState = State.READ_HEADER;
+                // fall-through
+            } catch (Exception e) {
+                out.add(invalidMessage(buffer, e));
+                return;
+            }
+            case READ_HEADER: try {
+                //利用解析器读取请求行
+                State nextState = readHeaders(buffer);
+                if (nextState == null) {
+                    return;
+                }
+                currentState = nextState;
+                switch (nextState) {
+                case SKIP_CONTROL_CHARS:
+                    // fast-path
+                    // No content is expected.
+                    out.add(message);
+                    out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                    resetNow();
+                    return;
+                case READ_CHUNK_SIZE:
+                    if (!chunkedSupported) {
+                        throw new IllegalArgumentException("Chunked messages not supported");
+                    }
+                    // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
+                    out.add(message);
+                    return;
+                default:
+                    /**
+                     * <a href="https://tools.ietf.org/html/rfc7230#section-3.3.3">RFC 7230, 3.3.3</a> states that if a
+                     * request does not have either a transfer-encoding or a content-length header then the message body
+                     * length is 0. However for a response the body length is the number of octets received prior to the
+                     * server closing the connection. So we treat this as variable length chunked encoding.
+                     */
+                    long contentLength = contentLength();
+                    if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
+                        out.add(message);
+                        out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                        resetNow();
+                        return;
+                    }
+
+                    assert nextState == State.READ_FIXED_LENGTH_CONTENT ||
+                            nextState == State.READ_VARIABLE_LENGTH_CONTENT;
+
+                    out.add(message);
+
+                    if (nextState == State.READ_FIXED_LENGTH_CONTENT) {
+                        // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT state reads data chunk by chunk.
+                        chunkSize = contentLength;
+                    }
+
+                    // We return here, this forces decode to be called again where we will decode the content
+                    return;
+            }
+        } catch (Exception e) {
+            out.add(invalidMessage(buffer, e));
+            return;
+        }
+        case READ_VARIABLE_LENGTH_CONTENT: {
+            // Keep reading data as a chunk until the end of connection is reached.
+            int toRead = Math.min(buffer.readableBytes(), maxChunkSize);
+            if (toRead > 0) {
+                ByteBuf content = buffer.readRetainedSlice(toRead);
+                out.add(new DefaultHttpContent(content));
+            }
+            return;
+        }
+        case READ_FIXED_LENGTH_CONTENT: {
+            int readLimit = buffer.readableBytes();
+
+            // Check if the buffer is readable first as we use the readable byte count
+            // to create the HttpChunk. This is needed as otherwise we may end up with
+            // create a HttpChunk instance that contains an empty buffer and so is
+            // handled like it is the last HttpChunk.
+            //
+            // See https://github.com/netty/netty/issues/433
+            if (readLimit == 0) {
+                return;
+            }
+
+            int toRead = Math.min(readLimit, maxChunkSize);
+            if (toRead > chunkSize) {
+                toRead = (int) chunkSize;
+            }
+            ByteBuf content = buffer.readRetainedSlice(toRead);
+            chunkSize -= toRead;
+
+            if (chunkSize == 0) {
+                // Read all content.
+                out.add(new DefaultLastHttpContent(content, validateHeaders));
+                resetNow();
+            } else {
+                out.add(new DefaultHttpContent(content));
+            }
+            return;
+        }
+        /**
+         * everything else after this point takes care of reading chunked content. basically, read chunk size,
+         * read chunk, read and ignore the CRLF and repeat until 0
+         */
+        case READ_CHUNK_SIZE: try {
+            AppendableCharSequence line = lineParser.parse(buffer);
+            if (line == null) {
+                return;
+            }
+            int chunkSize = getChunkSize(line.toString());
+            this.chunkSize = chunkSize;
+            if (chunkSize == 0) {
+                currentState = State.READ_CHUNK_FOOTER;
+                return;
+            }
+            currentState = State.READ_CHUNKED_CONTENT;
+            // fall-through
+        } catch (Exception e) {
+            out.add(invalidChunk(buffer, e));
+            return;
+        }
+        case READ_CHUNKED_CONTENT: {
+            assert chunkSize <= Integer.MAX_VALUE;
+            int toRead = Math.min((int) chunkSize, maxChunkSize);
+            toRead = Math.min(toRead, buffer.readableBytes());
+            if (toRead == 0) {
+                return;
+            }
+            HttpContent chunk = new DefaultHttpContent(buffer.readRetainedSlice(toRead));
+            chunkSize -= toRead;
+
+            out.add(chunk);
+
+            if (chunkSize != 0) {
+                return;
+            }
+            currentState = State.READ_CHUNK_DELIMITER;
+            // fall-through
+        }
+        case READ_CHUNK_DELIMITER: {
+            final int wIdx = buffer.writerIndex();
+            int rIdx = buffer.readerIndex();
+            while (wIdx > rIdx) {
+                byte next = buffer.getByte(rIdx++);
+                if (next == HttpConstants.LF) {
+                    currentState = State.READ_CHUNK_SIZE;
+                    break;
+                }
+            }
+            buffer.readerIndex(rIdx);
+            return;
+        }
+        case READ_CHUNK_FOOTER: try {
+            LastHttpContent trailer = readTrailingHeaders(buffer);
+            if (trailer == null) {
+                return;
+            }
+            out.add(trailer);
+            resetNow();
+            return;
+        } catch (Exception e) {
+            out.add(invalidChunk(buffer, e));
+            return;
+        }
+        case BAD_MESSAGE: {
+            // Keep discarding until disconnection.
+            buffer.skipBytes(buffer.readableBytes());
+            break;
+        }
+        case UPGRADED: {
+            int readableBytes = buffer.readableBytes();
+            if (readableBytes > 0) {
+                // Keep on consuming as otherwise we may trigger an DecoderException,
+                // other handler will replace this codec with the upgraded protocol codec to
+                // take the traffic over at some point then.
+                // See https://github.com/netty/netty/issues/2173
+                out.add(buffer.readBytes(readableBytes));
+            }
+            break;
+        }
+        }
+    }
+
+    
+}
+```
+
+##### ByteToMessageDecoder
+
+```java
+package io.netty.handler.codec;
+
+public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
+    
+    //处理byte转换成message的逻辑
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (msg instanceof ByteBuf) {
+            //转换结果的列表
+            CodecOutputList out = CodecOutputList.newInstance();
+            try {
+                ByteBuf data = (ByteBuf) msg;
+                first = cumulation == null;
+                if (first) {
+                    cumulation = data;
+                } else {
+                    //聚合多次读取的数据
+                    cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
+                }
+                callDecode(ctx, cumulation, out);
+            } catch (DecoderException e) {
+                throw e;
+            } catch (Throwable t) {
+                throw new DecoderException(t);
+            } finally {
+                //如果数据已经被读取了 那么直接释放
+                if (cumulation != null && !cumulation.isReadable()) {
+                    numReads = 0;
+                    cumulation.release();
+                    cumulation = null;
+                } else if (++ numReads >= discardAfterReads) {
+                    //当读取次数超过一定次数后，byte数据还没有被读取，那么丢掉
+                    // We did enough reads already try to discard some bytes so we not risk to see a OOME.
+                    // See https://github.com/netty/netty/issues/4275
+                    numReads = 0;
+                    discardSomeReadBytes();
+                }
+
+                //数据解码完成了 走后续的channelRead流程
+                int size = out.size();
+                decodeWasNull = !out.insertSinceRecycled();
+                fireChannelRead(ctx, out, size);
+                out.recycle();
+            }
+        } else {
+            ctx.fireChannelRead(msg);
+        }
+    }
+    
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+        try {
+            //可读就循环读
+            while (in.isReadable()) {
+                int outSize = out.size();
+
+                //如果已经有解码出来的实体了 那么先处理实体
+                if (outSize > 0) {
+                    fireChannelRead(ctx, out, outSize);
+                    out.clear();
+
+                    // Check if this handler was removed before continuing with decoding.
+                    // If it was removed, it is not safe to continue to operate on the buffer.
+                    //
+                    // See:
+                    // - https://github.com/netty/netty/issues/4635
+                    if (ctx.isRemoved()) {
+                        break;
+                    }
+                    outSize = 0;
+                }
+
+                //进行解码流程
+                int oldInputLength = in.readableBytes();
+                decode(ctx, in, out);
+
+                // Check if this handler was removed before continuing the loop.
+                // If it was removed, it is not safe to continue to operate on the buffer.
+                //
+                // See https://github.com/netty/netty/issues/1664
+                //如果ctx被移除了 那么就返回
+                if (ctx.isRemoved()) {
+                    break;
+                }
+			   //如果没解析出实体来 也没读取任何数据 也返回
+                if (outSize == out.size()) {
+                    if (oldInputLength == in.readableBytes()) {
+                        break;
+                    } else {
+                        continue;
+                    }
+                }
+
+                if (oldInputLength == in.readableBytes()) {
+                    throw new DecoderException(
+                            StringUtil.simpleClassName(getClass()) +
+                            ".decode() did not read anything but decoded a message.");
+                }
+
+                //是否是单次解码
+                if (isSingleDecode()) {
+                    break;
+                }
+            }
+        } catch (DecoderException e) {
+            throw e;
+        } catch (Throwable cause) {
+            throw new DecoderException(cause);
+        }
+    }
+
+
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##### 相关知识
+
+###### http解码中处理粘包问题
+
+由于http协议实际上是以/r/n做分割的纯文本协议 对于每一行数据 都使用/r/n的形式进行分割，所以利用HttpObjectDecoder，可以对数据做切割，当没有读到CRLF的换行符时，将不对整个数据做处理，返回上层，等待更多数据再处理。
+
+```http
+GET /xxx/query?xxx=1 HTTP/1.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: zh-CN,zh;q=0.9
+Cache-Control: no-cache
+Connection: keep-alive
+Cookie: MCITY=-131%3A; BAIDUID=4BCD5A098BB6EBBF01B8D9E721EDCD9C:FG=1; 
+Host: www.baidu.com
+Pragma: no-cache
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: none
+Sec-Fetch-User: ?1
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36
+sec-ch-ua: "Not)A;Brand";v="99", "Google Chrome";v="127", "Chromium";v="127"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Windows"
+```
+
+
 
 
 

@@ -17,7 +17,6 @@ public class CodecTest {
 
         SSLContext sslContext = null;
 
-
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.group(new NioEventLoopGroup(), new NioEventLoopGroup())
                 .channel(NioServerSocketChannel.class)

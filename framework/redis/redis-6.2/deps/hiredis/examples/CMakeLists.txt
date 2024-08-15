@@ -10,8 +10,8 @@ if (GLIB2_FOUND)
 ENDIF(GLIB2_FOUND)
 
 FIND_PATH(LIBEV ev.h
-    HINTS /usr/local /usr/opt/local
-    ENV LIBEV_INCLUDE_DIR)
+        HINTS /usr/local /usr/opt/local
+        ENV LIBEV_INCLUDE_DIR)
 
 if (LIBEV)
     # Just compile and link with libev

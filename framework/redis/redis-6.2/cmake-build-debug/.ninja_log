@@ -132,3 +132,7 @@
 426	847	1723683089281659800	deps/linenoise/liblinenoise.a	caf1e2a369ef0b89
 178	986	1723683089025920300	CMakeFiles/redis-server.dir/src/t_stream.c.o	2ab255f2d915d6f5
 987	1692	1723683089833257800	/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.exe	7bacf359c5ad406
+92	963	1723683851141831300	CMakeFiles/redis-server.dir/src/server.c.o	10cddc7b13303215
+964	1531	1723683852012278200	/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.exe	7bacf359c5ad406
+71	815	1723683897350207000	CMakeFiles/redis-server.dir/src/server.c.o	10cddc7b13303215
+815	1346	1723683898093942100	/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.exe	7bacf359c5ad406

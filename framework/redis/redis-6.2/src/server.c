@@ -6268,6 +6268,8 @@ int main(int argc, char **argv) {
     }
 #endif
 
+    printf("redis服务启动！\n");
+
     /* We need to initialize our libraries, and the server configuration. */
 #ifdef INIT_SETPROCTITLE_REPLACEMENT
     spt_init(argc, argv);

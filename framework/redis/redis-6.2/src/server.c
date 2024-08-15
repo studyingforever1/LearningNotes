@@ -3220,6 +3220,7 @@ void initServer(void) {
             strerror(errno));
         exit(1);
     }
+    //数据库一共16个数据库 sizeof(redisDb) * 16
     server.db = zmalloc(sizeof(redisDb)*server.dbnum);
 
     /* Open the TCP listening socket for the user commands. */

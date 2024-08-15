@@ -53,8 +53,8 @@ malloc_conf_unusuals = [
 ]
 
 all_unusuals = (
-    [os_unusual] + [compilers_unusual] + compiler_flag_unusuals
-    + configure_flag_unusuals + malloc_conf_unusuals
+        [os_unusual] + [compilers_unusual] + compiler_flag_unusuals
+        + configure_flag_unusuals + malloc_conf_unusuals
 )
 
 unusual_combinations_to_test = []
@@ -81,8 +81,8 @@ for unusual_combination in unusual_combinations_to_test:
         x for x in unusual_combination if x in malloc_conf_unusuals]
     # Filter out unsupported configurations on OS X.
     if os == 'osx' and ('dss:primary' in malloc_conf or \
-      'percpu_arena:percpu' in malloc_conf or 'background_thread:true' \
-      in malloc_conf):
+                        'percpu_arena:percpu' in malloc_conf or 'background_thread:true' \
+                        in malloc_conf):
         continue
     if len(malloc_conf) > 0:
         configure_flags.append('--with-malloc-conf=' + ",".join(malloc_conf))
@@ -93,15 +93,16 @@ for unusual_combination in unusual_combinations_to_test:
 
     # We get some spurious errors when -Warray-bounds is enabled.
     env_string = ('{} COMPILER_FLAGS="{}" CONFIGURE_FLAGS="{}" '
-	'EXTRA_CFLAGS="-Werror -Wno-array-bounds"').format(
+                  'EXTRA_CFLAGS="-Werror -Wno-array-bounds"').format(
         compilers, " ".join(compiler_flags), " ".join(configure_flags))
 
     include_rows += '    - os: %s\n' % os
     include_rows += '      env: %s\n' % env_string
     if '-m32' in unusual_combination and os == 'linux':
         include_rows += '      addons:\n'
-	include_rows += '        apt:\n'
-	include_rows += '          packages:\n'
-	include_rows += '            - gcc-multilib\n'
+        include_rows += '        apt:\n'
+        include_rows += '          packages:\n'
+        include_rows += '            - gcc-multilib\n'
 
-print travis_template % include_rows
+print
+travis_template % include_rows

@@ -135,7 +135,7 @@ set(SRC_CLI
 )
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     # better not to work with jemalloc
-endif()
+endif ()
 set(EXECUTABLE_OUTPUT_PATH src)
 add_executable(redis-server ${SRC_SERVER})
 add_executable(redis-cli ${SRC_CLI})

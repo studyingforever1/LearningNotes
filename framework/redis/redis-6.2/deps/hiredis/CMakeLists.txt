@@ -36,18 +36,18 @@ SET(hiredis_sources
 
 SET(hiredis_sources ${hiredis_sources})
 
-IF(WIN32)
+IF (WIN32)
     ADD_COMPILE_DEFINITIONS(_CRT_SECURE_NO_WARNINGS WIN32_LEAN_AND_MEAN)
-ENDIF()
+ENDIF ()
 
 ADD_LIBRARY(hiredis SHARED ${hiredis_sources})
 
 SET_TARGET_PROPERTIES(hiredis
         PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE
         VERSION "${HIREDIS_SONAME}")
-IF(WIN32 OR MINGW)
+IF (WIN32 OR MINGW)
     TARGET_LINK_LIBRARIES(hiredis PRIVATE ws2_32)
-ENDIF()
+ENDIF ()
 
 TARGET_INCLUDE_DIRECTORIES(hiredis PUBLIC $<INSTALL_INTERFACE:.> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
@@ -88,12 +88,12 @@ INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/hiredis-config.cmake
         DESTINATION ${CMAKE_CONF_INSTALL_DIR})
 
 
-IF(ENABLE_SSL)
+IF (ENABLE_SSL)
     IF (NOT OPENSSL_ROOT_DIR)
         IF (APPLE)
             SET(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
-        ENDIF()
-    ENDIF()
+        ENDIF ()
+    ENDIF ()
     FIND_PACKAGE(OpenSSL REQUIRED)
     SET(hiredis_ssl_sources
             ssl.c)
@@ -102,7 +102,7 @@ IF(ENABLE_SSL)
 
     IF (APPLE)
         SET_PROPERTY(TARGET hiredis_ssl PROPERTY LINK_FLAGS "-Wl,-undefined -Wl,dynamic_lookup")
-    ENDIF()
+    ENDIF ()
 
     SET_TARGET_PROPERTIES(hiredis_ssl
             PROPERTIES
@@ -113,7 +113,7 @@ IF(ENABLE_SSL)
     TARGET_LINK_LIBRARIES(hiredis_ssl PRIVATE ${OPENSSL_LIBRARIES})
     IF (WIN32 OR MINGW)
         TARGET_LINK_LIBRARIES(hiredis_ssl PRIVATE hiredis)
-    ENDIF()
+    ENDIF ()
     CONFIGURE_FILE(hiredis_ssl.pc.in hiredis_ssl.pc @ONLY)
 
     INSTALL(TARGETS hiredis_ssl
@@ -144,22 +144,22 @@ IF(ENABLE_SSL)
 
     INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/hiredis_ssl-config.cmake
             DESTINATION ${CMAKE_CONF_INSTALL_DIR})
-ENDIF()
+ENDIF ()
 
-IF(NOT DISABLE_TESTS)
+IF (NOT DISABLE_TESTS)
     ENABLE_TESTING()
     ADD_EXECUTABLE(hiredis-test test.c)
-    IF(ENABLE_SSL_TESTS)
+    IF (ENABLE_SSL_TESTS)
         ADD_DEFINITIONS(-DHIREDIS_TEST_SSL=1)
         TARGET_LINK_LIBRARIES(hiredis-test hiredis hiredis_ssl)
-    ELSE()
+    ELSE ()
         TARGET_LINK_LIBRARIES(hiredis-test hiredis)
-    ENDIF()
+    ENDIF ()
     ADD_TEST(NAME hiredis-test
             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test.sh)
-ENDIF()
+ENDIF ()
 
 # Add examples
-IF(ENABLE_EXAMPLES)
+IF (ENABLE_EXAMPLES)
     ADD_SUBDIRECTORY(examples)
-ENDIF(ENABLE_EXAMPLES)
+ENDIF (ENABLE_EXAMPLES)

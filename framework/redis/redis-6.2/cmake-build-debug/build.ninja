@@ -55,8 +55,6 @@ build CMakeFiles/redis-server.dir/src/server.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/crcspeed.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/crcspeed.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/crcspeed.c.o.d
@@ -64,8 +62,6 @@ build CMakeFiles/redis-server.dir/src/crcspeed.c.o: C_COMPILER__redis-server_uns
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/sha256.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/sha256.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/sha256.c.o.d
@@ -73,8 +69,6 @@ build CMakeFiles/redis-server.dir/src/sha256.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/connection.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/connection.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/connection.c.o.d
@@ -82,8 +76,6 @@ build CMakeFiles/redis-server.dir/src/connection.c.o: C_COMPILER__redis-server_u
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/acl.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/acl.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/acl.c.o.d
@@ -91,8 +83,6 @@ build CMakeFiles/redis-server.dir/src/acl.c.o: C_COMPILER__redis-server_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/timeout.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/timeout.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/timeout.c.o.d
@@ -100,8 +90,6 @@ build CMakeFiles/redis-server.dir/src/timeout.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/tracking.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/tracking.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/tracking.c.o.d
@@ -109,8 +97,6 @@ build CMakeFiles/redis-server.dir/src/tracking.c.o: C_COMPILER__redis-server_uns
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/tls.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/tls.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/tls.c.o.d
@@ -118,8 +104,6 @@ build CMakeFiles/redis-server.dir/src/tls.c.o: C_COMPILER__redis-server_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/adlist.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/adlist.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/adlist.c.o.d
@@ -127,8 +111,6 @@ build CMakeFiles/redis-server.dir/src/adlist.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/ae.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/ae.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/ae.c.o.d
@@ -136,8 +118,6 @@ build CMakeFiles/redis-server.dir/src/ae.c.o: C_COMPILER__redis-server_unscanned
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/anet.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/anet.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/anet.c.o.d
@@ -145,8 +125,6 @@ build CMakeFiles/redis-server.dir/src/anet.c.o: C_COMPILER__redis-server_unscann
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/mt19937-64.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/mt19937-64.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/mt19937-64.c.o.d
@@ -154,8 +132,6 @@ build CMakeFiles/redis-server.dir/src/mt19937-64.c.o: C_COMPILER__redis-server_u
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/monotonic.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/monotonic.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/monotonic.c.o.d
@@ -163,8 +139,6 @@ build CMakeFiles/redis-server.dir/src/monotonic.c.o: C_COMPILER__redis-server_un
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/dict.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/dict.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/dict.c.o.d
@@ -172,8 +146,6 @@ build CMakeFiles/redis-server.dir/src/dict.c.o: C_COMPILER__redis-server_unscann
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/sds.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/sds.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/sds.c.o.d
@@ -181,8 +153,6 @@ build CMakeFiles/redis-server.dir/src/sds.c.o: C_COMPILER__redis-server_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/zmalloc.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/zmalloc.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/zmalloc.c.o.d
@@ -190,8 +160,6 @@ build CMakeFiles/redis-server.dir/src/zmalloc.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/lzf_c.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/lzf_c.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/lzf_c.c.o.d
@@ -199,8 +167,6 @@ build CMakeFiles/redis-server.dir/src/lzf_c.c.o: C_COMPILER__redis-server_unscan
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/lzf_d.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/lzf_d.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/lzf_d.c.o.d
@@ -208,8 +174,6 @@ build CMakeFiles/redis-server.dir/src/lzf_d.c.o: C_COMPILER__redis-server_unscan
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/pqsort.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/pqsort.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/pqsort.c.o.d
@@ -217,8 +181,6 @@ build CMakeFiles/redis-server.dir/src/pqsort.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/zipmap.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/zipmap.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/zipmap.c.o.d
@@ -226,8 +188,6 @@ build CMakeFiles/redis-server.dir/src/zipmap.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/sha1.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/sha1.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/sha1.c.o.d
@@ -235,8 +195,6 @@ build CMakeFiles/redis-server.dir/src/sha1.c.o: C_COMPILER__redis-server_unscann
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/ziplist.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/ziplist.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/ziplist.c.o.d
@@ -244,8 +202,6 @@ build CMakeFiles/redis-server.dir/src/ziplist.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/release.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/release.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/release.c.o.d
@@ -253,8 +209,6 @@ build CMakeFiles/redis-server.dir/src/release.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/networking.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/networking.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/networking.c.o.d
@@ -262,8 +216,6 @@ build CMakeFiles/redis-server.dir/src/networking.c.o: C_COMPILER__redis-server_u
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/util.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/util.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/util.c.o.d
@@ -271,8 +223,6 @@ build CMakeFiles/redis-server.dir/src/util.c.o: C_COMPILER__redis-server_unscann
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/object.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/object.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/object.c.o.d
@@ -280,8 +230,6 @@ build CMakeFiles/redis-server.dir/src/object.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/db.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/db.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/db.c.o.d
@@ -289,8 +237,6 @@ build CMakeFiles/redis-server.dir/src/db.c.o: C_COMPILER__redis-server_unscanned
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/replication.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/replication.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/replication.c.o.d
@@ -298,8 +244,6 @@ build CMakeFiles/redis-server.dir/src/replication.c.o: C_COMPILER__redis-server_
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/rdb.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/rdb.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/rdb.c.o.d
@@ -307,8 +251,6 @@ build CMakeFiles/redis-server.dir/src/rdb.c.o: C_COMPILER__redis-server_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/t_string.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/t_string.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/t_string.c.o.d
@@ -316,8 +258,6 @@ build CMakeFiles/redis-server.dir/src/t_string.c.o: C_COMPILER__redis-server_uns
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/t_list.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/t_list.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/t_list.c.o.d
@@ -325,8 +265,6 @@ build CMakeFiles/redis-server.dir/src/t_list.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/t_set.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/t_set.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/t_set.c.o.d
@@ -334,8 +272,6 @@ build CMakeFiles/redis-server.dir/src/t_set.c.o: C_COMPILER__redis-server_unscan
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/t_zset.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/t_zset.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/t_zset.c.o.d
@@ -343,8 +279,6 @@ build CMakeFiles/redis-server.dir/src/t_zset.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/evict.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/evict.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/evict.c.o.d
@@ -352,8 +286,6 @@ build CMakeFiles/redis-server.dir/src/evict.c.o: C_COMPILER__redis-server_unscan
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/defrag.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/defrag.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/defrag.c.o.d
@@ -361,8 +293,6 @@ build CMakeFiles/redis-server.dir/src/defrag.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/module.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/module.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/module.c.o.d
@@ -370,8 +300,6 @@ build CMakeFiles/redis-server.dir/src/module.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/quicklist.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/quicklist.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/quicklist.c.o.d
@@ -379,8 +307,6 @@ build CMakeFiles/redis-server.dir/src/quicklist.c.o: C_COMPILER__redis-server_un
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/expire.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/expire.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/expire.c.o.d
@@ -388,8 +314,6 @@ build CMakeFiles/redis-server.dir/src/expire.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/childinfo.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/childinfo.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/childinfo.c.o.d
@@ -397,8 +321,6 @@ build CMakeFiles/redis-server.dir/src/childinfo.c.o: C_COMPILER__redis-server_un
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/redis-check-aof.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-check-aof.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/redis-check-aof.c.o.d
@@ -406,8 +328,6 @@ build CMakeFiles/redis-server.dir/src/redis-check-aof.c.o: C_COMPILER__redis-ser
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/redis-check-rdb.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-check-rdb.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/redis-check-rdb.c.o.d
@@ -415,8 +335,6 @@ build CMakeFiles/redis-server.dir/src/redis-check-rdb.c.o: C_COMPILER__redis-ser
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/lazyfree.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/lazyfree.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/lazyfree.c.o.d
@@ -424,8 +342,6 @@ build CMakeFiles/redis-server.dir/src/lazyfree.c.o: C_COMPILER__redis-server_uns
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/geohash.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/geohash.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/geohash.c.o.d
@@ -433,8 +349,6 @@ build CMakeFiles/redis-server.dir/src/geohash.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/rax.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/rax.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/rax.c.o.d
@@ -442,8 +356,6 @@ build CMakeFiles/redis-server.dir/src/rax.c.o: C_COMPILER__redis-server_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/geohash_helper.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/geohash_helper.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/geohash_helper.c.o.d
@@ -451,8 +363,6 @@ build CMakeFiles/redis-server.dir/src/geohash_helper.c.o: C_COMPILER__redis-serv
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/siphash.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/siphash.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/siphash.c.o.d
@@ -460,8 +370,6 @@ build CMakeFiles/redis-server.dir/src/siphash.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/geo.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/geo.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/geo.c.o.d
@@ -469,8 +377,6 @@ build CMakeFiles/redis-server.dir/src/geo.c.o: C_COMPILER__redis-server_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/t_hash.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/t_hash.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/t_hash.c.o.d
@@ -478,8 +384,6 @@ build CMakeFiles/redis-server.dir/src/t_hash.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/config.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/config.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/config.c.o.d
@@ -487,8 +391,6 @@ build CMakeFiles/redis-server.dir/src/config.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/aof.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/aof.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/aof.c.o.d
@@ -496,8 +398,6 @@ build CMakeFiles/redis-server.dir/src/aof.c.o: C_COMPILER__redis-server_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/pubsub.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/pubsub.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/pubsub.c.o.d
@@ -505,8 +405,6 @@ build CMakeFiles/redis-server.dir/src/pubsub.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/multi.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/multi.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/multi.c.o.d
@@ -514,8 +412,6 @@ build CMakeFiles/redis-server.dir/src/multi.c.o: C_COMPILER__redis-server_unscan
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/debug.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/debug.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/debug.c.o.d
@@ -523,8 +419,6 @@ build CMakeFiles/redis-server.dir/src/debug.c.o: C_COMPILER__redis-server_unscan
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/sort.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/sort.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/sort.c.o.d
@@ -532,8 +426,6 @@ build CMakeFiles/redis-server.dir/src/sort.c.o: C_COMPILER__redis-server_unscann
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/intset.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/intset.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/intset.c.o.d
@@ -541,8 +433,6 @@ build CMakeFiles/redis-server.dir/src/intset.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/syncio.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/syncio.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/syncio.c.o.d
@@ -550,8 +440,6 @@ build CMakeFiles/redis-server.dir/src/syncio.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/cluster.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cluster.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/cluster.c.o.d
@@ -559,8 +447,6 @@ build CMakeFiles/redis-server.dir/src/cluster.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/crc16.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/crc16.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/crc16.c.o.d
@@ -568,8 +454,6 @@ build CMakeFiles/redis-server.dir/src/crc16.c.o: C_COMPILER__redis-server_unscan
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/endianconv.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/endianconv.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/endianconv.c.o.d
@@ -577,8 +461,6 @@ build CMakeFiles/redis-server.dir/src/endianconv.c.o: C_COMPILER__redis-server_u
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/slowlog.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/slowlog.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/slowlog.c.o.d
@@ -586,8 +468,6 @@ build CMakeFiles/redis-server.dir/src/slowlog.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/scripting.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/scripting.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/scripting.c.o.d
@@ -595,8 +475,6 @@ build CMakeFiles/redis-server.dir/src/scripting.c.o: C_COMPILER__redis-server_un
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/bio.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/bio.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/bio.c.o.d
@@ -604,8 +482,6 @@ build CMakeFiles/redis-server.dir/src/bio.c.o: C_COMPILER__redis-server_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/rio.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/rio.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/rio.c.o.d
@@ -613,8 +489,6 @@ build CMakeFiles/redis-server.dir/src/rio.c.o: C_COMPILER__redis-server_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/rand.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/rand.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/rand.c.o.d
@@ -622,8 +496,6 @@ build CMakeFiles/redis-server.dir/src/rand.c.o: C_COMPILER__redis-server_unscann
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/memtest.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/memtest.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/memtest.c.o.d
@@ -631,8 +503,6 @@ build CMakeFiles/redis-server.dir/src/memtest.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/crc64.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/crc64.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/crc64.c.o.d
@@ -640,8 +510,6 @@ build CMakeFiles/redis-server.dir/src/crc64.c.o: C_COMPILER__redis-server_unscan
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/bitops.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/bitops.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/bitops.c.o.d
@@ -649,8 +517,6 @@ build CMakeFiles/redis-server.dir/src/bitops.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/sentinel.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/sentinel.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/sentinel.c.o.d
@@ -658,8 +524,6 @@ build CMakeFiles/redis-server.dir/src/sentinel.c.o: C_COMPILER__redis-server_uns
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/notify.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/notify.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/notify.c.o.d
@@ -667,8 +531,6 @@ build CMakeFiles/redis-server.dir/src/notify.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/setproctitle.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/setproctitle.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/setproctitle.c.o.d
@@ -676,8 +538,6 @@ build CMakeFiles/redis-server.dir/src/setproctitle.c.o: C_COMPILER__redis-server
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/blocked.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/blocked.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/blocked.c.o.d
@@ -685,8 +545,6 @@ build CMakeFiles/redis-server.dir/src/blocked.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/hyperloglog.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/hyperloglog.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/hyperloglog.c.o.d
@@ -694,8 +552,6 @@ build CMakeFiles/redis-server.dir/src/hyperloglog.c.o: C_COMPILER__redis-server_
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/latency.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/latency.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/latency.c.o.d
@@ -703,8 +559,6 @@ build CMakeFiles/redis-server.dir/src/latency.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/sparkline.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/sparkline.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/sparkline.c.o.d
@@ -712,8 +566,6 @@ build CMakeFiles/redis-server.dir/src/sparkline.c.o: C_COMPILER__redis-server_un
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/t_stream.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/t_stream.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/t_stream.c.o.d
@@ -721,8 +573,6 @@ build CMakeFiles/redis-server.dir/src/t_stream.c.o: C_COMPILER__redis-server_uns
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/lolwut.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/lolwut.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/lolwut.c.o.d
@@ -730,8 +580,6 @@ build CMakeFiles/redis-server.dir/src/lolwut.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/lolwut5.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/lolwut5.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/lolwut5.c.o.d
@@ -739,8 +587,6 @@ build CMakeFiles/redis-server.dir/src/lolwut5.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/lolwut6.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/lolwut6.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/lolwut6.c.o.d
@@ -748,8 +594,6 @@ build CMakeFiles/redis-server.dir/src/lolwut6.c.o: C_COMPILER__redis-server_unsc
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/listpack.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/listpack.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/listpack.c.o.d
@@ -757,8 +601,6 @@ build CMakeFiles/redis-server.dir/src/listpack.c.o: C_COMPILER__redis-server_uns
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/localtime.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/localtime.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/localtime.c.o.d
@@ -766,8 +608,6 @@ build CMakeFiles/redis-server.dir/src/localtime.c.o: C_COMPILER__redis-server_un
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 build CMakeFiles/redis-server.dir/src/gopher.c.o: C_COMPILER__redis-server_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/gopher.c || cmake_object_order_depends_target_redis-server
   DEP_FILE = CMakeFiles/redis-server.dir/src/gopher.c.o.d
@@ -775,8 +615,6 @@ build CMakeFiles/redis-server.dir/src/gopher.c.o: C_COMPILER__redis-server_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-server.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-server.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
 
 
 # =============================================================================
@@ -793,10 +631,9 @@ build /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/red
   OBJECT_DIR = CMakeFiles/redis-server.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = CMakeFiles/redis-server.dir/
   TARGET_FILE = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.exe
   TARGET_IMPLIB = src/libredis-server.dll.a
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.pdb
+  TARGET_PDB = redis-server.exe.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target redis-cli
@@ -813,8 +650,6 @@ build CMakeFiles/redis-cli.dir/src/anet.c.o: C_COMPILER__redis-cli_unscanned_Deb
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-cli.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
 
 build CMakeFiles/redis-cli.dir/src/sds.c.o: C_COMPILER__redis-cli_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/sds.c || cmake_object_order_depends_target_redis-cli
   DEP_FILE = CMakeFiles/redis-cli.dir/src/sds.c.o.d
@@ -822,8 +657,6 @@ build CMakeFiles/redis-cli.dir/src/sds.c.o: C_COMPILER__redis-cli_unscanned_Debu
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-cli.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
 
 build CMakeFiles/redis-cli.dir/src/adlist.c.o: C_COMPILER__redis-cli_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/adlist.c || cmake_object_order_depends_target_redis-cli
   DEP_FILE = CMakeFiles/redis-cli.dir/src/adlist.c.o.d
@@ -831,8 +664,6 @@ build CMakeFiles/redis-cli.dir/src/adlist.c.o: C_COMPILER__redis-cli_unscanned_D
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-cli.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
 
 build CMakeFiles/redis-cli.dir/src/redis-cli.c.o: C_COMPILER__redis-cli_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.c || cmake_object_order_depends_target_redis-cli
   DEP_FILE = CMakeFiles/redis-cli.dir/src/redis-cli.c.o.d
@@ -840,8 +671,6 @@ build CMakeFiles/redis-cli.dir/src/redis-cli.c.o: C_COMPILER__redis-cli_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-cli.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
 
 build CMakeFiles/redis-cli.dir/src/zmalloc.c.o: C_COMPILER__redis-cli_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/zmalloc.c || cmake_object_order_depends_target_redis-cli
   DEP_FILE = CMakeFiles/redis-cli.dir/src/zmalloc.c.o.d
@@ -849,8 +678,6 @@ build CMakeFiles/redis-cli.dir/src/zmalloc.c.o: C_COMPILER__redis-cli_unscanned_
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-cli.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
 
 build CMakeFiles/redis-cli.dir/src/release.c.o: C_COMPILER__redis-cli_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/release.c || cmake_object_order_depends_target_redis-cli
   DEP_FILE = CMakeFiles/redis-cli.dir/src/release.c.o.d
@@ -858,8 +685,6 @@ build CMakeFiles/redis-cli.dir/src/release.c.o: C_COMPILER__redis-cli_unscanned_
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-cli.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
 
 build CMakeFiles/redis-cli.dir/src/ae.c.o: C_COMPILER__redis-cli_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/ae.c || cmake_object_order_depends_target_redis-cli
   DEP_FILE = CMakeFiles/redis-cli.dir/src/ae.c.o.d
@@ -867,8 +692,6 @@ build CMakeFiles/redis-cli.dir/src/ae.c.o: C_COMPILER__redis-cli_unscanned_Debug
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-cli.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
 
 build CMakeFiles/redis-cli.dir/src/crc64.c.o: C_COMPILER__redis-cli_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/crc64.c || cmake_object_order_depends_target_redis-cli
   DEP_FILE = CMakeFiles/redis-cli.dir/src/crc64.c.o.d
@@ -876,8 +699,6 @@ build CMakeFiles/redis-cli.dir/src/crc64.c.o: C_COMPILER__redis-cli_unscanned_De
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-cli.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
 
 build CMakeFiles/redis-cli.dir/src/crc16.c.o: C_COMPILER__redis-cli_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/crc16.c || cmake_object_order_depends_target_redis-cli
   DEP_FILE = CMakeFiles/redis-cli.dir/src/crc16.c.o.d
@@ -885,8 +706,6 @@ build CMakeFiles/redis-cli.dir/src/crc16.c.o: C_COMPILER__redis-cli_unscanned_De
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-cli.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
 
 build CMakeFiles/redis-cli.dir/src/dict.c.o: C_COMPILER__redis-cli_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/dict.c || cmake_object_order_depends_target_redis-cli
   DEP_FILE = CMakeFiles/redis-cli.dir/src/dict.c.o.d
@@ -894,8 +713,6 @@ build CMakeFiles/redis-cli.dir/src/dict.c.o: C_COMPILER__redis-cli_unscanned_Deb
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-cli.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
 
 build CMakeFiles/redis-cli.dir/src/siphash.c.o: C_COMPILER__redis-cli_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/siphash.c || cmake_object_order_depends_target_redis-cli
   DEP_FILE = CMakeFiles/redis-cli.dir/src/siphash.c.o.d
@@ -903,8 +720,6 @@ build CMakeFiles/redis-cli.dir/src/siphash.c.o: C_COMPILER__redis-cli_unscanned_
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   OBJECT_FILE_DIR = CMakeFiles/redis-cli.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
 
 
 # =============================================================================
@@ -921,10 +736,9 @@ build /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/red
   OBJECT_DIR = CMakeFiles/redis-cli.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = CMakeFiles/redis-cli.dir/
   TARGET_FILE = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.exe
   TARGET_IMPLIB = src/libredis-cli.dll.a
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-cli.pdb
+  TARGET_PDB = redis-cli.exe.dbg
 
 
 #############################################
@@ -1082,8 +896,6 @@ build deps/hiredis/CMakeFiles/hiredis.dir/alloc.c.o: C_COMPILER__hiredis_unscann
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis
   OBJECT_DIR = deps/hiredis/CMakeFiles/hiredis.dir
   OBJECT_FILE_DIR = deps/hiredis/CMakeFiles/hiredis.dir
-  TARGET_COMPILE_PDB = deps/hiredis/CMakeFiles/hiredis.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cyghiredis.pdb
 
 build deps/hiredis/CMakeFiles/hiredis.dir/async.c.o: C_COMPILER__hiredis_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/async.c || cmake_object_order_depends_target_hiredis
   DEFINES = -Dhiredis_EXPORTS
@@ -1092,8 +904,6 @@ build deps/hiredis/CMakeFiles/hiredis.dir/async.c.o: C_COMPILER__hiredis_unscann
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis
   OBJECT_DIR = deps/hiredis/CMakeFiles/hiredis.dir
   OBJECT_FILE_DIR = deps/hiredis/CMakeFiles/hiredis.dir
-  TARGET_COMPILE_PDB = deps/hiredis/CMakeFiles/hiredis.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cyghiredis.pdb
 
 build deps/hiredis/CMakeFiles/hiredis.dir/dict.c.o: C_COMPILER__hiredis_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/dict.c || cmake_object_order_depends_target_hiredis
   DEFINES = -Dhiredis_EXPORTS
@@ -1102,8 +912,6 @@ build deps/hiredis/CMakeFiles/hiredis.dir/dict.c.o: C_COMPILER__hiredis_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis
   OBJECT_DIR = deps/hiredis/CMakeFiles/hiredis.dir
   OBJECT_FILE_DIR = deps/hiredis/CMakeFiles/hiredis.dir
-  TARGET_COMPILE_PDB = deps/hiredis/CMakeFiles/hiredis.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cyghiredis.pdb
 
 build deps/hiredis/CMakeFiles/hiredis.dir/hiredis.c.o: C_COMPILER__hiredis_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/hiredis.c || cmake_object_order_depends_target_hiredis
   DEFINES = -Dhiredis_EXPORTS
@@ -1112,8 +920,6 @@ build deps/hiredis/CMakeFiles/hiredis.dir/hiredis.c.o: C_COMPILER__hiredis_unsca
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis
   OBJECT_DIR = deps/hiredis/CMakeFiles/hiredis.dir
   OBJECT_FILE_DIR = deps/hiredis/CMakeFiles/hiredis.dir
-  TARGET_COMPILE_PDB = deps/hiredis/CMakeFiles/hiredis.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cyghiredis.pdb
 
 build deps/hiredis/CMakeFiles/hiredis.dir/net.c.o: C_COMPILER__hiredis_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/net.c || cmake_object_order_depends_target_hiredis
   DEFINES = -Dhiredis_EXPORTS
@@ -1122,8 +928,6 @@ build deps/hiredis/CMakeFiles/hiredis.dir/net.c.o: C_COMPILER__hiredis_unscanned
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis
   OBJECT_DIR = deps/hiredis/CMakeFiles/hiredis.dir
   OBJECT_FILE_DIR = deps/hiredis/CMakeFiles/hiredis.dir
-  TARGET_COMPILE_PDB = deps/hiredis/CMakeFiles/hiredis.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cyghiredis.pdb
 
 build deps/hiredis/CMakeFiles/hiredis.dir/read.c.o: C_COMPILER__hiredis_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/read.c || cmake_object_order_depends_target_hiredis
   DEFINES = -Dhiredis_EXPORTS
@@ -1132,8 +936,6 @@ build deps/hiredis/CMakeFiles/hiredis.dir/read.c.o: C_COMPILER__hiredis_unscanne
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis
   OBJECT_DIR = deps/hiredis/CMakeFiles/hiredis.dir
   OBJECT_FILE_DIR = deps/hiredis/CMakeFiles/hiredis.dir
-  TARGET_COMPILE_PDB = deps/hiredis/CMakeFiles/hiredis.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cyghiredis.pdb
 
 build deps/hiredis/CMakeFiles/hiredis.dir/sds.c.o: C_COMPILER__hiredis_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/sds.c || cmake_object_order_depends_target_hiredis
   DEFINES = -Dhiredis_EXPORTS
@@ -1142,8 +944,6 @@ build deps/hiredis/CMakeFiles/hiredis.dir/sds.c.o: C_COMPILER__hiredis_unscanned
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis
   OBJECT_DIR = deps/hiredis/CMakeFiles/hiredis.dir
   OBJECT_FILE_DIR = deps/hiredis/CMakeFiles/hiredis.dir
-  TARGET_COMPILE_PDB = deps/hiredis/CMakeFiles/hiredis.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cyghiredis.pdb
 
 build deps/hiredis/CMakeFiles/hiredis.dir/sockcompat.c.o: C_COMPILER__hiredis_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/sockcompat.c || cmake_object_order_depends_target_hiredis
   DEFINES = -Dhiredis_EXPORTS
@@ -1152,8 +952,6 @@ build deps/hiredis/CMakeFiles/hiredis.dir/sockcompat.c.o: C_COMPILER__hiredis_un
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis
   OBJECT_DIR = deps/hiredis/CMakeFiles/hiredis.dir
   OBJECT_FILE_DIR = deps/hiredis/CMakeFiles/hiredis.dir
-  TARGET_COMPILE_PDB = deps/hiredis/CMakeFiles/hiredis.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cyghiredis.pdb
 
 
 # =============================================================================
@@ -1169,10 +967,9 @@ build /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cyg
   POST_BUILD = :
   PRE_LINK = :
   RESTAT = 1
-  TARGET_COMPILE_PDB = deps/hiredis/CMakeFiles/hiredis.dir/
   TARGET_FILE = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cyghiredis.dll
   TARGET_IMPLIB = deps/hiredis/libhiredis.dll.a
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/cyghiredis.pdb
+  TARGET_PDB = hiredis.dll.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target hiredis-test
@@ -1189,8 +986,6 @@ build deps/hiredis/CMakeFiles/hiredis-test.dir/test.c.o: C_COMPILER__hiredis-tes
   INCLUDES = -I/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis
   OBJECT_DIR = deps/hiredis/CMakeFiles/hiredis-test.dir
   OBJECT_FILE_DIR = deps/hiredis/CMakeFiles/hiredis-test.dir
-  TARGET_COMPILE_PDB = deps/hiredis/CMakeFiles/hiredis-test.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/hiredis-test.pdb
 
 
 # =============================================================================
@@ -1207,10 +1002,9 @@ build /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/hir
   OBJECT_DIR = deps/hiredis/CMakeFiles/hiredis-test.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = deps/hiredis/CMakeFiles/hiredis-test.dir/
   TARGET_FILE = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/hiredis-test.exe
   TARGET_IMPLIB = deps/hiredis/libhiredis-test.dll.a
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/hiredis-test.pdb
+  TARGET_PDB = hiredis-test.exe.dbg
 
 
 #############################################
@@ -1296,8 +1090,6 @@ build deps/linenoise/CMakeFiles/linenoise.dir/linenoise.c.o: C_COMPILER__linenoi
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/linenoise/CMakeFiles/linenoise.dir
   OBJECT_FILE_DIR = deps/linenoise/CMakeFiles/linenoise.dir
-  TARGET_COMPILE_PDB = deps/linenoise/CMakeFiles/linenoise.dir/linenoise.pdb
-  TARGET_PDB = deps/linenoise/liblinenoise.pdb
 
 
 # =============================================================================
@@ -1312,9 +1104,8 @@ build deps/linenoise/liblinenoise.a: C_STATIC_LIBRARY_LINKER__linenoise_Debug de
   OBJECT_DIR = deps/linenoise/CMakeFiles/linenoise.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = deps/linenoise/CMakeFiles/linenoise.dir/linenoise.pdb
   TARGET_FILE = deps/linenoise/liblinenoise.a
-  TARGET_PDB = deps/linenoise/liblinenoise.pdb
+  TARGET_PDB = linenoise.a.dbg
 
 
 #############################################
@@ -1400,304 +1191,228 @@ build deps/lua/CMakeFiles/lua.dir/src/lauxlib.c.o: C_COMPILER__lua_unscanned_Deb
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/liolib.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/liolib.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/liolib.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lopcodes.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lopcodes.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lopcodes.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lstate.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lstate.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lstate.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lobject.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lobject.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lobject.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/print.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/print.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/print.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lmathlib.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lmathlib.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lmathlib.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/loadlib.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/loadlib.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/loadlib.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lvm.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lvm.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lvm.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lfunc.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lfunc.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lfunc.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lstrlib.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lstrlib.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lstrlib.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lua.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lua.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lua.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/linit.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/linit.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/linit.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lstring.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lstring.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lstring.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lundump.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lundump.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lundump.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/luac.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/luac.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/luac.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/ltable.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/ltable.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/ltable.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/ldump.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/ldump.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/ldump.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/loslib.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/loslib.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/loslib.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lgc.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lgc.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lgc.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lzio.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lzio.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lzio.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/ldblib.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/ldblib.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/ldblib.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/strbuf.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/strbuf.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/strbuf.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lmem.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lmem.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lmem.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lcode.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lcode.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lcode.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/ltablib.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/ltablib.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/ltablib.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lua_struct.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lua_struct.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lua_struct.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lapi.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lapi.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lapi.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lbaselib.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lbaselib.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lbaselib.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lua_cmsgpack.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lua_cmsgpack.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lua_cmsgpack.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/ldebug.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/ldebug.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/ldebug.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lparser.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lparser.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lparser.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lua_cjson.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lua_cjson.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lua_cjson.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/fpconv.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/fpconv.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/fpconv.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/lua_bit.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/lua_bit.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/lua_bit.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/llex.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/llex.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/llex.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/ltm.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/ltm.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/ltm.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 build deps/lua/CMakeFiles/lua.dir/src/ldo.c.o: C_COMPILER__lua_unscanned_Debug /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/src/ldo.c || cmake_object_order_depends_target_lua
   DEP_FILE = deps/lua/CMakeFiles/lua.dir/src/ldo.c.o.d
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   OBJECT_FILE_DIR = deps/lua/CMakeFiles/lua.dir/src
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
-  TARGET_PDB = deps/lua/liblua.pdb
 
 
 # =============================================================================
@@ -1712,9 +1427,8 @@ build deps/lua/liblua.a: C_STATIC_LIBRARY_LINKER__lua_Debug deps/lua/CMakeFiles/
   OBJECT_DIR = deps/lua/CMakeFiles/lua.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = deps/lua/CMakeFiles/lua.dir/lua.pdb
   TARGET_FILE = deps/lua/liblua.a
-  TARGET_PDB = deps/lua/liblua.pdb
+  TARGET_PDB = lua.a.dbg
 
 
 #############################################
@@ -1801,8 +1515,6 @@ build src/modules/CMakeFiles/helloworld.dir/helloworld.c.o: C_COMPILER__hellowor
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = src/modules/CMakeFiles/helloworld.dir
   OBJECT_FILE_DIR = src/modules/CMakeFiles/helloworld.dir
-  TARGET_COMPILE_PDB = src/modules/CMakeFiles/helloworld.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/helloworld.pdb
 
 
 # =============================================================================
@@ -1818,10 +1530,9 @@ build /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/hel
   POST_BUILD = :
   PRE_LINK = :
   RESTAT = 1
-  TARGET_COMPILE_PDB = src/modules/CMakeFiles/helloworld.dir/
   TARGET_FILE = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/helloworld.so
   TARGET_IMPLIB = src/modules/libhelloworld.dll.a
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/helloworld.pdb
+  TARGET_PDB = helloworld.so.dbg
 
 # =============================================================================
 # Object build statements for SHARED_LIBRARY target hellotype
@@ -1838,8 +1549,6 @@ build src/modules/CMakeFiles/hellotype.dir/hellotype.c.o: C_COMPILER__hellotype_
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = src/modules/CMakeFiles/hellotype.dir
   OBJECT_FILE_DIR = src/modules/CMakeFiles/hellotype.dir
-  TARGET_COMPILE_PDB = src/modules/CMakeFiles/hellotype.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/hellotype.pdb
 
 
 # =============================================================================
@@ -1855,10 +1564,9 @@ build /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/hel
   POST_BUILD = :
   PRE_LINK = :
   RESTAT = 1
-  TARGET_COMPILE_PDB = src/modules/CMakeFiles/hellotype.dir/
   TARGET_FILE = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/hellotype.so
   TARGET_IMPLIB = src/modules/libhellotype.dll.a
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/hellotype.pdb
+  TARGET_PDB = hellotype.so.dbg
 
 # =============================================================================
 # Object build statements for SHARED_LIBRARY target helloblock
@@ -1875,8 +1583,6 @@ build src/modules/CMakeFiles/helloblock.dir/helloblock.c.o: C_COMPILER__helloblo
   FLAGS = -g -fdiagnostics-color=always
   OBJECT_DIR = src/modules/CMakeFiles/helloblock.dir
   OBJECT_FILE_DIR = src/modules/CMakeFiles/helloblock.dir
-  TARGET_COMPILE_PDB = src/modules/CMakeFiles/helloblock.dir/
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/helloblock.pdb
 
 
 # =============================================================================
@@ -1892,10 +1598,9 @@ build /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/hel
   POST_BUILD = :
   PRE_LINK = :
   RESTAT = 1
-  TARGET_COMPILE_PDB = src/modules/CMakeFiles/helloblock.dir/
   TARGET_FILE = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/helloblock.so
   TARGET_IMPLIB = src/modules/libhelloblock.dll.a
-  TARGET_PDB = /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/helloblock.pdb
+  TARGET_PDB = helloblock.so.dbg
 
 
 #############################################
@@ -2058,14 +1763,14 @@ build src/modules/all: phony /cygdrive/d/doc/my/studymd/LearningNotes/framework/
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja: RERUN_CMAKE | /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCCompiler.cmake.in /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCCompilerABI.c /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCXXCompiler.cmake.in /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCXXCompilerABI.cpp /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCXXInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCommonLanguageInclude.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCompilerIdDetection.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCXXCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCompileFeatures.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCompilerABI.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCompilerId.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineRCCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineSystem.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeFindBinUtils.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeGenericSystem.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeInitializeConfigs.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeLanguageInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakePackageConfigHelpers.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeParseImplicitIncludeInfo.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeParseImplicitLinkInfo.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeParseLibraryArchitecture.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeRCCompiler.cmake.in /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeRCInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeSystem.cmake.in /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeSystemSpecificInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeSystemSpecificInitialize.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeTestCCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeTestCXXCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeTestCompilerCommon.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeTestRCCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/ADSP-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/ARMCC-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/ARMClang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/AppleClang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Borland-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Bruce-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/CMakeCommonCompilerMacros.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Clang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Clang-DetermineCompilerInternal.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Compaq-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Compaq-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Cray-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/CrayClang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Embarcadero-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Fujitsu-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GHS-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-C.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-CXX.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-FindBinUtils.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/HP-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/HP-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IAR-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IBMCPP-CXX-DetermineVersionInternal.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IBMClang-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IBMClang-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Intel-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/LCC-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/LCC-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/MSVC-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/NVHPC-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/NVIDIA-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/OrangeC-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/PGI-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/PathScale-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/SCO-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/SDCC-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/SunPro-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/SunPro-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/TI-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/TIClang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Tasking-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/VisualAge-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Watcom-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/XL-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/XL-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/XLClang-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/XLClang-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/zOS-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/zOS-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/GNUInstallDirs.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Internal/CMakeDetermineLinkerId.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Internal/FeatureTesting.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-Determine-CXX.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU-C.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU-CXX.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-Initialize.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-windres.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/UnixPaths.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/WriteBasicConfigVersionFile.cmake /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/hiredis-config.cmake.in /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/hiredis.pc.in /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/modules/CMakeLists.txt CMakeCache.txt CMakeFiles/3.29.6/CMakeCCompiler.cmake CMakeFiles/3.29.6/CMakeCXXCompiler.cmake CMakeFiles/3.29.6/CMakeRCCompiler.cmake CMakeFiles/3.29.6/CMakeSystem.cmake
+build build.ninja: RERUN_CMAKE | /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCXXInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCommonLanguageInclude.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeGenericSystem.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeInitializeConfigs.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeLanguageInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakePackageConfigHelpers.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeRCInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeSystemSpecificInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeSystemSpecificInitialize.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/CMakeCommonCompilerMacros.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-C.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-CXX.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/GNUInstallDirs.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU-C.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU-CXX.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-Initialize.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-windres.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/UnixPaths.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/WriteBasicConfigVersionFile.cmake /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/hiredis-config.cmake.in /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/hiredis.pc.in /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/modules/CMakeLists.txt CMakeCache.txt CMakeFiles/3.29.6/CMakeCCompiler.cmake CMakeFiles/3.29.6/CMakeCXXCompiler.cmake CMakeFiles/3.29.6/CMakeRCCompiler.cmake CMakeFiles/3.29.6/CMakeSystem.cmake
   pool = console
 
 
 #############################################
 # A missing CMake input file is not an error.
 
-build /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCCompiler.cmake.in /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCCompilerABI.c /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCXXCompiler.cmake.in /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCXXCompilerABI.cpp /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCXXInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCommonLanguageInclude.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCompilerIdDetection.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCXXCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCompileFeatures.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCompilerABI.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineCompilerId.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineRCCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeDetermineSystem.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeFindBinUtils.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeGenericSystem.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeInitializeConfigs.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeLanguageInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakePackageConfigHelpers.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeParseImplicitIncludeInfo.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeParseImplicitLinkInfo.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeParseLibraryArchitecture.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeRCCompiler.cmake.in /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeRCInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeSystem.cmake.in /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeSystemSpecificInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeSystemSpecificInitialize.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeTestCCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeTestCXXCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeTestCompilerCommon.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeTestRCCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/ADSP-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/ARMCC-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/ARMClang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/AppleClang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Borland-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Bruce-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/CMakeCommonCompilerMacros.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Clang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Clang-DetermineCompilerInternal.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Compaq-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Compaq-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Cray-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/CrayClang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Embarcadero-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Fujitsu-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GHS-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-C.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-CXX.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-FindBinUtils.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/HP-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/HP-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IAR-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IBMCPP-CXX-DetermineVersionInternal.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IBMClang-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IBMClang-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Intel-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/LCC-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/LCC-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/MSVC-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/NVHPC-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/NVIDIA-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/OrangeC-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/PGI-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/PathScale-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/SCO-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/SDCC-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/SunPro-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/SunPro-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/TI-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/TIClang-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Tasking-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/VisualAge-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/Watcom-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/XL-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/XL-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/XLClang-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/XLClang-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/zOS-C-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/zOS-CXX-DetermineCompiler.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/GNUInstallDirs.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Internal/CMakeDetermineLinkerId.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Internal/FeatureTesting.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-Determine-CXX.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU-C.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU-CXX.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-Initialize.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-windres.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/UnixPaths.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/WriteBasicConfigVersionFile.cmake /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/hiredis-config.cmake.in /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/hiredis.pc.in /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/modules/CMakeLists.txt CMakeCache.txt CMakeFiles/3.29.6/CMakeCCompiler.cmake CMakeFiles/3.29.6/CMakeCXXCompiler.cmake CMakeFiles/3.29.6/CMakeRCCompiler.cmake CMakeFiles/3.29.6/CMakeSystem.cmake: phony
+build /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCXXInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeCommonLanguageInclude.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeGenericSystem.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeInitializeConfigs.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeLanguageInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakePackageConfigHelpers.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeRCInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeSystemSpecificInformation.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/CMakeSystemSpecificInitialize.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/CMakeCommonCompilerMacros.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-C.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU-CXX.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Compiler/GNU.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/GNUInstallDirs.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU-C.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU-CXX.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-GNU.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-Initialize.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN-windres.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/CYGWIN.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/Platform/UnixPaths.cmake /cygdrive/c/Users/Administrator/AppData/Local/JetBrains/CLion2024.2/cygwin_cmake/share/cmake-3.29.6/Modules/WriteBasicConfigVersionFile.cmake /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/hiredis-config.cmake.in /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/hiredis/hiredis.pc.in /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/linenoise/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/deps/lua/CMakeLists.txt /cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/modules/CMakeLists.txt CMakeCache.txt CMakeFiles/3.29.6/CMakeCCompiler.cmake CMakeFiles/3.29.6/CMakeCXXCompiler.cmake CMakeFiles/3.29.6/CMakeRCCompiler.cmake CMakeFiles/3.29.6/CMakeSystem.cmake: phony
 
 
 #############################################

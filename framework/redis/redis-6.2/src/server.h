@@ -317,28 +317,28 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
 /* Slave replication state. Used in server.repl_state for slaves to remember
  * what to do next. */
 typedef enum {
-    REPL_STATE_NONE = 0,            /* No active replication */
-    REPL_STATE_CONNECT,             /* Must connect to master */
-    REPL_STATE_CONNECTING,          /* Connecting to master */
+    REPL_STATE_NONE = 0, /* No active replication */
+    REPL_STATE_CONNECT, /* Must connect to master */
+    REPL_STATE_CONNECTING, /* Connecting to master */
     /* --- Handshake states, must be ordered --- */
-    REPL_STATE_RECEIVE_PING_REPLY,  /* Wait for PING reply */
-    REPL_STATE_SEND_HANDSHAKE,      /* Send handshake sequance to master */
-    REPL_STATE_RECEIVE_AUTH_REPLY,  /* Wait for AUTH reply */
-    REPL_STATE_RECEIVE_PORT_REPLY,  /* Wait for REPLCONF reply */
-    REPL_STATE_RECEIVE_IP_REPLY,    /* Wait for REPLCONF reply */
-    REPL_STATE_RECEIVE_CAPA_REPLY,  /* Wait for REPLCONF reply */
-    REPL_STATE_SEND_PSYNC,          /* Send PSYNC */
+    REPL_STATE_RECEIVE_PING_REPLY, /* Wait for PING reply */
+    REPL_STATE_SEND_HANDSHAKE, /* Send handshake sequance to master */
+    REPL_STATE_RECEIVE_AUTH_REPLY, /* Wait for AUTH reply */
+    REPL_STATE_RECEIVE_PORT_REPLY, /* Wait for REPLCONF reply */
+    REPL_STATE_RECEIVE_IP_REPLY, /* Wait for REPLCONF reply */
+    REPL_STATE_RECEIVE_CAPA_REPLY, /* Wait for REPLCONF reply */
+    REPL_STATE_SEND_PSYNC, /* Send PSYNC */
     REPL_STATE_RECEIVE_PSYNC_REPLY, /* Wait for PSYNC reply */
     /* --- End of handshake states --- */
-    REPL_STATE_TRANSFER,        /* Receiving .rdb from master */
-    REPL_STATE_CONNECTED,       /* Connected to master */
+    REPL_STATE_TRANSFER, /* Receiving .rdb from master */
+    REPL_STATE_CONNECTED, /* Connected to master */
 } repl_state;
 
 /* The state of an in progress coordinated failover */
 typedef enum {
-    NO_FAILOVER = 0,        /* No failover in progress */
+    NO_FAILOVER = 0, /* No failover in progress */
     FAILOVER_WAIT_FOR_SYNC, /* Waiting for target replica to catch up */
-    FAILOVER_IN_PROGRESS    /* Waiting for target replica to accept
+    FAILOVER_IN_PROGRESS /* Waiting for target replica to accept
                              * PSYNC FAILOVER request. */
 } failover_state;
 
@@ -465,8 +465,8 @@ typedef enum {
  * pause types than smaller pause types. */
 typedef enum {
     CLIENT_PAUSE_OFF = 0, /* Pause no commands */
-    CLIENT_PAUSE_WRITE,   /* Pause write commands */
-    CLIENT_PAUSE_ALL      /* Pause all commands */
+    CLIENT_PAUSE_WRITE, /* Pause write commands */
+    CLIENT_PAUSE_ALL /* Pause all commands */
 } pause_type;
 
 /* RDB active child save type. */
@@ -491,6 +491,7 @@ typedef enum {
 #define NOTIFY_LOADED (1<<12)     /* module only key space notification, indicate a key loaded from rdb */
 #define NOTIFY_MODULE (1<<13)     /* d, module key space notification */
 #define NOTIFY_ALL (NOTIFY_GENERIC | NOTIFY_STRING | NOTIFY_LIST | NOTIFY_SET | NOTIFY_HASH | NOTIFY_ZSET | NOTIFY_EXPIRED | NOTIFY_EVICTED | NOTIFY_STREAM | NOTIFY_MODULE) /* A flag */
+
 
 /* Get the first bind addr or NULL */
 #define NET_FIRST_BIND_ADDR (server.bindaddr_count ? server.bindaddr[0] : NULL)
@@ -554,23 +555,34 @@ struct RedisModuleDefragCtx;
  * log, create the digest for "DEBUG DIGEST", and free the value when a key
  * is deleted. */
 typedef void *(*moduleTypeLoadFunc)(struct RedisModuleIO *io, int encver);
+
 typedef void (*moduleTypeSaveFunc)(struct RedisModuleIO *io, void *value);
+
 typedef int (*moduleTypeAuxLoadFunc)(struct RedisModuleIO *rdb, int encver, int when);
+
 typedef void (*moduleTypeAuxSaveFunc)(struct RedisModuleIO *rdb, int when);
+
 typedef void (*moduleTypeRewriteFunc)(struct RedisModuleIO *io, struct redisObject *key, void *value);
+
 typedef void (*moduleTypeDigestFunc)(struct RedisModuleDigest *digest, void *value);
+
 typedef size_t (*moduleTypeMemUsageFunc)(const void *value);
+
 typedef void (*moduleTypeFreeFunc)(void *value);
+
 typedef size_t (*moduleTypeFreeEffortFunc)(struct redisObject *key, const void *value);
+
 typedef void (*moduleTypeUnlinkFunc)(struct redisObject *key, void *value);
+
 typedef void *(*moduleTypeCopyFunc)(struct redisObject *fromkey, struct redisObject *tokey, const void *value);
+
 typedef int (*moduleTypeDefragFunc)(struct RedisModuleDefragCtx *ctx, struct redisObject *key, void **value);
 
 /* This callback type is called by moduleNotifyUserChanged() every time
  * a user authenticated via the module API is associated with a different
  * user or gets disconnected. This needs to be exposed since you can't cast
  * a function pointer to (void *). */
-typedef void (*RedisModuleUserChangedFunc) (uint64_t client_id, void *privdata);
+typedef void (*RedisModuleUserChangedFunc)(uint64_t client_id, void *privdata);
 
 
 /* The module type, which is referenced in each value of a given type, defines
@@ -618,14 +630,14 @@ typedef struct moduleValue {
  * the user does not have to take the total count of the written bytes nor
  * to care about error conditions. */
 typedef struct RedisModuleIO {
-    size_t bytes;       /* Bytes read / written so far. */
-    rio *rio;           /* Rio stream. */
-    moduleType *type;   /* Module type doing the operation. */
-    int error;          /* True if error condition happened. */
-    int ver;            /* Module serialization version: 1 (old),
+    size_t bytes; /* Bytes read / written so far. */
+    rio *rio; /* Rio stream. */
+    moduleType *type; /* Module type doing the operation. */
+    int error; /* True if error condition happened. */
+    int ver; /* Module serialization version: 1 (old),
                          * 2 (current version with opcodes annotation). */
     struct RedisModuleCtx *ctx; /* Optional context, see RM_GetContextFromIO()*/
-    struct redisObject *key;    /* Optional name of key processed */
+    struct redisObject *key; /* Optional name of key processed */
 } RedisModuleIO;
 
 /* Macro to initialize an IO context. Note that the 'ver' field is populated
@@ -646,8 +658,8 @@ typedef struct RedisModuleIO {
  * reflects the values. See the DEBUG DIGEST command implementation for more
  * background. */
 typedef struct RedisModuleDigest {
-    unsigned char o[20];    /* Ordered elements. */
-    unsigned char x[20];    /* Xored elements. */
+    unsigned char o[20]; /* Ordered elements. */
+    unsigned char x[20]; /* Xored elements. */
 } RedisModuleDigest;
 
 /* Just start with a digest composed of all zero bytes. */
@@ -678,10 +690,11 @@ typedef struct RedisModuleDigest {
 #define OBJ_SHARED_REFCOUNT INT_MAX     /* Global object never destroyed. */
 #define OBJ_STATIC_REFCOUNT (INT_MAX-1) /* Object allocated in the stack. */
 #define OBJ_FIRST_SPECIAL_REFCOUNT OBJ_STATIC_REFCOUNT
+
 typedef struct redisObject {
-    unsigned type:4;
-    unsigned encoding:4;
-    unsigned lru:LRU_BITS; /* LRU time (relative to global lru_clock) or
+    unsigned type: 4;
+    unsigned encoding: 4;
+    unsigned lru: LRU_BITS; /* LRU time (relative to global lru_clock) or
                             * LFU data (least significant 8 bits frequency
                             * and most significant 16 bits access time). */
     int refcount;
@@ -691,7 +704,7 @@ typedef struct redisObject {
 /* The a string name for an object's type as listed above
  * Native types are checked against the OBJ_STRING, OBJ_LIST, OBJ_* defines,
  * and Module types have their registered name returned. */
-char *getObjectTypeName(robj*);
+char *getObjectTypeName(robj *);
 
 /* Macro used to initialize a Redis object allocated on the stack.
  * Note that this macro is taken near the structure definition to make sure
@@ -717,15 +730,15 @@ typedef struct clientReplyBlock {
  * by integers from 0 (the default database) up to the max configured
  * database. The database number is the 'id' field in the structure. */
 typedef struct redisDb {
-    dict *dict;                 /* The keyspace for this DB */
-    dict *expires;              /* Timeout of keys with a timeout set */
-    dict *blocking_keys;        /* Keys with clients waiting for data (BLPOP)*/
-    dict *ready_keys;           /* Blocked keys that received a PUSH */
-    dict *watched_keys;         /* WATCHED keys for MULTI/EXEC CAS */
-    int id;                     /* Database ID */
-    long long avg_ttl;          /* Average TTL, just for stats */
+    dict *dict; /* The keyspace for this DB */
+    dict *expires; /* Timeout of keys with a timeout set */
+    dict *blocking_keys; /* Keys with clients waiting for data (BLPOP)*/
+    dict *ready_keys; /* Blocked keys that received a PUSH */
+    dict *watched_keys; /* WATCHED keys for MULTI/EXEC CAS */
+    int id; /* Database ID */
+    long long avg_ttl; /* Average TTL, just for stats */
     unsigned long expires_cursor; /* Cursor of the active expire cycle. */
-    list *defrag_later;         /* List of key names to attempt to defrag one by one, gradually. */
+    list *defrag_later; /* List of key names to attempt to defrag one by one, gradually. */
 } redisDb;
 
 /* Declare database backup that include redis main DBs and slots to keys map.
@@ -741,12 +754,12 @@ typedef struct multiCmd {
 } multiCmd;
 
 typedef struct multiState {
-    multiCmd *commands;     /* Array of MULTI commands */
-    int count;              /* Total number of MULTI commands */
-    int cmd_flags;          /* The accumulated command flags OR-ed together.
+    multiCmd *commands; /* Array of MULTI commands */
+    int count; /* Total number of MULTI commands */
+    int cmd_flags; /* The accumulated command flags OR-ed together.
                                So if at least a command has a given flag, it
                                will be set in this field. */
-    int cmd_inv_flags;      /* Same as cmd_flags, OR-ing the ~flags. so that it
+    int cmd_inv_flags; /* Same as cmd_flags, OR-ing the ~flags. so that it
                                is possible to know if all the commands have a
                                certain flag. */
 } multiState;
@@ -755,30 +768,30 @@ typedef struct multiState {
  * The fields used depend on client->btype. */
 typedef struct blockingState {
     /* Generic fields. */
-    mstime_t timeout;       /* Blocking operation timeout. If UNIX current time
+    mstime_t timeout; /* Blocking operation timeout. If UNIX current time
                              * is > timeout then the operation timed out. */
 
     /* BLOCKED_LIST, BLOCKED_ZSET and BLOCKED_STREAM */
-    dict *keys;             /* The keys we are waiting to terminate a blocking
+    dict *keys; /* The keys we are waiting to terminate a blocking
                              * operation such as BLPOP or XREAD. Or NULL. */
-    robj *target;           /* The key that should receive the element,
+    robj *target; /* The key that should receive the element,
                              * for BLMOVE. */
     struct listPos {
-        int wherefrom;      /* Where to pop from */
-        int whereto;        /* Where to push to */
-    } listpos;              /* The positions in the src/dst lists
+        int wherefrom; /* Where to pop from */
+        int whereto; /* Where to push to */
+    } listpos; /* The positions in the src/dst lists
                              * where we want to pop/push an element
                              * for BLPOP, BRPOP and BLMOVE. */
 
     /* BLOCK_STREAM */
-    size_t xread_count;     /* XREAD COUNT option. */
-    robj *xread_group;      /* XREADGROUP group name. */
-    robj *xread_consumer;   /* XREADGROUP consumer name. */
+    size_t xread_count; /* XREAD COUNT option. */
+    robj *xread_group; /* XREADGROUP group name. */
+    robj *xread_consumer; /* XREADGROUP consumer name. */
     int xread_group_noack;
 
     /* BLOCKED_WAIT */
-    int numreplicas;        /* Number of replicas we are waiting for ACK. */
-    long long reploffset;   /* Replication offset to reach. */
+    int numreplicas; /* Number of replicas we are waiting for ACK. */
+    long long reploffset; /* Replication offset to reach. */
 
     /* BLOCKED_MODULE */
     void *module_blocked_handle; /* RedisModuleBlockedClient structure.
@@ -828,7 +841,7 @@ typedef struct readyList {
                                                  * payload. */
 
 typedef struct {
-    sds name;       /* The username as an SDS string. */
+    sds name; /* The username as an SDS string. */
     uint64_t flags; /* See USER_FLAG_* */
 
     /* The bit in allowed_commands is set if this user has the right to
@@ -838,7 +851,7 @@ typedef struct {
      * If the bit for a given command is NOT set and the command has
      * subcommands, Redis will also check allowed_subcommands in order to
      * understand if the command can be executed. */
-    uint64_t allowed_commands[USER_COMMAND_BITS_COUNT/64];
+    uint64_t allowed_commands[USER_COMMAND_BITS_COUNT / 64];
 
     /* This array points, for each command ID (corresponding to the command
      * bit set in allowed_commands), to an array of SDS strings, terminated by
@@ -847,10 +860,10 @@ typedef struct {
      * set to NULL to avoid allocating USER_COMMAND_BITS_COUNT pointers. */
     sds **allowed_subcommands;
     list *passwords; /* A list of SDS valid passwords for this user. */
-    list *patterns;  /* A list of allowed key patterns. If this field is NULL
+    list *patterns; /* A list of allowed key patterns. If this field is NULL
                         the user cannot mention any key in a command, unless
                         the flag ALLKEYS is set in the user. */
-    list *channels;  /* A list of allowed Pub/Sub channel patterns. If this
+    list *channels; /* A list of allowed Pub/Sub channel patterns. If this
                         field is NULL the user cannot mention any channel in a
                         `PUBLISH` or [P][UNSUBSCRIBE] command, unless the flag
                         ALLCHANNELS is set in the user. */
@@ -864,68 +877,69 @@ typedef struct {
                                       -2, ... and so forth. */
 
 typedef struct client {
-    uint64_t id;            /* Client incremental unique ID. */
+    uint64_t id; /* Client incremental unique ID. */
     connection *conn;
-    int resp;               /* RESP protocol version. Can be 2 or 3. */
-    redisDb *db;            /* Pointer to currently SELECTed DB. */
-    robj *name;             /* As set by CLIENT SETNAME. */
-    sds querybuf;           /* Buffer we use to accumulate client queries. */
-    size_t qb_pos;          /* The position we have read in querybuf. */
-    sds pending_querybuf;   /* If this client is flagged as master, this buffer
+    int resp; /* RESP protocol version. Can be 2 or 3. */
+    redisDb *db; /* Pointer to currently SELECTed DB. */
+    robj *name; /* As set by CLIENT SETNAME. */
+    sds querybuf; /* Buffer we use to accumulate client queries. */
+    size_t qb_pos; /* The position we have read in querybuf. */
+    sds pending_querybuf; /* If this client is flagged as master, this buffer
                                represents the yet not applied portion of the
                                replication stream that we are receiving from
                                the master. */
-    size_t querybuf_peak;   /* Recent (100ms or more) peak of querybuf size. */
-    int argc;               /* Num of arguments of current command. */
-    robj **argv;            /* Arguments of current command. */
-    int original_argc;      /* Num of arguments of original command if arguments were rewritten. */
-    robj **original_argv;   /* Arguments of original command if arguments were rewritten. */
-    size_t argv_len_sum;    /* Sum of lengths of objects in argv list. */
-    struct redisCommand *cmd, *lastcmd;  /* Last command executed. */
-    user *user;             /* User associated with this connection. If the
+    size_t querybuf_peak; /* Recent (100ms or more) peak of querybuf size. */
+    int argc; /* Num of arguments of current command. */
+    robj **argv; /* Arguments of current command. */
+    int original_argc; /* Num of arguments of original command if arguments were rewritten. */
+    robj **original_argv; /* Arguments of original command if arguments were rewritten. */
+    size_t argv_len_sum; /* Sum of lengths of objects in argv list. */
+    struct redisCommand *cmd, *lastcmd; /* Last command executed. */
+    user *user; /* User associated with this connection. If the
                                user is set to NULL the connection can do
                                anything (admin). */
-    int reqtype;            /* Request protocol type: PROTO_REQ_* */
-    int multibulklen;       /* Number of multi bulk arguments left to read. */
-    long bulklen;           /* Length of bulk argument in multi bulk request. */
-    list *reply;            /* List of reply objects to send to the client. */
+    int reqtype; /* Request protocol type: PROTO_REQ_* */
+    int multibulklen; /* Number of multi bulk arguments left to read. */
+    long bulklen; /* Length of bulk argument in multi bulk request. */
+    list *reply; /* List of reply objects to send to the client. */
     unsigned long long reply_bytes; /* Tot bytes of objects in reply list. */
-    list *deferred_reply_errors;    /* Used for module thread safe contexts. */
-    size_t sentlen;         /* Amount of bytes already sent in the current
+    list *deferred_reply_errors; /* Used for module thread safe contexts. */
+    size_t sentlen; /* Amount of bytes already sent in the current
                                buffer or object being sent. */
-    time_t ctime;           /* Client creation time. */
-    long duration;          /* Current command duration. Used for measuring latency of blocking/non-blocking cmds */
+    time_t ctime; /* Client creation time. */
+    long duration; /* Current command duration. Used for measuring latency of blocking/non-blocking cmds */
     time_t lastinteraction; /* Time of the last interaction, used for timeout */
     time_t obuf_soft_limit_reached_time;
-    uint64_t flags;         /* Client flags: CLIENT_* macros. */
-    int authenticated;      /* Needed when the default user requires auth. */
-    int replstate;          /* Replication state if this is a slave. */
+    uint64_t flags; /* Client flags: CLIENT_* macros. */
+    int authenticated; /* Needed when the default user requires auth. */
+    int replstate; /* Replication state if this is a slave. */
     int repl_put_online_on_ack; /* Install slave write handler on first ACK. */
-    int repldbfd;           /* Replication DB file descriptor. */
-    off_t repldboff;        /* Replication DB file offset. */
-    off_t repldbsize;       /* Replication DB file size. */
-    sds replpreamble;       /* Replication DB preamble. */
+    int repldbfd; /* Replication DB file descriptor. */
+    off_t repldboff; /* Replication DB file offset. */
+    off_t repldbsize; /* Replication DB file size. */
+    sds replpreamble; /* Replication DB preamble. */
     long long read_reploff; /* Read replication offset if this is a master. */
-    long long reploff;      /* Applied replication offset if this is a master. */
+    long long reploff; /* Applied replication offset if this is a master. */
     long long repl_ack_off; /* Replication ack offset, if this is a slave. */
-    long long repl_ack_time;/* Replication ack time, if this is a slave. */
-    long long repl_last_partial_write; /* The last time the server did a partial write from the RDB child pipe to this replica  */
+    long long repl_ack_time; /* Replication ack time, if this is a slave. */
+    long long repl_last_partial_write;
+    /* The last time the server did a partial write from the RDB child pipe to this replica  */
     long long psync_initial_offset; /* FULLRESYNC reply offset other slaves
                                        copying this slave output buffer
                                        should use. */
-    char replid[CONFIG_RUN_ID_SIZE+1]; /* Master replication ID (if master). */
+    char replid[CONFIG_RUN_ID_SIZE + 1]; /* Master replication ID (if master). */
     int slave_listening_port; /* As configured with: REPLCONF listening-port */
-    char *slave_addr;       /* Optionally given by REPLCONF ip-address */
-    int slave_capa;         /* Slave capabilities: SLAVE_CAPA_* bitwise OR. */
-    multiState mstate;      /* MULTI/EXEC state */
-    int btype;              /* Type of blocking op if CLIENT_BLOCKED. */
-    blockingState bpop;     /* blocking state */
-    long long woff;         /* Last write global replication offset. */
-    list *watched_keys;     /* Keys WATCHED for MULTI/EXEC CAS */
-    dict *pubsub_channels;  /* channels a client is interested in (SUBSCRIBE) */
-    list *pubsub_patterns;  /* patterns a client is interested in (SUBSCRIBE) */
-    sds peerid;             /* Cached peer ID. */
-    sds sockname;           /* Cached connection target address. */
+    char *slave_addr; /* Optionally given by REPLCONF ip-address */
+    int slave_capa; /* Slave capabilities: SLAVE_CAPA_* bitwise OR. */
+    multiState mstate; /* MULTI/EXEC state */
+    int btype; /* Type of blocking op if CLIENT_BLOCKED. */
+    blockingState bpop; /* blocking state */
+    long long woff; /* Last write global replication offset. */
+    list *watched_keys; /* Keys WATCHED for MULTI/EXEC CAS */
+    dict *pubsub_channels; /* channels a client is interested in (SUBSCRIBE) */
+    list *pubsub_patterns; /* patterns a client is interested in (SUBSCRIBE) */
+    sds peerid; /* Cached peer ID. */
+    sds sockname; /* Cached connection target address. */
     listNode *client_list_node; /* list node in client list */
     listNode *paused_list_node; /* list node within the pause list */
     RedisModuleUserChangedFunc auth_callback; /* Module callback to execute
@@ -934,7 +948,7 @@ typedef struct client {
     void *auth_callback_privdata; /* Private data that is passed when the auth
                                    * changed callback is executed. Opaque for
                                    * Redis Core. */
-    void *auth_module;      /* The module that owns the callback, which is used
+    void *auth_module; /* The module that owns the callback, which is used
                              * to disconnect the client if the module is
                              * unloaded for cleanup. Opaque for Redis Core.*/
 
@@ -951,7 +965,7 @@ typedef struct client {
      * client, and in which categoty the client was, in order to remove it
      * before adding it the new value. */
     uint64_t client_cron_last_memory_usage;
-    int      client_cron_last_memory_type;
+    int client_cron_last_memory_type;
     /* Response buffer */
     int bufpos;
     char buf[PROTO_REPLY_CHUNK_BYTES];
@@ -983,24 +997,24 @@ struct sentinelConfig {
 
 struct sharedObjectsStruct {
     robj *crlf, *ok, *err, *emptybulk, *czero, *cone, *pong, *space,
-    *colon, *queued, *null[4], *nullarray[4], *emptymap[4], *emptyset[4],
-    *emptyarray, *wrongtypeerr, *nokeyerr, *syntaxerr, *sameobjecterr,
-    *outofrangeerr, *noscripterr, *loadingerr, *slowscripterr, *bgsaveerr,
-    *masterdownerr, *roslaveerr, *execaborterr, *noautherr, *noreplicaserr,
-    *busykeyerr, *oomerr, *plus, *messagebulk, *pmessagebulk, *subscribebulk,
-    *unsubscribebulk, *psubscribebulk, *punsubscribebulk, *del, *unlink,
-    *rpop, *lpop, *lpush, *rpoplpush, *lmove, *blmove, *zpopmin, *zpopmax,
-    *emptyscan, *multi, *exec, *left, *right, *hset, *srem, *xgroup, *xclaim,  
-    *script, *replconf, *eval, *persist, *set, *pexpireat, *pexpire, 
-    *time, *pxat, *px, *retrycount, *force, *justid, 
-    *lastid, *ping, *setid, *keepttl, *load, *createconsumer,
-    *getack, *special_asterick, *special_equals, *default_username, *redacted,
-    *select[PROTO_SHARED_SELECT_CMDS],
-    *integers[OBJ_SHARED_INTEGERS],
-    *mbulkhdr[OBJ_SHARED_BULKHDR_LEN], /* "*<value>\r\n" */
-    *bulkhdr[OBJ_SHARED_BULKHDR_LEN],  /* "$<value>\r\n" */
-    *maphdr[OBJ_SHARED_BULKHDR_LEN],   /* "%<value>\r\n" */
-    *sethdr[OBJ_SHARED_BULKHDR_LEN];   /* "~<value>\r\n" */
+            *colon, *queued, *null[4], *nullarray[4], *emptymap[4], *emptyset[4],
+            *emptyarray, *wrongtypeerr, *nokeyerr, *syntaxerr, *sameobjecterr,
+            *outofrangeerr, *noscripterr, *loadingerr, *slowscripterr, *bgsaveerr,
+            *masterdownerr, *roslaveerr, *execaborterr, *noautherr, *noreplicaserr,
+            *busykeyerr, *oomerr, *plus, *messagebulk, *pmessagebulk, *subscribebulk,
+            *unsubscribebulk, *psubscribebulk, *punsubscribebulk, *del, *unlink,
+            *rpop, *lpop, *lpush, *rpoplpush, *lmove, *blmove, *zpopmin, *zpopmax,
+            *emptyscan, *multi, *exec, *left, *right, *hset, *srem, *xgroup, *xclaim,
+            *script, *replconf, *eval, *persist, *set, *pexpireat, *pexpire,
+            *time, *pxat, *px, *retrycount, *force, *justid,
+            *lastid, *ping, *setid, *keepttl, *load, *createconsumer,
+            *getack, *special_asterick, *special_equals, *default_username, *redacted,
+            *select[PROTO_SHARED_SELECT_CMDS],
+            *integers[OBJ_SHARED_INTEGERS],
+            *mbulkhdr[OBJ_SHARED_BULKHDR_LEN], /* "*<value>\r\n" */
+            *bulkhdr[OBJ_SHARED_BULKHDR_LEN], /* "$<value>\r\n" */
+            *maphdr[OBJ_SHARED_BULKHDR_LEN], /* "%<value>\r\n" */
+            *sethdr[OBJ_SHARED_BULKHDR_LEN]; /* "~<value>\r\n" */
     sds minstring, maxstring;
 };
 
@@ -1009,6 +1023,7 @@ typedef struct zskiplistNode {
     sds ele;
     double score;
     struct zskiplistNode *backward;
+
     struct zskiplistLevel {
         struct zskiplistNode *forward;
         unsigned long span;
@@ -1084,6 +1099,7 @@ struct redisMemOverhead {
     float rss_extra;
     size_t rss_extra_bytes;
     size_t num_dbs;
+
     struct {
         size_t dbid;
         size_t overhead_ht_main;
@@ -1101,12 +1117,12 @@ struct redisMemOverhead {
  * top-level master. */
 typedef struct rdbSaveInfo {
     /* Used saving and loading. */
-    int repl_stream_db;  /* DB to select in server.master client. */
+    int repl_stream_db; /* DB to select in server.master client. */
 
     /* Used only loading. */
-    int repl_id_is_set;  /* True if repl_id field is set. */
-    char repl_id[CONFIG_RUN_ID_SIZE+1];     /* Replication ID. */
-    long long repl_offset;                  /* Replication offset. */
+    int repl_id_is_set; /* True if repl_id field is set. */
+    char repl_id[CONFIG_RUN_ID_SIZE + 1]; /* Replication ID. */
+    long long repl_offset; /* Replication offset. */
 } rdbSaveInfo;
 
 #define RDB_SAVE_INFO_INIT {-1,0,"0000000000000000000000000000000000000000",-1}
@@ -1129,12 +1145,12 @@ typedef struct socketFds {
  *----------------------------------------------------------------------------*/
 
 typedef struct redisTLSContextConfig {
-    char *cert_file;                /* Server side and optionally client side cert file name */
-    char *key_file;                 /* Private key filename for cert_file */
-    char *key_file_pass;            /* Optional password for key_file */
-    char *client_cert_file;         /* Certificate to use as a client; if none, use cert_file */
-    char *client_key_file;          /* Private key filename for client_cert_file */
-    char *client_key_file_pass;     /* Optional password for client_key_file */
+    char *cert_file; /* Server side and optionally client side cert file name */
+    char *key_file; /* Private key filename for cert_file */
+    char *key_file_pass; /* Optional password for key_file */
+    char *client_cert_file; /* Certificate to use as a client; if none, use cert_file */
+    char *client_key_file; /* Private key filename for client_cert_file */
+    char *client_key_file_pass; /* Optional password for client_key_file */
     char *dh_params_file;
     char *ca_cert_file;
     char *ca_cert_dir;
@@ -1174,84 +1190,84 @@ typedef enum childInfoType {
 
 struct redisServer {
     /* General */
-    pid_t pid;                  /* Main process pid. */
-    pthread_t main_thread_id;         /* Main thread id */
-    char *configfile;           /* Absolute config file path, or NULL */
-    char *executable;           /* Absolute executable file path. */
-    char **exec_argv;           /* Executable argv vector (copy). */
-    int dynamic_hz;             /* Change hz value depending on # of clients. */
-    int config_hz;              /* Configured HZ value. May be different than
+    pid_t pid; /* Main process pid. */
+    pthread_t main_thread_id; /* Main thread id */
+    char *configfile; /* Absolute config file path, or NULL */
+    char *executable; /* Absolute executable file path. */
+    char **exec_argv; /* Executable argv vector (copy). */
+    int dynamic_hz; /* Change hz value depending on # of clients. */
+    int config_hz; /* Configured HZ value. May be different than
                                    the actual 'hz' field value if dynamic-hz
                                    is enabled. */
-    mode_t umask;               /* The umask value of the process on startup */
-    int hz;                     /* serverCron() calls frequency in hertz */
-    int in_fork_child;          /* indication that this is a fork child */
+    mode_t umask; /* The umask value of the process on startup */
+    int hz; /* serverCron() calls frequency in hertz */
+    int in_fork_child; /* indication that this is a fork child */
     redisDb *db;
-    dict *commands;             /* Command table */
-    dict *orig_commands;        /* Command table before command renaming. */
+    dict *commands; /* Command table */
+    dict *orig_commands; /* Command table before command renaming. */
     aeEventLoop *el;
-    rax *errors;                /* Errors table */
+    rax *errors; /* Errors table */
     redisAtomic unsigned int lruclock; /* Clock for LRU eviction */
     volatile sig_atomic_t shutdown_asap; /* SHUTDOWN needed ASAP */
-    int activerehashing;        /* Incremental rehash in serverCron() */
-    int active_defrag_running;  /* Active defragmentation running (holds current scan aggressiveness) */
-    char *pidfile;              /* PID file path */
-    int arch_bits;              /* 32 or 64 depending on sizeof(long) */
-    int cronloops;              /* Number of times the cron function run */
-    char runid[CONFIG_RUN_ID_SIZE+1];  /* ID always different at every exec. */
-    int sentinel_mode;          /* True if this instance is a Sentinel. */
+    int activerehashing; /* Incremental rehash in serverCron() */
+    int active_defrag_running; /* Active defragmentation running (holds current scan aggressiveness) */
+    char *pidfile; /* PID file path */
+    int arch_bits; /* 32 or 64 depending on sizeof(long) */
+    int cronloops; /* Number of times the cron function run */
+    char runid[CONFIG_RUN_ID_SIZE + 1]; /* ID always different at every exec. */
+    int sentinel_mode; /* True if this instance is a Sentinel. */
     size_t initial_memory_usage; /* Bytes used after initialization. */
-    int always_show_logo;       /* Show logo even for non-stdout logging. */
-    int in_eval;                /* Are we inside EVAL? */
-    int in_exec;                /* Are we inside EXEC? */
-    int propagate_in_transaction;  /* Make sure we don't propagate nested MULTI/EXEC */
-    char *ignore_warnings;      /* Config: warnings that should be ignored. */
+    int always_show_logo; /* Show logo even for non-stdout logging. */
+    int in_eval; /* Are we inside EVAL? */
+    int in_exec; /* Are we inside EXEC? */
+    int propagate_in_transaction; /* Make sure we don't propagate nested MULTI/EXEC */
+    char *ignore_warnings; /* Config: warnings that should be ignored. */
     int client_pause_in_transaction; /* Was a client pause executed during this Exec? */
     /* Modules */
-    dict *moduleapi;            /* Exported core APIs dictionary for modules. */
-    dict *sharedapi;            /* Like moduleapi but containing the APIs that
+    dict *moduleapi; /* Exported core APIs dictionary for modules. */
+    dict *sharedapi; /* Like moduleapi but containing the APIs that
                                    modules share with each other. */
-    list *loadmodule_queue;     /* List of modules to load at startup. */
+    list *loadmodule_queue; /* List of modules to load at startup. */
     int module_blocked_pipe[2]; /* Pipe used to awake the event loop if a
                                    client blocked on a module command needs
                                    to be processed. */
-    pid_t child_pid;            /* PID of current child */
-    int child_type;             /* Type of current child */
-    client *module_client;      /* "Fake" client to call Redis from modules */
+    pid_t child_pid; /* PID of current child */
+    int child_type; /* Type of current child */
+    client *module_client; /* "Fake" client to call Redis from modules */
     /* Networking */
-    int port;                   /* TCP listening port */
-    int tls_port;               /* TLS listening port */
-    int tcp_backlog;            /* TCP listen() backlog */
+    int port; /* TCP listening port */
+    int tls_port; /* TLS listening port */
+    int tcp_backlog; /* TCP listen() backlog */
     char *bindaddr[CONFIG_BINDADDR_MAX]; /* Addresses we should bind to */
-    int bindaddr_count;         /* Number of addresses in server.bindaddr[] */
-    char *unixsocket;           /* UNIX socket path */
-    mode_t unixsocketperm;      /* UNIX socket permission */
-    socketFds ipfd;             /* TCP socket file descriptors */
-    socketFds tlsfd;            /* TLS socket file descriptors */
-    int sofd;                   /* Unix socket file descriptor */
-    socketFds cfd;              /* Cluster bus listening socket */
-    list *clients;              /* List of active clients */
-    list *clients_to_close;     /* Clients to close asynchronously */
+    int bindaddr_count; /* Number of addresses in server.bindaddr[] */
+    char *unixsocket; /* UNIX socket path */
+    mode_t unixsocketperm; /* UNIX socket permission */
+    socketFds ipfd; /* TCP socket file descriptors */
+    socketFds tlsfd; /* TLS socket file descriptors */
+    int sofd; /* Unix socket file descriptor */
+    socketFds cfd; /* Cluster bus listening socket */
+    list *clients; /* List of active clients */
+    list *clients_to_close; /* Clients to close asynchronously */
     list *clients_pending_write; /* There is to write or install handler. */
-    list *clients_pending_read;  /* Client has pending read socket buffers. */
-    list *slaves, *monitors;    /* List of slaves and MONITORs */
-    client *current_client;     /* Current client executing the command. */
+    list *clients_pending_read; /* Client has pending read socket buffers. */
+    list *slaves, *monitors; /* List of slaves and MONITORs */
+    client *current_client; /* Current client executing the command. */
     rax *clients_timeout_table; /* Radix tree for blocked clients timeouts. */
-    long fixed_time_expire;     /* If > 0, expire keys against server.mstime. */
-    int in_nested_call;         /* If > 0, in a nested call of a call */
-    rax *clients_index;         /* Active clients dictionary by client ID. */
-    pause_type client_pause_type;      /* True if clients are currently paused */
-    list *paused_clients;       /* List of pause clients */
-    mstime_t client_pause_end_time;    /* Time when we undo clients_paused */
-    char neterr[ANET_ERR_LEN];   /* Error buffer for anet.c */
-    dict *migrate_cached_sockets;/* MIGRATE cached sockets */
+    long fixed_time_expire; /* If > 0, expire keys against server.mstime. */
+    int in_nested_call; /* If > 0, in a nested call of a call */
+    rax *clients_index; /* Active clients dictionary by client ID. */
+    pause_type client_pause_type; /* True if clients are currently paused */
+    list *paused_clients; /* List of pause clients */
+    mstime_t client_pause_end_time; /* Time when we undo clients_paused */
+    char neterr[ANET_ERR_LEN]; /* Error buffer for anet.c */
+    dict *migrate_cached_sockets; /* MIGRATE cached sockets */
     redisAtomic uint64_t next_client_id; /* Next client unique ID. Incremental. */
-    int protected_mode;         /* Don't accept external connections. */
-    int gopher_enabled;         /* If true the server will reply to gopher
+    int protected_mode; /* Don't accept external connections. */
+    int gopher_enabled; /* If true the server will reply to gopher
                                    queries. Will still serve RESP2 queries. */
-    int io_threads_num;         /* Number of IO threads to use. */
-    int io_threads_do_reads;    /* Read and parse from IO threads? */
-    int io_threads_active;      /* Is IO threads currently active? */
+    int io_threads_num; /* Number of IO threads to use. */
+    int io_threads_do_reads; /* Read and parse from IO threads? */
+    int io_threads_active; /* Is IO threads currently active? */
     long long events_processed_while_blocked; /* processEventsWhileBlocked() */
 
     /* RDB / AOF loading information */
@@ -1263,51 +1279,52 @@ struct redisServer {
     off_t loading_process_events_interval_bytes;
     /* Fast pointers to often looked up command */
     struct redisCommand *delCommand, *multiCommand, *lpushCommand,
-                        *lpopCommand, *rpopCommand, *zpopminCommand,
-                        *zpopmaxCommand, *sremCommand, *execCommand,
-                        *expireCommand, *pexpireCommand, *xclaimCommand,
-                        *xgroupCommand, *rpoplpushCommand, *lmoveCommand;
+            *lpopCommand, *rpopCommand, *zpopminCommand,
+            *zpopmaxCommand, *sremCommand, *execCommand,
+            *expireCommand, *pexpireCommand, *xclaimCommand,
+            *xgroupCommand, *rpoplpushCommand, *lmoveCommand;
     /* Fields used only for stats */
-    time_t stat_starttime;          /* Server start time */
-    long long stat_numcommands;     /* Number of processed commands */
-    long long stat_numconnections;  /* Number of connections received */
-    long long stat_expiredkeys;     /* Number of expired keys */
+    time_t stat_starttime; /* Server start time */
+    long long stat_numcommands; /* Number of processed commands */
+    long long stat_numconnections; /* Number of connections received */
+    long long stat_expiredkeys; /* Number of expired keys */
     double stat_expired_stale_perc; /* Percentage of keys probably expired */
     long long stat_expired_time_cap_reached_count; /* Early expire cylce stops.*/
     long long stat_expire_cycle_time_used; /* Cumulative microseconds used. */
-    long long stat_evictedkeys;     /* Number of evicted keys (maxmemory) */
-    long long stat_keyspace_hits;   /* Number of successful lookups of keys */
+    long long stat_evictedkeys; /* Number of evicted keys (maxmemory) */
+    long long stat_keyspace_hits; /* Number of successful lookups of keys */
     long long stat_keyspace_misses; /* Number of failed lookups of keys */
-    long long stat_active_defrag_hits;      /* number of allocations moved */
-    long long stat_active_defrag_misses;    /* number of allocations scanned but not moved */
-    long long stat_active_defrag_key_hits;  /* number of keys with moved allocations */
-    long long stat_active_defrag_key_misses;/* number of keys scanned and not moved */
-    long long stat_active_defrag_scanned;   /* number of dictEntries scanned */
-    size_t stat_peak_memory;        /* Max used memory record */
-    long long stat_fork_time;       /* Time needed to perform latest fork() */
-    double stat_fork_rate;          /* Fork rate in GB/sec. */
-    long long stat_total_forks;     /* Total count of fork. */
-    long long stat_rejected_conn;   /* Clients rejected because of maxclients */
-    long long stat_sync_full;       /* Number of full resyncs with slaves. */
+    long long stat_active_defrag_hits; /* number of allocations moved */
+    long long stat_active_defrag_misses; /* number of allocations scanned but not moved */
+    long long stat_active_defrag_key_hits; /* number of keys with moved allocations */
+    long long stat_active_defrag_key_misses; /* number of keys scanned and not moved */
+    long long stat_active_defrag_scanned; /* number of dictEntries scanned */
+    size_t stat_peak_memory; /* Max used memory record */
+    long long stat_fork_time; /* Time needed to perform latest fork() */
+    double stat_fork_rate; /* Fork rate in GB/sec. */
+    long long stat_total_forks; /* Total count of fork. */
+    long long stat_rejected_conn; /* Clients rejected because of maxclients */
+    long long stat_sync_full; /* Number of full resyncs with slaves. */
     long long stat_sync_partial_ok; /* Number of accepted PSYNC requests. */
-    long long stat_sync_partial_err;/* Number of unaccepted PSYNC requests. */
-    list *slowlog;                  /* SLOWLOG list of commands */
-    long long slowlog_entry_id;     /* SLOWLOG current entry ID */
+    long long stat_sync_partial_err; /* Number of unaccepted PSYNC requests. */
+    list *slowlog; /* SLOWLOG list of commands */
+    long long slowlog_entry_id; /* SLOWLOG current entry ID */
     long long slowlog_log_slower_than; /* SLOWLOG time limit (to get logged) */
-    unsigned long slowlog_max_len;     /* SLOWLOG max number of items logged */
+    unsigned long slowlog_max_len; /* SLOWLOG max number of items logged */
     struct malloc_stats cron_malloc_stats; /* sampled in serverCron(). */
     redisAtomic long long stat_net_input_bytes; /* Bytes read from network. */
     redisAtomic long long stat_net_output_bytes; /* Bytes written to network. */
-    size_t stat_current_cow_bytes;  /* Copy on write bytes while child is active. */
-    monotime stat_current_cow_updated;  /* Last update time of stat_current_cow_bytes */
-    size_t stat_current_save_keys_processed;  /* Processed keys while child is active. */
-    size_t stat_current_save_keys_total;  /* Number of keys when child started. */
-    size_t stat_rdb_cow_bytes;      /* Copy on write bytes during RDB saving. */
-    size_t stat_aof_cow_bytes;      /* Copy on write bytes during AOF rewrite. */
-    size_t stat_module_cow_bytes;   /* Copy on write bytes during module fork. */
-    double stat_module_progress;   /* Module save progress. */
-    uint64_t stat_clients_type_memory[CLIENT_TYPE_COUNT];/* Mem usage by type */
-    long long stat_unexpected_error_replies; /* Number of unexpected (aof-loading, replica to master, etc.) error replies */
+    size_t stat_current_cow_bytes; /* Copy on write bytes while child is active. */
+    monotime stat_current_cow_updated; /* Last update time of stat_current_cow_bytes */
+    size_t stat_current_save_keys_processed; /* Processed keys while child is active. */
+    size_t stat_current_save_keys_total; /* Number of keys when child started. */
+    size_t stat_rdb_cow_bytes; /* Copy on write bytes during RDB saving. */
+    size_t stat_aof_cow_bytes; /* Copy on write bytes during AOF rewrite. */
+    size_t stat_module_cow_bytes; /* Copy on write bytes during module fork. */
+    double stat_module_progress; /* Module save progress. */
+    uint64_t stat_clients_type_memory[CLIENT_TYPE_COUNT]; /* Mem usage by type */
+    long long stat_unexpected_error_replies;
+    /* Number of unexpected (aof-loading, replica to master, etc.) error replies */
     long long stat_total_error_replies; /* Total number of issued error replies ( command + rejected errors ) */
     long long stat_dump_payload_sanitizations; /* Number deep dump payloads integrity validations. */
     long long stat_io_reads_processed; /* Number of read events processed by IO / Main threads */
@@ -1318,66 +1335,68 @@ struct redisServer {
      * number of operations per second, network traffic. */
     struct {
         long long last_sample_time; /* Timestamp of last sample in ms */
-        long long last_sample_count;/* Count in last sample */
+        long long last_sample_count; /* Count in last sample */
         long long samples[STATS_METRIC_SAMPLES];
         int idx;
     } inst_metric[STATS_METRIC_COUNT];
+
     /* Configuration */
-    int verbosity;                  /* Loglevel in redis.conf */
-    int maxidletime;                /* Client timeout in seconds */
-    int tcpkeepalive;               /* Set SO_KEEPALIVE if non-zero. */
-    int active_expire_enabled;      /* Can be disabled for testing purposes. */
-    int active_expire_effort;       /* From 1 (default) to 10, active effort. */
+    int verbosity; /* Loglevel in redis.conf */
+    int maxidletime; /* Client timeout in seconds */
+    int tcpkeepalive; /* Set SO_KEEPALIVE if non-zero. */
+    int active_expire_enabled; /* Can be disabled for testing purposes. */
+    int active_expire_effort; /* From 1 (default) to 10, active effort. */
     int active_defrag_enabled;
-    int sanitize_dump_payload;      /* Enables deep sanitization for ziplist and listpack in RDB and RESTORE. */
-    int skip_checksum_validation;   /* Disables checksum validateion for RDB and RESTORE payload. */
-    int jemalloc_bg_thread;         /* Enable jemalloc background thread */
+    int sanitize_dump_payload; /* Enables deep sanitization for ziplist and listpack in RDB and RESTORE. */
+    int skip_checksum_validation; /* Disables checksum validateion for RDB and RESTORE payload. */
+    int jemalloc_bg_thread; /* Enable jemalloc background thread */
     size_t active_defrag_ignore_bytes; /* minimum amount of fragmentation waste to start active defrag */
     int active_defrag_threshold_lower; /* minimum percentage of fragmentation to start active defrag */
     int active_defrag_threshold_upper; /* maximum percentage of fragmentation at which we use maximum effort */
-    int active_defrag_cycle_min;       /* minimal effort for defrag in CPU percentage */
-    int active_defrag_cycle_max;       /* maximal effort for defrag in CPU percentage */
-    unsigned long active_defrag_max_scan_fields; /* maximum number of fields of set/hash/zset/list to process from within the main dict scan */
+    int active_defrag_cycle_min; /* minimal effort for defrag in CPU percentage */
+    int active_defrag_cycle_max; /* maximal effort for defrag in CPU percentage */
+    unsigned long active_defrag_max_scan_fields;
+    /* maximum number of fields of set/hash/zset/list to process from within the main dict scan */
     size_t client_max_querybuf_len; /* Limit for client query buffer length */
-    int dbnum;                      /* Total number of configured DBs */
-    int supervised;                 /* 1 if supervised, 0 otherwise. */
-    int supervised_mode;            /* See SUPERVISED_* */
-    int daemonize;                  /* True if running as a daemon */
-    int set_proc_title;             /* True if change proc title */
-    char *proc_title_template;      /* Process title template format */
+    int dbnum; /* Total number of configured DBs */
+    int supervised; /* 1 if supervised, 0 otherwise. */
+    int supervised_mode; /* See SUPERVISED_* */
+    int daemonize; /* True if running as a daemon */
+    int set_proc_title; /* True if change proc title */
+    char *proc_title_template; /* Process title template format */
     clientBufferLimitsConfig client_obuf_limits[CLIENT_TYPE_OBUF_COUNT];
-    int pause_cron;                 /* Don't run cron tasks (debug) */
+    int pause_cron; /* Don't run cron tasks (debug) */
     /* AOF persistence */
-    int aof_enabled;                /* AOF configuration */
-    int aof_state;                  /* AOF_(ON|OFF|WAIT_REWRITE) */
-    int aof_fsync;                  /* Kind of fsync() policy */
-    char *aof_filename;             /* Name of the AOF file */
-    int aof_no_fsync_on_rewrite;    /* Don't fsync if a rewrite is in prog. */
-    int aof_rewrite_perc;           /* Rewrite AOF if % growth is > M and... */
-    off_t aof_rewrite_min_size;     /* the AOF file is at least N bytes. */
-    off_t aof_rewrite_base_size;    /* AOF size on latest startup or rewrite. */
-    off_t aof_current_size;         /* AOF current size. */
-    off_t aof_fsync_offset;         /* AOF offset which is already synced to disk. */
-    int aof_flush_sleep;            /* Micros to sleep before flush. (used by tests) */
-    int aof_rewrite_scheduled;      /* Rewrite once BGSAVE terminates. */
-    list *aof_rewrite_buf_blocks;   /* Hold changes during an AOF rewrite. */
-    sds aof_buf;      /* AOF buffer, written before entering the event loop */
-    int aof_fd;       /* File descriptor of currently selected AOF file */
+    int aof_enabled; /* AOF configuration */
+    int aof_state; /* AOF_(ON|OFF|WAIT_REWRITE) */
+    int aof_fsync; /* Kind of fsync() policy */
+    char *aof_filename; /* Name of the AOF file */
+    int aof_no_fsync_on_rewrite; /* Don't fsync if a rewrite is in prog. */
+    int aof_rewrite_perc; /* Rewrite AOF if % growth is > M and... */
+    off_t aof_rewrite_min_size; /* the AOF file is at least N bytes. */
+    off_t aof_rewrite_base_size; /* AOF size on latest startup or rewrite. */
+    off_t aof_current_size; /* AOF current size. */
+    off_t aof_fsync_offset; /* AOF offset which is already synced to disk. */
+    int aof_flush_sleep; /* Micros to sleep before flush. (used by tests) */
+    int aof_rewrite_scheduled; /* Rewrite once BGSAVE terminates. */
+    list *aof_rewrite_buf_blocks; /* Hold changes during an AOF rewrite. */
+    sds aof_buf; /* AOF buffer, written before entering the event loop */
+    int aof_fd; /* File descriptor of currently selected AOF file */
     int aof_selected_db; /* Currently selected DB in AOF */
     time_t aof_flush_postponed_start; /* UNIX time of postponed AOF flush */
-    time_t aof_last_fsync;            /* UNIX time of last fsync() */
-    time_t aof_rewrite_time_last;   /* Time used by last AOF rewrite run. */
-    time_t aof_rewrite_time_start;  /* Current AOF rewrite start time. */
-    int aof_lastbgrewrite_status;   /* C_OK or C_ERR */
-    unsigned long aof_delayed_fsync;  /* delayed AOF fsync() counter */
-    int aof_rewrite_incremental_fsync;/* fsync incrementally while aof rewriting? */
-    int rdb_save_incremental_fsync;   /* fsync incrementally while rdb saving? */
-    int aof_last_write_status;      /* C_OK or C_ERR */
-    int aof_last_write_errno;       /* Valid if aof write/fsync status is ERR */
-    int aof_load_truncated;         /* Don't stop on unexpected AOF EOF. */
-    int aof_use_rdb_preamble;       /* Use RDB preamble on AOF rewrites. */
+    time_t aof_last_fsync; /* UNIX time of last fsync() */
+    time_t aof_rewrite_time_last; /* Time used by last AOF rewrite run. */
+    time_t aof_rewrite_time_start; /* Current AOF rewrite start time. */
+    int aof_lastbgrewrite_status; /* C_OK or C_ERR */
+    unsigned long aof_delayed_fsync; /* delayed AOF fsync() counter */
+    int aof_rewrite_incremental_fsync; /* fsync incrementally while aof rewriting? */
+    int rdb_save_incremental_fsync; /* fsync incrementally while rdb saving? */
+    int aof_last_write_status; /* C_OK or C_ERR */
+    int aof_last_write_errno; /* Valid if aof write/fsync status is ERR */
+    int aof_load_truncated; /* Don't stop on unexpected AOF EOF. */
+    int aof_use_rdb_preamble; /* Use RDB preamble on AOF rewrites. */
     redisAtomic int aof_bio_fsync_status; /* Status of AOF fsync in bio job. */
-    redisAtomic int aof_bio_fsync_errno;  /* Errno of AOF fsync in bio job. */
+    redisAtomic int aof_bio_fsync_errno; /* Errno of AOF fsync in bio job. */
     /* AOF pipes used to communicate between parent and child during rewrite. */
     int aof_pipe_write_data_to_child;
     int aof_pipe_read_data_from_parent;
@@ -1385,141 +1404,141 @@ struct redisServer {
     int aof_pipe_read_ack_from_child;
     int aof_pipe_write_ack_to_child;
     int aof_pipe_read_ack_from_parent;
-    int aof_stop_sending_diff;     /* If true stop sending accumulated diffs
+    int aof_stop_sending_diff; /* If true stop sending accumulated diffs
                                       to child process. */
-    sds aof_child_diff;             /* AOF diff accumulator child side. */
+    sds aof_child_diff; /* AOF diff accumulator child side. */
     /* RDB persistence */
-    long long dirty;                /* Changes to DB from the last save */
-    long long dirty_before_bgsave;  /* Used to restore dirty on failed BGSAVE */
-    struct saveparam *saveparams;   /* Save points array for RDB */
-    int saveparamslen;              /* Number of saving points */
-    char *rdb_filename;             /* Name of RDB file */
-    int rdb_compression;            /* Use compression in RDB? */
-    int rdb_checksum;               /* Use RDB checksum? */
-    int rdb_del_sync_files;         /* Remove RDB files used only for SYNC if
+    long long dirty; /* Changes to DB from the last save */
+    long long dirty_before_bgsave; /* Used to restore dirty on failed BGSAVE */
+    struct saveparam *saveparams; /* Save points array for RDB */
+    int saveparamslen; /* Number of saving points */
+    char *rdb_filename; /* Name of RDB file */
+    int rdb_compression; /* Use compression in RDB? */
+    int rdb_checksum; /* Use RDB checksum? */
+    int rdb_del_sync_files; /* Remove RDB files used only for SYNC if
                                        the instance does not use persistence. */
-    time_t lastsave;                /* Unix time of last successful save */
-    time_t lastbgsave_try;          /* Unix time of last attempted bgsave */
-    time_t rdb_save_time_last;      /* Time used by last RDB save run. */
-    time_t rdb_save_time_start;     /* Current RDB save start time. */
-    int rdb_bgsave_scheduled;       /* BGSAVE when possible if true. */
-    int rdb_child_type;             /* Type of save by active child. */
-    int lastbgsave_status;          /* C_OK or C_ERR */
-    int stop_writes_on_bgsave_err;  /* Don't allow writes if can't BGSAVE */
-    int rdb_pipe_read;              /* RDB pipe used to transfer the rdb data */
-                                    /* to the parent process in diskless repl. */
-    int rdb_child_exit_pipe;        /* Used by the diskless parent allow child exit. */
-    connection **rdb_pipe_conns;    /* Connections which are currently the */
-    int rdb_pipe_numconns;          /* target of diskless rdb fork child. */
-    int rdb_pipe_numconns_writing;  /* Number of rdb conns with pending writes. */
-    char *rdb_pipe_buff;            /* In diskless replication, this buffer holds data */
-    int rdb_pipe_bufflen;           /* that was read from the the rdb pipe. */
-    int rdb_key_save_delay;         /* Delay in microseconds between keys while
+    time_t lastsave; /* Unix time of last successful save */
+    time_t lastbgsave_try; /* Unix time of last attempted bgsave */
+    time_t rdb_save_time_last; /* Time used by last RDB save run. */
+    time_t rdb_save_time_start; /* Current RDB save start time. */
+    int rdb_bgsave_scheduled; /* BGSAVE when possible if true. */
+    int rdb_child_type; /* Type of save by active child. */
+    int lastbgsave_status; /* C_OK or C_ERR */
+    int stop_writes_on_bgsave_err; /* Don't allow writes if can't BGSAVE */
+    int rdb_pipe_read; /* RDB pipe used to transfer the rdb data */
+    /* to the parent process in diskless repl. */
+    int rdb_child_exit_pipe; /* Used by the diskless parent allow child exit. */
+    connection **rdb_pipe_conns; /* Connections which are currently the */
+    int rdb_pipe_numconns; /* target of diskless rdb fork child. */
+    int rdb_pipe_numconns_writing; /* Number of rdb conns with pending writes. */
+    char *rdb_pipe_buff; /* In diskless replication, this buffer holds data */
+    int rdb_pipe_bufflen; /* that was read from the the rdb pipe. */
+    int rdb_key_save_delay; /* Delay in microseconds between keys while
                                      * writing the RDB. (for testings). negative
                                      * value means fractions of microsecons (on average). */
-    int key_load_delay;             /* Delay in microseconds between keys while
+    int key_load_delay; /* Delay in microseconds between keys while
                                      * loading aof or rdb. (for testings). negative
                                      * value means fractions of microsecons (on average). */
     /* Pipe and data structures for child -> parent info sharing. */
-    int child_info_pipe[2];         /* Pipe used to write the child_info_data. */
-    int child_info_nread;           /* Num of bytes of the last read from pipe */
+    int child_info_pipe[2]; /* Pipe used to write the child_info_data. */
+    int child_info_nread; /* Num of bytes of the last read from pipe */
     /* Propagation of commands in AOF / replication */
-    redisOpArray also_propagate;    /* Additional command to propagate. */
-    int replication_allowed;        /* Are we allowed to replicate? */
+    redisOpArray also_propagate; /* Additional command to propagate. */
+    int replication_allowed; /* Are we allowed to replicate? */
     /* Logging */
-    char *logfile;                  /* Path of log file */
-    int syslog_enabled;             /* Is syslog enabled? */
-    char *syslog_ident;             /* Syslog ident */
-    int syslog_facility;            /* Syslog facility */
-    int crashlog_enabled;           /* Enable signal handler for crashlog.
+    char *logfile; /* Path of log file */
+    int syslog_enabled; /* Is syslog enabled? */
+    char *syslog_ident; /* Syslog ident */
+    int syslog_facility; /* Syslog facility */
+    int crashlog_enabled; /* Enable signal handler for crashlog.
                                      * disable for clean core dumps. */
-    int memcheck_enabled;           /* Enable memory check on crash. */
-    int use_exit_on_panic;          /* Use exit() on panic and assert rather than
+    int memcheck_enabled; /* Enable memory check on crash. */
+    int use_exit_on_panic; /* Use exit() on panic and assert rather than
                                      * abort(). useful for Valgrind. */
     /* Replication (master) */
-    char replid[CONFIG_RUN_ID_SIZE+1];  /* My current replication ID. */
-    char replid2[CONFIG_RUN_ID_SIZE+1]; /* replid inherited from master*/
-    long long master_repl_offset;   /* My current replication offset */
+    char replid[CONFIG_RUN_ID_SIZE + 1]; /* My current replication ID. */
+    char replid2[CONFIG_RUN_ID_SIZE + 1]; /* replid inherited from master*/
+    long long master_repl_offset; /* My current replication offset */
     long long second_replid_offset; /* Accept offsets up to this for replid2. */
-    int slaveseldb;                 /* Last SELECTed DB in replication output */
-    int repl_ping_slave_period;     /* Master pings the slave every N seconds */
-    char *repl_backlog;             /* Replication backlog for partial syncs */
-    long long repl_backlog_size;    /* Backlog circular buffer size */
+    int slaveseldb; /* Last SELECTed DB in replication output */
+    int repl_ping_slave_period; /* Master pings the slave every N seconds */
+    char *repl_backlog; /* Replication backlog for partial syncs */
+    long long repl_backlog_size; /* Backlog circular buffer size */
     long long repl_backlog_histlen; /* Backlog actual data length */
-    long long repl_backlog_idx;     /* Backlog circular buffer current offset,
+    long long repl_backlog_idx; /* Backlog circular buffer current offset,
                                        that is the next byte will'll write to.*/
-    long long repl_backlog_off;     /* Replication "master offset" of first
+    long long repl_backlog_off; /* Replication "master offset" of first
                                        byte in the replication backlog buffer.*/
     time_t repl_backlog_time_limit; /* Time without slaves after the backlog
                                        gets released. */
-    time_t repl_no_slaves_since;    /* We have no slaves since that time.
+    time_t repl_no_slaves_since; /* We have no slaves since that time.
                                        Only valid if server.slaves len is 0. */
-    int repl_min_slaves_to_write;   /* Min number of slaves to write. */
-    int repl_min_slaves_max_lag;    /* Max lag of <count> slaves to write. */
-    int repl_good_slaves_count;     /* Number of slaves with lag <= max_lag. */
-    int repl_diskless_sync;         /* Master send RDB to slaves sockets directly. */
-    int repl_diskless_load;         /* Slave parse RDB directly from the socket.
+    int repl_min_slaves_to_write; /* Min number of slaves to write. */
+    int repl_min_slaves_max_lag; /* Max lag of <count> slaves to write. */
+    int repl_good_slaves_count; /* Number of slaves with lag <= max_lag. */
+    int repl_diskless_sync; /* Master send RDB to slaves sockets directly. */
+    int repl_diskless_load; /* Slave parse RDB directly from the socket.
                                      * see REPL_DISKLESS_LOAD_* enum */
-    int repl_diskless_sync_delay;   /* Delay to start a diskless repl BGSAVE. */
+    int repl_diskless_sync_delay; /* Delay to start a diskless repl BGSAVE. */
     /* Replication (slave) */
-    char *masteruser;               /* AUTH with this user and masterauth with master */
-    sds masterauth;                 /* AUTH with this password with master */
-    char *masterhost;               /* Hostname of master */
-    int masterport;                 /* Port of master */
-    int repl_timeout;               /* Timeout after N seconds of master idle */
-    client *master;     /* Client that is master for this slave */
+    char *masteruser; /* AUTH with this user and masterauth with master */
+    sds masterauth; /* AUTH with this password with master */
+    char *masterhost; /* Hostname of master */
+    int masterport; /* Port of master */
+    int repl_timeout; /* Timeout after N seconds of master idle */
+    client *master; /* Client that is master for this slave */
     client *cached_master; /* Cached master to be reused for PSYNC. */
     int repl_syncio_timeout; /* Timeout for synchronous I/O calls */
-    int repl_state;          /* Replication status if the instance is a slave */
+    int repl_state; /* Replication status if the instance is a slave */
     off_t repl_transfer_size; /* Size of RDB to read from master during sync. */
     off_t repl_transfer_read; /* Amount of RDB read from master during sync. */
     off_t repl_transfer_last_fsync_off; /* Offset when we fsync-ed last time. */
-    connection *repl_transfer_s;     /* Slave -> Master SYNC connection */
-    int repl_transfer_fd;    /* Slave -> Master SYNC temp file descriptor */
+    connection *repl_transfer_s; /* Slave -> Master SYNC connection */
+    int repl_transfer_fd; /* Slave -> Master SYNC temp file descriptor */
     char *repl_transfer_tmpfile; /* Slave-> master SYNC temp file name */
     time_t repl_transfer_lastio; /* Unix time of the latest read, for timeout */
     int repl_serve_stale_data; /* Serve stale data when link is down? */
-    int repl_slave_ro;          /* Slave is read only? */
-    int repl_slave_ignore_maxmemory;    /* If true slaves do not evict. */
+    int repl_slave_ro; /* Slave is read only? */
+    int repl_slave_ignore_maxmemory; /* If true slaves do not evict. */
     time_t repl_down_since; /* Unix time at which link with master went down */
-    int repl_disable_tcp_nodelay;   /* Disable TCP_NODELAY after SYNC? */
-    int slave_priority;             /* Reported in INFO and used by Sentinel. */
-    int replica_announced;          /* If true, replica is announced by Sentinel */
-    int slave_announce_port;        /* Give the master this listening port. */
-    char *slave_announce_ip;        /* Give the master this ip address. */
+    int repl_disable_tcp_nodelay; /* Disable TCP_NODELAY after SYNC? */
+    int slave_priority; /* Reported in INFO and used by Sentinel. */
+    int replica_announced; /* If true, replica is announced by Sentinel */
+    int slave_announce_port; /* Give the master this listening port. */
+    char *slave_announce_ip; /* Give the master this ip address. */
     /* The following two fields is where we store master PSYNC replid/offset
      * while the PSYNC is in progress. At the end we'll copy the fields into
      * the server->master client structure. */
-    char master_replid[CONFIG_RUN_ID_SIZE+1];  /* Master PSYNC runid. */
-    long long master_initial_offset;           /* Master PSYNC offset. */
-    int repl_slave_lazy_flush;          /* Lazy FLUSHALL before loading DB? */
+    char master_replid[CONFIG_RUN_ID_SIZE + 1]; /* Master PSYNC runid. */
+    long long master_initial_offset; /* Master PSYNC offset. */
+    int repl_slave_lazy_flush; /* Lazy FLUSHALL before loading DB? */
     /* Replication script cache. */
-    dict *repl_scriptcache_dict;        /* SHA1 all slaves are aware of. */
-    list *repl_scriptcache_fifo;        /* First in, first out LRU eviction. */
+    dict *repl_scriptcache_dict; /* SHA1 all slaves are aware of. */
+    list *repl_scriptcache_fifo; /* First in, first out LRU eviction. */
     unsigned int repl_scriptcache_size; /* Max number of elements. */
     /* Synchronous replication. */
-    list *clients_waiting_acks;         /* Clients waiting in WAIT command. */
-    int get_ack_from_slaves;            /* If true we send REPLCONF GETACK. */
+    list *clients_waiting_acks; /* Clients waiting in WAIT command. */
+    int get_ack_from_slaves; /* If true we send REPLCONF GETACK. */
     /* Limits */
-    unsigned int maxclients;            /* Max number of simultaneous clients */
-    unsigned long long maxmemory;   /* Max number of memory bytes to use */
-    int maxmemory_policy;           /* Policy for key eviction */
-    int maxmemory_samples;          /* Precision of random sampling */
-    int maxmemory_eviction_tenacity;/* Aggressiveness of eviction processing */
-    int lfu_log_factor;             /* LFU logarithmic counter factor. */
-    int lfu_decay_time;             /* LFU counter decay factor. */
-    long long proto_max_bulk_len;   /* Protocol bulk length maximum size. */
-    int oom_score_adj_base;         /* Base oom_score_adj value, as observed on startup */
-    int oom_score_adj_values[CONFIG_OOM_COUNT];   /* Linux oom_score_adj configuration */
-    int oom_score_adj;                            /* If true, oom_score_adj is managed */
-    int disable_thp;                              /* If true, disable THP by syscall */
+    unsigned int maxclients; /* Max number of simultaneous clients */
+    unsigned long long maxmemory; /* Max number of memory bytes to use */
+    int maxmemory_policy; /* Policy for key eviction */
+    int maxmemory_samples; /* Precision of random sampling */
+    int maxmemory_eviction_tenacity; /* Aggressiveness of eviction processing */
+    int lfu_log_factor; /* LFU logarithmic counter factor. */
+    int lfu_decay_time; /* LFU counter decay factor. */
+    long long proto_max_bulk_len; /* Protocol bulk length maximum size. */
+    int oom_score_adj_base; /* Base oom_score_adj value, as observed on startup */
+    int oom_score_adj_values[CONFIG_OOM_COUNT]; /* Linux oom_score_adj configuration */
+    int oom_score_adj; /* If true, oom_score_adj is managed */
+    int disable_thp; /* If true, disable THP by syscall */
     /* Blocked clients */
-    unsigned int blocked_clients;   /* # of clients executing a blocking cmd.*/
+    unsigned int blocked_clients; /* # of clients executing a blocking cmd.*/
     unsigned int blocked_clients_by_type[BLOCKED_NUM];
     list *unblocked_clients; /* list of clients to unblock before next loop */
-    list *ready_keys;        /* List of readyList structures for BLPOP & co */
+    list *ready_keys; /* List of readyList structures for BLPOP & co */
     /* Client side caching. */
-    unsigned int tracking_clients;  /* # of clients with tracking enabled.*/
+    unsigned int tracking_clients; /* # of clients with tracking enabled.*/
     size_t tracking_table_max_keys; /* Max number of keys in tracking table. */
     list *tracking_pending_keys; /* tracking invalidation keys pending to flush */
     /* Sort parameters - qsort_r() is only available under BSD so we
@@ -1542,62 +1561,62 @@ struct redisServer {
     int list_compress_depth;
     /* time cache */
     redisAtomic time_t unixtime; /* Unix time sampled every cron cycle. */
-    time_t timezone;            /* Cached timezone. As set by tzset(). */
-    int daylight_active;        /* Currently in daylight saving time. */
-    mstime_t mstime;            /* 'unixtime' in milliseconds. */
-    ustime_t ustime;            /* 'unixtime' in microseconds. */
+    time_t timezone; /* Cached timezone. As set by tzset(). */
+    int daylight_active; /* Currently in daylight saving time. */
+    mstime_t mstime; /* 'unixtime' in milliseconds. */
+    ustime_t ustime; /* 'unixtime' in microseconds. */
     size_t blocking_op_nesting; /* Nesting level of blocking operation, used to reset blocked_last_cron. */
     long long blocked_last_cron; /* Indicate the mstime of the last time we did cron jobs from a blocking operation */
     /* Pubsub */
-    dict *pubsub_channels;  /* Map channels to list of subscribed clients */
-    dict *pubsub_patterns;  /* A dict of pubsub_patterns */
+    dict *pubsub_channels; /* Map channels to list of subscribed clients */
+    dict *pubsub_patterns; /* A dict of pubsub_patterns */
     int notify_keyspace_events; /* Events to propagate via Pub/Sub. This is an
                                    xor of NOTIFY_... flags. */
     /* Cluster */
-    int cluster_enabled;      /* Is cluster enabled? */
+    int cluster_enabled; /* Is cluster enabled? */
     mstime_t cluster_node_timeout; /* Cluster node timeout. */
     char *cluster_configfile; /* Cluster auto-generated config file name. */
-    struct clusterState *cluster;  /* State of the cluster */
+    struct clusterState *cluster; /* State of the cluster */
     int cluster_migration_barrier; /* Cluster replicas migration barrier. */
     int cluster_allow_replica_migration; /* Automatic replica migrations to orphaned masters and from empty masters */
     int cluster_slave_validity_factor; /* Slave max data age for failover. */
     int cluster_require_full_coverage; /* If true, put the cluster down if
                                           there is at least an uncovered slot.*/
-    int cluster_slave_no_failover;  /* Prevent slave from starting a failover
+    int cluster_slave_no_failover; /* Prevent slave from starting a failover
                                        if the master is in failure state. */
-    char *cluster_announce_ip;  /* IP address to announce on cluster bus. */
-    int cluster_announce_port;     /* base port to announce on cluster bus. */
+    char *cluster_announce_ip; /* IP address to announce on cluster bus. */
+    int cluster_announce_port; /* base port to announce on cluster bus. */
     int cluster_announce_tls_port; /* TLS port to announce on cluster bus. */
     int cluster_announce_bus_port; /* bus port to announce on cluster bus. */
-    int cluster_module_flags;      /* Set of flags that Redis modules are able
+    int cluster_module_flags; /* Set of flags that Redis modules are able
                                       to set in order to suppress certain
                                       native Redis Cluster features. Check the
                                       REDISMODULE_CLUSTER_FLAG_*. */
     int cluster_allow_reads_when_down; /* Are reads allowed when the cluster
                                         is down? */
-    int cluster_config_file_lock_fd;   /* cluster config fd, will be flock */
+    int cluster_config_file_lock_fd; /* cluster config fd, will be flock */
     /* Scripting */
     lua_State *lua; /* The Lua interpreter. We use just one for all clients */
-    client *lua_client;   /* The "fake client" to query Redis from Lua */
-    client *lua_caller;   /* The client running EVAL right now, or NULL */
-    char* lua_cur_script; /* SHA1 of the script currently running, or NULL */
-    dict *lua_scripts;         /* A dictionary of SHA1 -> Lua scripts */
-    unsigned long long lua_scripts_mem;  /* Cached scripts' memory + oh */
-    mstime_t lua_time_limit;  /* Script timeout in milliseconds */
-    monotime lua_time_start;  /* monotonic timer to detect timed-out script */
+    client *lua_client; /* The "fake client" to query Redis from Lua */
+    client *lua_caller; /* The client running EVAL right now, or NULL */
+    char *lua_cur_script; /* SHA1 of the script currently running, or NULL */
+    dict *lua_scripts; /* A dictionary of SHA1 -> Lua scripts */
+    unsigned long long lua_scripts_mem; /* Cached scripts' memory + oh */
+    mstime_t lua_time_limit; /* Script timeout in milliseconds */
+    monotime lua_time_start; /* monotonic timer to detect timed-out script */
     mstime_t lua_time_snapshot; /* Snapshot of mstime when script is started */
-    int lua_write_dirty;  /* True if a write command was called during the
+    int lua_write_dirty; /* True if a write command was called during the
                              execution of the current script. */
     int lua_random_dirty; /* True if a random command was called during the
                              execution of the current script. */
     int lua_replicate_commands; /* True if we are doing single commands repl. */
-    int lua_multi_emitted;/* True if we already propagated MULTI. */
-    int lua_repl;         /* Script replication flags for redis.set_repl(). */
-    int lua_timedout;     /* True if we reached the time limit for script
+    int lua_multi_emitted; /* True if we already propagated MULTI. */
+    int lua_repl; /* Script replication flags for redis.set_repl(). */
+    int lua_timedout; /* True if we reached the time limit for script
                              execution. */
-    int lua_kill;         /* Kill the script if true. */
+    int lua_kill; /* Kill the script if true. */
     int lua_always_replicate_commands; /* Default replication type. */
-    int lua_oom;          /* OOM detected when script start? */
+    int lua_oom; /* OOM detected when script start? */
     /* Lazy free */
     int lazyfree_lazy_eviction;
     int lazyfree_lazy_expire;
@@ -1608,16 +1627,16 @@ struct redisServer {
     long long latency_monitor_threshold;
     dict *latency_events;
     /* ACLs */
-    char *acl_filename;           /* ACL Users file. NULL if not configured. */
+    char *acl_filename; /* ACL Users file. NULL if not configured. */
     unsigned long acllog_max_len; /* Maximum length of the ACL LOG list. */
-    sds requirepass;              /* Remember the cleartext password set with
+    sds requirepass; /* Remember the cleartext password set with
                                      the old "requirepass" directive for
                                      backward compatibility with Redis <= 5. */
-    int acl_pubsub_default;      /* Default ACL pub/sub channels flag */
+    int acl_pubsub_default; /* Default ACL pub/sub channels flag */
     /* Assert & bug reporting */
-    int watchdog_period;  /* Software watchdog period in ms. 0 = off */
+    int watchdog_period; /* Software watchdog period in ms. 0 = off */
     /* System hardware info */
-    size_t system_memory_size;  /* Total memory in system as reported by OS */
+    size_t system_memory_size; /* Total memory in system as reported by OS */
     /* TLS Configuration */
     int tls_cluster;
     int tls_replication;
@@ -1646,30 +1665,33 @@ struct redisServer {
  * keys as indices to the provided argv.
  */
 typedef struct {
-    int keysbuf[MAX_KEYS_BUFFER];       /* Pre-allocated buffer, to save heap allocations */
-    int *keys;                          /* Key indices array, points to keysbuf or heap */
-    int numkeys;                        /* Number of key indices return */
-    int size;                           /* Available array size */
+    int keysbuf[MAX_KEYS_BUFFER]; /* Pre-allocated buffer, to save heap allocations */
+    int *keys; /* Key indices array, points to keysbuf or heap */
+    int numkeys; /* Number of key indices return */
+    int size; /* Available array size */
 } getKeysResult;
+
 #define GETKEYS_RESULT_INIT { {0}, NULL, 0, MAX_KEYS_BUFFER }
 
 typedef void redisCommandProc(client *c);
+
 typedef int redisGetKeysProc(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
+
 struct redisCommand {
     char *name;
     redisCommandProc *proc;
     int arity;
-    char *sflags;   /* Flags as string representation, one char per flag. */
+    char *sflags; /* Flags as string representation, one char per flag. */
     uint64_t flags; /* The actual flags, obtained from the 'sflags' field. */
     /* Use a function to determine keys arguments in a command line.
      * Used for Redis Cluster redirect. */
     redisGetKeysProc *getkeys_proc;
     /* What keys should be loaded in background when calling this command? */
     int firstkey; /* The first argument that's a key (0 = no keys) */
-    int lastkey;  /* The last argument that's a key */
-    int keystep;  /* The step between first and last key */
+    int lastkey; /* The last argument that's a key */
+    int keystep; /* The step between first and last key */
     long long microseconds, calls, rejected_calls, failed_calls;
-    int id;     /* Command ID. This is a progressive ID starting from 0 that
+    int id; /* Command ID. This is a progressive ID starting from 0 that
                    is assigned at runtime, and is used in order to check
                    ACLs. A connection is able to execute a given command if
                    the user associated to the connection has this command
@@ -1687,6 +1709,7 @@ struct redisFunctionSym {
 
 typedef struct _redisSortObject {
     robj *obj;
+
     union {
         double score;
         robj *cmpobj;
@@ -1766,159 +1789,300 @@ extern dictType sdsReplyDictType;
 
 /* Modules */
 void moduleInitModulesSystem(void);
+
 void moduleInitModulesSystemLast(void);
+
 int moduleLoad(const char *path, void **argv, int argc);
+
 void moduleLoadFromQueue(void);
+
 int moduleGetCommandKeysViaAPI(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
+
 moduleType *moduleTypeLookupModuleByID(uint64_t id);
+
 void moduleTypeNameByID(char *name, uint64_t moduleid);
+
 const char *moduleTypeModuleName(moduleType *mt);
+
 void moduleFreeContext(struct RedisModuleCtx *ctx);
+
 void unblockClientFromModule(client *c);
+
 void moduleHandleBlockedClients(void);
+
 void moduleBlockedClientTimedOut(client *c);
+
 void moduleBlockedClientPipeReadable(aeEventLoop *el, int fd, void *privdata, int mask);
+
 size_t moduleCount(void);
+
 void moduleAcquireGIL(void);
+
 int moduleTryAcquireGIL(void);
+
 void moduleReleaseGIL(void);
+
 void moduleNotifyKeyspaceEvent(int type, const char *event, robj *key, int dbid);
+
 void moduleCallCommandFilters(client *c);
+
 void ModuleForkDoneHandler(int exitcode, int bysignal);
+
 int TerminateModuleForkChild(int child_pid, int wait);
+
 ssize_t rdbSaveModulesAux(rio *rdb, int when);
+
 int moduleAllDatatypesHandleErrors();
+
 sds modulesCollectInfo(sds info, const char *section, int for_crash_report, int sections);
+
 void moduleFireServerEvent(uint64_t eid, int subid, void *data);
+
 void processModuleLoadingProgressEvent(int is_aof);
+
 int moduleTryServeClientBlockedOnKey(client *c, robj *key);
+
 void moduleUnblockClient(client *c);
+
 int moduleBlockedClientMayTimeout(client *c);
+
 int moduleClientIsBlockedOnKeys(client *c);
+
 void moduleNotifyUserChanged(client *c);
+
 void moduleNotifyKeyUnlink(robj *key, robj *val);
+
 robj *moduleTypeDupOrReply(client *c, robj *fromkey, robj *tokey, robj *value);
+
 int moduleDefragValue(robj *key, robj *obj, long *defragged);
+
 int moduleLateDefrag(robj *key, robj *value, unsigned long *cursor, long long endtime, long long *defragged);
+
 long moduleDefragGlobals(void);
 
 /* Utils */
 long long ustime(void);
+
 long long mstime(void);
+
 void getRandomHexChars(char *p, size_t len);
+
 void getRandomBytes(unsigned char *p, size_t len);
+
 uint64_t crc64(uint64_t crc, const unsigned char *s, uint64_t l);
+
 void exitFromChild(int retcode);
+
 long long redisPopcount(void *s, long count);
+
 int redisSetProcTitle(char *title);
+
 int validateProcTitleTemplate(const char *template);
+
 int redisCommunicateSystemd(const char *sd_notify_msg);
+
 void redisSetCpuAffinity(const char *cpulist);
 
 /* networking.c -- Networking and Client related operations */
 client *createClient(connection *conn);
+
 void closeTimedoutClients(void);
+
 void freeClient(client *c);
+
 void freeClientAsync(client *c);
+
 void resetClient(client *c);
+
 void freeClientOriginalArgv(client *c);
+
 void sendReplyToClient(connection *conn);
+
 void *addReplyDeferredLen(client *c);
+
 void setDeferredArrayLen(client *c, void *node, long length);
+
 void setDeferredMapLen(client *c, void *node, long length);
+
 void setDeferredSetLen(client *c, void *node, long length);
+
 void setDeferredAttributeLen(client *c, void *node, long length);
+
 void setDeferredPushLen(client *c, void *node, long length);
+
 void processInputBuffer(client *c);
+
 void processGopherRequest(client *c);
+
 void acceptHandler(aeEventLoop *el, int fd, void *privdata, int mask);
+
 void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask);
+
 void acceptTLSHandler(aeEventLoop *el, int fd, void *privdata, int mask);
+
 void acceptUnixHandler(aeEventLoop *el, int fd, void *privdata, int mask);
+
 void readQueryFromClient(connection *conn);
+
 void addReplyNull(client *c);
+
 void addReplyNullArray(client *c);
+
 void addReplyBool(client *c, int b);
+
 void addReplyVerbatim(client *c, const char *s, size_t len, const char *ext);
+
 void addReplyProto(client *c, const char *s, size_t len);
+
 void AddReplyFromClient(client *c, client *src);
+
 void addReplyBulk(client *c, robj *obj);
+
 void addReplyBulkCString(client *c, const char *s);
+
 void addReplyBulkCBuffer(client *c, const void *p, size_t len);
+
 void addReplyBulkLongLong(client *c, long long ll);
+
 void addReply(client *c, robj *obj);
+
 void addReplySds(client *c, sds s);
+
 void addReplyBulkSds(client *c, sds s);
+
 void setDeferredReplyBulkSds(client *c, void *node, sds s);
+
 void addReplyErrorObject(client *c, robj *err);
+
 void addReplyErrorSds(client *c, sds err);
+
 void addReplyError(client *c, const char *err);
+
 void addReplyStatus(client *c, const char *status);
+
 void addReplyDouble(client *c, double d);
-void addReplyBigNum(client *c, const char* num, size_t len);
+
+void addReplyBigNum(client *c, const char *num, size_t len);
+
 void addReplyHumanLongDouble(client *c, long double d);
+
 void addReplyLongLong(client *c, long long ll);
+
 void addReplyArrayLen(client *c, long length);
+
 void addReplyMapLen(client *c, long length);
+
 void addReplySetLen(client *c, long length);
+
 void addReplyAttributeLen(client *c, long length);
+
 void addReplyPushLen(client *c, long length);
+
 void addReplyHelp(client *c, const char **help);
+
 void addReplySubcommandSyntaxError(client *c);
+
 void addReplyLoadedModules(client *c);
+
 void copyClientOutputBuffer(client *dst, client *src);
+
 void deferredAfterErrorReply(client *c, list *errors);
+
 size_t sdsZmallocSize(sds s);
+
 size_t getStringObjectSdsUsedMemory(robj *o);
+
 void freeClientReplyValue(void *o);
+
 void *dupClientReplyValue(void *o);
+
 void getClientsMaxBuffers(unsigned long *longest_output_list,
                           unsigned long *biggest_input_buffer);
+
 char *getClientPeerId(client *client);
+
 char *getClientSockName(client *client);
+
 sds catClientInfoString(sds s, client *client);
+
 sds getAllClientsInfoString(int type);
+
 void rewriteClientCommandVector(client *c, int argc, ...);
+
 void rewriteClientCommandArgument(client *c, int i, robj *newval);
+
 void replaceClientCommandVector(client *c, int argc, robj **argv);
+
 void redactClientCommandArgument(client *c, int argc);
+
 unsigned long getClientOutputBufferMemoryUsage(client *c);
+
 int freeClientsInAsyncFreeQueue(void);
+
 int closeClientOnOutputBufferLimitReached(client *c, int async);
+
 int getClientType(client *c);
+
 int getClientTypeByName(char *name);
+
 char *getClientTypeName(int class);
+
 void flushSlavesOutputBuffers(void);
+
 void disconnectSlaves(void);
+
 int listenToPort(int port, socketFds *fds);
+
 void pauseClients(mstime_t duration, pause_type type);
+
 void unpauseClients(void);
+
 int areClientsPaused(void);
+
 int checkClientPauseTimeoutAndReturnIfPaused(void);
+
 void processEventsWhileBlocked(void);
+
 void loadingCron(void);
+
 void whileBlockedCron();
+
 void blockingOperationStarts();
+
 void blockingOperationEnds();
+
 int handleClientsWithPendingWrites(void);
+
 int handleClientsWithPendingWritesUsingThreads(void);
+
 int handleClientsWithPendingReadsUsingThreads(void);
+
 int stopThreadedIOIfNeeded(void);
+
 int clientHasPendingReplies(client *c);
+
 void unlinkClient(client *c);
+
 int writeToClient(client *c, int handler_installed);
+
 void linkClient(client *c);
+
 void protectClient(client *c);
+
 void unprotectClient(client *c);
+
 void initThreadedIO(void);
+
 client *lookupClientByID(uint64_t id);
+
 int authRequired(client *c);
 
 #ifdef __GNUC__
 void addReplyErrorFormat(client *c, const char *fmt, ...)
-    __attribute__((format(printf, 2, 3)));
+__attribute__((format(printf, 2, 3)));
+
 void addReplyStatusFormat(client *c, const char *fmt, ...)
-    __attribute__((format(printf, 2, 3)));
+__attribute__((format(printf, 2, 3)));
 #else
 void addReplyErrorFormat(client *c, const char *fmt, ...);
 void addReplyStatusFormat(client *c, const char *fmt, ...);
@@ -1926,228 +2090,408 @@ void addReplyStatusFormat(client *c, const char *fmt, ...);
 
 /* Client side caching (tracking mode) */
 void enableTracking(client *c, uint64_t redirect_to, uint64_t options, robj **prefix, size_t numprefix);
+
 void disableTracking(client *c);
+
 void trackingRememberKeys(client *c);
+
 void trackingInvalidateKey(client *c, robj *keyobj, int bcast);
+
 void trackingScheduleKeyInvalidation(uint64_t client_id, robj *keyobj);
+
 void trackingHandlePendingKeyInvalidations(void);
+
 void trackingInvalidateKeysOnFlush(int async);
+
 void freeTrackingRadixTree(rax *rt);
+
 void freeTrackingRadixTreeAsync(rax *rt);
+
 void trackingLimitUsedSlots(void);
+
 uint64_t trackingGetTotalItems(void);
+
 uint64_t trackingGetTotalKeys(void);
+
 uint64_t trackingGetTotalPrefixes(void);
+
 void trackingBroadcastInvalidationMessages(void);
+
 int checkPrefixCollisionsOrReply(client *c, robj **prefix, size_t numprefix);
 
 /* List data type */
 void listTypeTryConversion(robj *subject, robj *value);
+
 void listTypePush(robj *subject, robj *value, int where);
+
 robj *listTypePop(robj *subject, int where);
+
 unsigned long listTypeLength(const robj *subject);
+
 listTypeIterator *listTypeInitIterator(robj *subject, long index, unsigned char direction);
+
 void listTypeReleaseIterator(listTypeIterator *li);
+
 int listTypeNext(listTypeIterator *li, listTypeEntry *entry);
+
 robj *listTypeGet(listTypeEntry *entry);
+
 void listTypeInsert(listTypeEntry *entry, robj *value, int where);
+
 int listTypeEqual(listTypeEntry *entry, robj *o);
+
 void listTypeDelete(listTypeIterator *iter, listTypeEntry *entry);
+
 void listTypeConvert(robj *subject, int enc);
+
 robj *listTypeDup(robj *o);
+
 void unblockClientWaitingData(client *c);
+
 void popGenericCommand(client *c, int where);
+
 void listElementsRemoved(client *c, robj *key, int where, robj *o, long count);
 
 /* MULTI/EXEC/WATCH... */
 void unwatchAllKeys(client *c);
+
 void initClientMultiState(client *c);
+
 void freeClientMultiState(client *c);
+
 void queueMultiCommand(client *c);
+
 void touchWatchedKey(redisDb *db, robj *key);
+
 int isWatchedKeyExpired(client *c);
+
 void touchAllWatchedKeysInDb(redisDb *emptied, redisDb *replaced_with);
+
 void discardTransaction(client *c);
+
 void flagTransaction(client *c);
+
 void execCommandAbort(client *c, sds error);
+
 void execCommandPropagateMulti(int dbid);
+
 void execCommandPropagateExec(int dbid);
+
 void beforePropagateMulti();
+
 void afterPropagateExec();
 
 /* Redis object implementation */
 void decrRefCount(robj *o);
+
 void decrRefCountVoid(void *o);
+
 void incrRefCount(robj *o);
+
 robj *makeObjectShared(robj *o);
+
 robj *resetRefCount(robj *obj);
+
 void freeStringObject(robj *o);
+
 void freeListObject(robj *o);
+
 void freeSetObject(robj *o);
+
 void freeZsetObject(robj *o);
+
 void freeHashObject(robj *o);
+
 robj *createObject(int type, void *ptr);
+
 robj *createStringObject(const char *ptr, size_t len);
+
 robj *createRawStringObject(const char *ptr, size_t len);
+
 robj *createEmbeddedStringObject(const char *ptr, size_t len);
+
 robj *tryCreateRawStringObject(const char *ptr, size_t len);
+
 robj *tryCreateStringObject(const char *ptr, size_t len);
+
 robj *dupStringObject(const robj *o);
+
 int isSdsRepresentableAsLongLong(sds s, long long *llval);
+
 int isObjectRepresentableAsLongLong(robj *o, long long *llongval);
+
 robj *tryObjectEncoding(robj *o);
+
 robj *getDecodedObject(robj *o);
+
 size_t stringObjectLen(robj *o);
+
 robj *createStringObjectFromLongLong(long long value);
+
 robj *createStringObjectFromLongLongForValue(long long value);
+
 robj *createStringObjectFromLongDouble(long double value, int humanfriendly);
+
 robj *createQuicklistObject(void);
+
 robj *createZiplistObject(void);
+
 robj *createSetObject(void);
+
 robj *createIntsetObject(void);
+
 robj *createHashObject(void);
+
 robj *createZsetObject(void);
+
 robj *createZsetZiplistObject(void);
+
 robj *createStreamObject(void);
+
 robj *createModuleObject(moduleType *mt, void *value);
+
 int getLongFromObjectOrReply(client *c, robj *o, long *target, const char *msg);
+
 int getPositiveLongFromObjectOrReply(client *c, robj *o, long *target, const char *msg);
+
 int getRangeLongFromObjectOrReply(client *c, robj *o, long min, long max, long *target, const char *msg);
+
 int checkType(client *c, robj *o, int type);
+
 int getLongLongFromObjectOrReply(client *c, robj *o, long long *target, const char *msg);
+
 int getDoubleFromObjectOrReply(client *c, robj *o, double *target, const char *msg);
+
 int getDoubleFromObject(const robj *o, double *target);
+
 int getLongLongFromObject(robj *o, long long *target);
+
 int getLongDoubleFromObject(robj *o, long double *target);
+
 int getLongDoubleFromObjectOrReply(client *c, robj *o, long double *target, const char *msg);
+
 int getIntFromObjectOrReply(client *c, robj *o, int *target, const char *msg);
+
 char *strEncoding(int encoding);
+
 int compareStringObjects(robj *a, robj *b);
+
 int collateStringObjects(robj *a, robj *b);
+
 int equalStringObjects(robj *a, robj *b);
+
 unsigned long long estimateObjectIdleTime(robj *o);
+
 void trimStringObjectIfNeeded(robj *o);
+
 #define sdsEncodedObject(objptr) (objptr->encoding == OBJ_ENCODING_RAW || objptr->encoding == OBJ_ENCODING_EMBSTR)
 
 /* Synchronous I/O with timeout */
 ssize_t syncWrite(int fd, char *ptr, ssize_t size, long long timeout);
+
 ssize_t syncRead(int fd, char *ptr, ssize_t size, long long timeout);
+
 ssize_t syncReadLine(int fd, char *ptr, ssize_t size, long long timeout);
 
 /* Replication */
 void replicationFeedSlaves(list *slaves, int dictid, robj **argv, int argc);
+
 void replicationFeedSlavesFromMasterStream(list *slaves, char *buf, size_t buflen);
+
 void replicationFeedMonitors(client *c, list *monitors, int dictid, robj **argv, int argc);
+
 void updateSlavesWaitingBgsave(int bgsaveerr, int type);
+
 void replicationCron(void);
+
 void replicationStartPendingFork(void);
+
 void replicationHandleMasterDisconnection(void);
+
 void replicationCacheMaster(client *c);
+
 void resizeReplicationBacklog(long long newsize);
+
 void replicationSetMaster(char *ip, int port);
+
 void replicationUnsetMaster(void);
+
 void refreshGoodSlavesCount(void);
+
 void replicationScriptCacheInit(void);
+
 void replicationScriptCacheFlush(void);
+
 void replicationScriptCacheAdd(sds sha1);
+
 int replicationScriptCacheExists(sds sha1);
+
 void processClientsWaitingReplicas(void);
+
 void unblockClientWaitingReplicas(client *c);
+
 int replicationCountAcksByOffset(long long offset);
+
 void replicationSendNewlineToMaster(void);
+
 long long replicationGetSlaveOffset(void);
+
 char *replicationGetSlaveName(client *c);
+
 long long getPsyncInitialOffset(void);
+
 int replicationSetupSlaveForFullResync(client *slave, long long offset);
+
 void changeReplicationId(void);
+
 void clearReplicationId2(void);
+
 void chopReplicationBacklog(void);
+
 void replicationCacheMasterUsingMyself(void);
+
 void feedReplicationBacklog(void *ptr, size_t len);
+
 void showLatestBacklog(void);
+
 void rdbPipeReadHandler(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
+
 void rdbPipeWriteHandlerConnRemoved(struct connection *conn);
+
 void clearFailoverState(void);
+
 void updateFailoverStatus(void);
+
 void abortFailover(const char *err);
+
 const char *getFailoverStateString();
 
 /* Generic persistence functions */
-void startLoadingFile(FILE* fp, char* filename, int rdbflags);
+void startLoadingFile(FILE *fp, char *filename, int rdbflags);
+
 void startLoading(size_t size, int rdbflags);
+
 void loadingProgress(off_t pos);
+
 void stopLoading(int success);
+
 void startSaving(int rdbflags);
+
 void stopSaving(int success);
+
 int allPersistenceDisabled(void);
 
 #define DISK_ERROR_TYPE_AOF 1       /* Don't accept writes: AOF errors. */
 #define DISK_ERROR_TYPE_RDB 2       /* Don't accept writes: RDB errors. */
 #define DISK_ERROR_TYPE_NONE 0      /* No problems, we can accept writes. */
+
 int writeCommandsDeniedByDiskError(void);
 
 /* RDB persistence */
 #include "rdb.h"
+
 void killRDBChild(void);
+
 int bg_unlink(const char *filename);
 
 /* AOF persistence */
 void flushAppendOnlyFile(int force);
+
 void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int argc);
+
 void aofRemoveTempFile(pid_t childpid);
+
 int rewriteAppendOnlyFileBackground(void);
+
 int loadAppendOnlyFile(char *filename);
+
 void stopAppendOnly(void);
+
 int startAppendOnly(void);
+
 void backgroundRewriteDoneHandler(int exitcode, int bysignal);
+
 void aofRewriteBufferReset(void);
+
 unsigned long aofRewriteBufferSize(void);
+
 ssize_t aofReadDiffFromParent(void);
+
 void killAppendOnlyChild(void);
+
 void restartAOFAfterSYNC();
 
 /* Child info */
 void openChildInfoPipe(void);
+
 void closeChildInfoPipe(void);
+
 void sendChildInfoGeneric(childInfoType info_type, size_t keys, double progress, char *pname);
+
 void sendChildCowInfo(childInfoType info_type, char *pname);
+
 void sendChildInfo(childInfoType info_type, size_t keys, char *pname);
+
 void receiveChildInfo(void);
 
 /* Fork helpers */
 int redisFork(int type);
+
 int hasActiveChildProcess();
+
 void resetChildState();
+
 int isMutuallyExclusiveChildType(int type);
 
 /* acl.c -- Authentication related prototypes. */
 extern rax *Users;
 extern user *DefaultUser;
+
 void ACLInit(void);
+
 /* Return values for ACLCheckAllPerm(). */
 #define ACL_OK 0
 #define ACL_DENIED_CMD 1
 #define ACL_DENIED_KEY 2
 #define ACL_DENIED_AUTH 3 /* Only used for ACL LOG entries. */
 #define ACL_DENIED_CHANNEL 4 /* Only used for pub/sub commands */
+
 int ACLCheckUserCredentials(robj *username, robj *password);
+
 int ACLAuthenticateUser(client *c, robj *username, robj *password);
+
 unsigned long ACLGetCommandID(const char *cmdname);
+
 void ACLClearCommandID(void);
+
 user *ACLGetUserByName(const char *name, size_t namelen);
+
 int ACLCheckAllPerm(client *c, int *idxptr);
+
 int ACLSetUser(user *u, const char *op, ssize_t oplen);
+
 sds ACLDefaultUserFirstPassword(void);
+
 uint64_t ACLGetCommandCategoryFlagByName(const char *name);
+
 int ACLAppendUserForLoading(sds *argv, int argc, int *argc_err);
+
 const char *ACLSetUserStringError(void);
+
 int ACLLoadConfiguredUsers(void);
+
 sds ACLDescribeUser(user *u);
+
 void ACLLoadUsersAtStartup(void);
+
 void addReplyCommandCategories(client *c, struct redisCommand *cmd);
+
 user *ACLCreateUnlinkedUser();
+
 void ACLFreeUserAndKillClients(user *u);
+
 void addACLLogEntry(client *c, int reason, int keypos, sds username);
+
 void ACLUpdateDefaultUserPassword(sds password);
 
 /* Sorted sets data type */
@@ -2174,123 +2518,219 @@ typedef struct {
 
 /* Struct to hold an inclusive/exclusive range spec by lexicographic comparison. */
 typedef struct {
-    sds min, max;     /* May be set to shared.(minstring|maxstring) */
+    sds min, max; /* May be set to shared.(minstring|maxstring) */
     int minex, maxex; /* are min or max exclusive? */
 } zlexrangespec;
 
 zskiplist *zslCreate(void);
+
 void zslFree(zskiplist *zsl);
+
 zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele);
+
 unsigned char *zzlInsert(unsigned char *zl, sds ele, double score);
+
 int zslDelete(zskiplist *zsl, double score, sds ele, zskiplistNode **node);
+
 zskiplistNode *zslFirstInRange(zskiplist *zsl, zrangespec *range);
+
 zskiplistNode *zslLastInRange(zskiplist *zsl, zrangespec *range);
+
 double zzlGetScore(unsigned char *sptr);
+
 void zzlNext(unsigned char *zl, unsigned char **eptr, unsigned char **sptr);
+
 void zzlPrev(unsigned char *zl, unsigned char **eptr, unsigned char **sptr);
+
 unsigned char *zzlFirstInRange(unsigned char *zl, zrangespec *range);
+
 unsigned char *zzlLastInRange(unsigned char *zl, zrangespec *range);
+
 unsigned long zsetLength(const robj *zobj);
+
 void zsetConvert(robj *zobj, int encoding);
+
 void zsetConvertToZiplistIfNeeded(robj *zobj, size_t maxelelen, size_t totelelen);
+
 int zsetScore(robj *zobj, sds member, double *score);
+
 unsigned long zslGetRank(zskiplist *zsl, double score, sds o);
+
 int zsetAdd(robj *zobj, double score, sds ele, int in_flags, int *out_flags, double *newscore);
+
 long zsetRank(robj *zobj, sds ele, int reverse);
+
 int zsetDel(robj *zobj, sds ele);
+
 robj *zsetDup(robj *o);
+
 int zsetZiplistValidateIntegrity(unsigned char *zl, size_t size, int deep);
+
 void genericZpopCommand(client *c, robj **keyv, int keyc, int where, int emitkey, robj *countarg);
+
 sds ziplistGetObject(unsigned char *sptr);
+
 int zslValueGteMin(double value, zrangespec *spec);
+
 int zslValueLteMax(double value, zrangespec *spec);
+
 void zslFreeLexRange(zlexrangespec *spec);
+
 int zslParseLexRange(robj *min, robj *max, zlexrangespec *spec);
+
 unsigned char *zzlFirstInLexRange(unsigned char *zl, zlexrangespec *range);
+
 unsigned char *zzlLastInLexRange(unsigned char *zl, zlexrangespec *range);
+
 zskiplistNode *zslFirstInLexRange(zskiplist *zsl, zlexrangespec *range);
+
 zskiplistNode *zslLastInLexRange(zskiplist *zsl, zlexrangespec *range);
+
 int zzlLexValueGteMin(unsigned char *p, zlexrangespec *spec);
+
 int zzlLexValueLteMax(unsigned char *p, zlexrangespec *spec);
+
 int zslLexValueGteMin(sds value, zlexrangespec *spec);
+
 int zslLexValueLteMax(sds value, zlexrangespec *spec);
 
 /* Core functions */
 int getMaxmemoryState(size_t *total, size_t *logical, size_t *tofree, float *level);
+
 size_t freeMemoryGetNotCountedMemory();
+
 int overMaxmemoryAfterAlloc(size_t moremem);
+
 int processCommand(client *c);
+
 int processPendingCommandsAndResetClient(client *c);
+
 void setupSignalHandlers(void);
+
 void removeSignalHandlers(void);
+
 int createSocketAcceptHandler(socketFds *sfd, aeFileProc *accept_handler);
+
 int changeListenPort(int port, socketFds *sfd, aeFileProc *accept_handler);
+
 int changeBindAddr(sds *addrlist, int addrlist_len);
+
 struct redisCommand *lookupCommand(sds name);
+
 struct redisCommand *lookupCommandByCString(const char *s);
+
 struct redisCommand *lookupCommandOrOriginal(sds name);
+
 void call(client *c, int flags);
+
 void propagate(struct redisCommand *cmd, int dbid, robj **argv, int argc, int flags);
+
 void alsoPropagate(struct redisCommand *cmd, int dbid, robj **argv, int argc, int target);
+
 void redisOpArrayInit(redisOpArray *oa);
+
 void redisOpArrayFree(redisOpArray *oa);
+
 void forceCommandPropagation(client *c, int flags);
+
 void preventCommandPropagation(client *c);
+
 void preventCommandAOF(client *c);
+
 void preventCommandReplication(client *c);
+
 void slowlogPushCurrentCommand(client *c, struct redisCommand *cmd, ustime_t duration);
+
 int prepareForShutdown(int flags);
+
 void afterCommand(client *c);
+
 int inNestedCall(void);
 #ifdef __GNUC__
 void _serverLog(int level, const char *fmt, ...)
-    __attribute__((format(printf, 2, 3)));
+__attribute__((format(printf, 2, 3)));
 #else
 void _serverLog(int level, const char *fmt, ...);
 #endif
 void serverLogRaw(int level, const char *msg);
+
 void serverLogFromHandler(int level, const char *msg);
+
 void usage(void);
+
 void updateDictResizePolicy(void);
+
 int htNeedsResize(dict *dict);
+
 void populateCommandTable(void);
+
 void resetCommandTableStats(void);
+
 void resetErrorTableStats(void);
+
 void adjustOpenFilesLimit(void);
+
 void incrementErrorCount(const char *fullerr, size_t namelen);
+
 void closeListeningSockets(int unlink_unix_socket);
+
 void updateCachedTime(int update_daylight_info);
+
 void resetServerStats(void);
+
 void activeDefragCycle(void);
+
 unsigned int getLRUClock(void);
+
 unsigned int LRU_CLOCK(void);
+
 const char *evictPolicyToString(void);
+
 struct redisMemOverhead *getMemoryOverheadData(void);
+
 void freeMemoryOverheadData(struct redisMemOverhead *mh);
+
 void checkChildrenDone(void);
+
 int setOOMScoreAdj(int process_class);
+
 void rejectCommandFormat(client *c, const char *fmt, ...);
+
 void *activeDefragAlloc(void *ptr);
-robj *activeDefragStringOb(robj* ob, long *defragged);
+
+robj *activeDefragStringOb(robj *ob, long *defragged);
 
 #define RESTART_SERVER_NONE 0
 #define RESTART_SERVER_GRACEFULLY (1<<0)     /* Do proper shutdown. */
 #define RESTART_SERVER_CONFIG_REWRITE (1<<1) /* CONFIG REWRITE before restart.*/
+
 int restartServer(int flags, mstime_t delay);
 
 /* Set data type */
 robj *setTypeCreate(sds value);
+
 int setTypeAdd(robj *subject, sds value);
+
 int setTypeRemove(robj *subject, sds value);
+
 int setTypeIsMember(robj *subject, sds value);
+
 setTypeIterator *setTypeInitIterator(robj *subject);
+
 void setTypeReleaseIterator(setTypeIterator *si);
+
 int setTypeNext(setTypeIterator *si, sds *sdsele, int64_t *llele);
+
 sds setTypeNextObject(setTypeIterator *si);
+
 int setTypeRandomElement(robj *setobj, sds *sdsele, int64_t *llele);
+
 unsigned long setTypeRandomElements(robj *set, unsigned long count, robj *aux_set);
+
 unsigned long setTypeSize(const robj *subject);
+
 void setTypeConvert(robj *subject, int enc);
+
 robj *setTypeDup(robj *o);
 
 /* Hash data type */
@@ -2299,461 +2739,840 @@ robj *setTypeDup(robj *o);
 #define HASH_SET_COPY 0
 
 void hashTypeConvert(robj *o, int enc);
+
 void hashTypeTryConversion(robj *subject, robj **argv, int start, int end);
+
 int hashTypeExists(robj *o, sds key);
+
 int hashTypeDelete(robj *o, sds key);
+
 unsigned long hashTypeLength(const robj *o);
+
 hashTypeIterator *hashTypeInitIterator(robj *subject);
+
 void hashTypeReleaseIterator(hashTypeIterator *hi);
+
 int hashTypeNext(hashTypeIterator *hi);
+
 void hashTypeCurrentFromZiplist(hashTypeIterator *hi, int what,
                                 unsigned char **vstr,
                                 unsigned int *vlen,
                                 long long *vll);
+
 sds hashTypeCurrentFromHashTable(hashTypeIterator *hi, int what);
+
 void hashTypeCurrentObject(hashTypeIterator *hi, int what, unsigned char **vstr, unsigned int *vlen, long long *vll);
+
 sds hashTypeCurrentObjectNewSds(hashTypeIterator *hi, int what);
+
 robj *hashTypeLookupWriteOrCreate(client *c, robj *key);
+
 robj *hashTypeGetValueObject(robj *o, sds field);
+
 int hashTypeSet(robj *o, sds field, sds value, int flags);
+
 robj *hashTypeDup(robj *o);
+
 int hashZiplistValidateIntegrity(unsigned char *zl, size_t size, int deep);
 
 /* Pub / Sub */
 int pubsubUnsubscribeAllChannels(client *c, int notify);
+
 int pubsubUnsubscribeAllPatterns(client *c, int notify);
+
 int pubsubPublishMessage(robj *channel, robj *message);
+
 void addReplyPubsubMessage(client *c, robj *channel, robj *msg);
 
 /* Keyspace events notification */
 void notifyKeyspaceEvent(int type, char *event, robj *key, int dbid);
+
 int keyspaceEventsStringToFlags(char *classes);
+
 sds keyspaceEventsFlagsToString(int flags);
 
 /* Configuration */
 void loadServerConfig(char *filename, char config_from_stdin, char *options);
+
 void appendServerSaveParams(time_t seconds, int changes);
+
 void resetServerSaveParams(void);
+
 struct rewriteConfigState; /* Forward declaration to export API. */
 void rewriteConfigRewriteLine(struct rewriteConfigState *state, const char *option, sds line, int force);
+
 void rewriteConfigMarkAsProcessed(struct rewriteConfigState *state, const char *option);
+
 int rewriteConfig(char *path, int force_all);
+
 void initConfigValues();
 
 /* db.c -- Keyspace access API */
 int removeExpire(redisDb *db, robj *key);
+
 void deleteExpiredKeyAndPropagate(redisDb *db, robj *keyobj);
+
 void propagateExpire(redisDb *db, robj *key, int lazy);
+
 int keyIsExpired(redisDb *db, robj *key);
+
 int expireIfNeeded(redisDb *db, robj *key);
+
 long long getExpire(redisDb *db, robj *key);
+
 void setExpire(client *c, redisDb *db, robj *key, long long when);
+
 int checkAlreadyExpired(long long when);
+
 robj *lookupKey(redisDb *db, robj *key, int flags);
+
 robj *lookupKeyRead(redisDb *db, robj *key);
+
 robj *lookupKeyWrite(redisDb *db, robj *key);
+
 robj *lookupKeyReadOrReply(client *c, robj *key, robj *reply);
+
 robj *lookupKeyWriteOrReply(client *c, robj *key, robj *reply);
+
 robj *lookupKeyReadWithFlags(redisDb *db, robj *key, int flags);
+
 robj *lookupKeyWriteWithFlags(redisDb *db, robj *key, int flags);
+
 robj *objectCommandLookup(client *c, robj *key);
+
 robj *objectCommandLookupOrReply(client *c, robj *key, robj *reply);
+
 void SentReplyOnKeyMiss(client *c, robj *reply);
+
 int objectSetLRUOrLFU(robj *val, long long lfu_freq, long long lru_idle,
-                       long long lru_clock, int lru_multiplier);
+                      long long lru_clock, int lru_multiplier);
+
 #define LOOKUP_NONE 0
 #define LOOKUP_NOTOUCH (1<<0)
 #define LOOKUP_NONOTIFY (1<<1)
+
 void dbAdd(redisDb *db, robj *key, robj *val);
+
 int dbAddRDBLoad(redisDb *db, sds key, robj *val);
+
 void dbOverwrite(redisDb *db, robj *key, robj *val);
+
 void genericSetKey(client *c, redisDb *db, robj *key, robj *val, int keepttl, int signal);
+
 void setKey(client *c, redisDb *db, robj *key, robj *val);
+
 robj *dbRandomKey(redisDb *db);
+
 int dbSyncDelete(redisDb *db, robj *key);
+
 int dbDelete(redisDb *db, robj *key);
+
 robj *dbUnshareStringValue(redisDb *db, robj *key, robj *o);
 
 #define EMPTYDB_NO_FLAGS 0      /* No flags. */
 #define EMPTYDB_ASYNC (1<<0)    /* Reclaim memory in another thread. */
-long long emptyDb(int dbnum, int flags, void(callback)(void*));
-long long emptyDbStructure(redisDb *dbarray, int dbnum, int async, void(callback)(void*));
+
+long long emptyDb(int dbnum, int flags, void (callback)(void *));
+
+long long emptyDbStructure(redisDb *dbarray, int dbnum, int async, void (callback)(void *));
+
 void flushAllDataAndResetRDB(int flags);
+
 long long dbTotalServerKeyCount();
+
 dbBackup *backupDb(void);
+
 void restoreDbBackup(dbBackup *buckup);
-void discardDbBackup(dbBackup *buckup, int flags, void(callback)(void*));
+
+void discardDbBackup(dbBackup *buckup, int flags, void (callback)(void *));
 
 
 int selectDb(client *c, int id);
+
 void signalModifiedKey(client *c, redisDb *db, robj *key);
+
 void signalFlushedDb(int dbid, int async);
+
 unsigned int getKeysInSlot(unsigned int hashslot, robj **keys, unsigned int count);
+
 unsigned int countKeysInSlot(unsigned int hashslot);
+
 unsigned int delKeysInSlot(unsigned int hashslot);
+
 int verifyClusterConfigWithData(void);
+
 void scanGenericCommand(client *c, robj *o, unsigned long cursor);
+
 int parseScanCursorOrReply(client *c, robj *o, unsigned long *cursor);
+
 void slotToKeyAdd(sds key);
+
 void slotToKeyDel(sds key);
+
 int dbAsyncDelete(redisDb *db, robj *key);
+
 void emptyDbAsync(redisDb *db);
+
 void slotToKeyFlush(int async);
+
 size_t lazyfreeGetPendingObjectsCount(void);
+
 size_t lazyfreeGetFreedObjectsCount(void);
+
 void freeObjAsync(robj *key, robj *obj);
+
 void freeSlotsToKeysMapAsync(rax *rt);
+
 void freeSlotsToKeysMap(rax *rt, int async);
 
 
 /* API to get key arguments from commands */
 int *getKeysPrepareResult(getKeysResult *result, int numkeys);
+
 int getKeysFromCommand(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
+
 void getKeysFreeResult(getKeysResult *result);
-int zunionInterDiffGetKeys(struct redisCommand *cmd,robj **argv, int argc, getKeysResult *result);
-int zunionInterDiffStoreGetKeys(struct redisCommand *cmd,robj **argv, int argc, getKeysResult *result);
+
+int zunionInterDiffGetKeys(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
+
+int zunionInterDiffStoreGetKeys(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
+
 int evalGetKeys(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
+
 int sortGetKeys(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
+
 int migrateGetKeys(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
+
 int georadiusGetKeys(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
+
 int xreadGetKeys(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
+
 int memoryGetKeys(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
+
 int lcsGetKeys(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
 
 /* Cluster */
 void clusterInit(void);
+
 unsigned short crc16(const char *buf, int len);
+
 unsigned int keyHashSlot(char *key, int keylen);
+
 void clusterCron(void);
+
 void clusterPropagatePublish(robj *channel, robj *message);
+
 void migrateCloseTimedoutSockets(void);
+
 void clusterBeforeSleep(void);
-int clusterSendModuleMessageToTarget(const char *target, uint64_t module_id, uint8_t type, unsigned char *payload, uint32_t len);
+
+int clusterSendModuleMessageToTarget(const char *target, uint64_t module_id, uint8_t type, unsigned char *payload,
+                                     uint32_t len);
 
 /* Sentinel */
 void initSentinelConfig(void);
+
 void initSentinel(void);
+
 void sentinelTimer(void);
+
 const char *sentinelHandleConfiguration(char **argv, int argc);
+
 void queueSentinelConfig(sds *argv, int argc, int linenum, sds line);
+
 void loadSentinelConfigFromQueue(void);
+
 void sentinelIsRunning(void);
+
 void sentinelCheckConfigFile(void);
 
 /* redis-check-rdb & aof */
 int redis_check_rdb(char *rdbfilename, FILE *fp);
+
 int redis_check_rdb_main(int argc, char **argv, FILE *fp);
+
 int redis_check_aof_main(int argc, char **argv);
 
 /* Scripting */
 void scriptingInit(int setup);
+
 int ldbRemoveChild(pid_t pid);
+
 void ldbKillForkedSessions(void);
+
 int ldbPendingChildren(void);
+
 sds luaCreateFunction(client *c, lua_State *lua, robj *body);
+
 void freeLuaScriptsAsync(dict *lua_scripts);
 
 /* Blocked clients */
 void processUnblockedClients(void);
+
 void blockClient(client *c, int btype);
+
 void unblockClient(client *c);
+
 void queueClientForReprocessing(client *c);
+
 void replyToBlockedClientTimedOut(client *c);
+
 int getTimeoutFromObjectOrReply(client *c, robj *object, mstime_t *timeout, int unit);
+
 void disconnectAllBlockedClients(void);
+
 void handleClientsBlockedOnKeys(void);
+
 void signalKeyAsReady(redisDb *db, robj *key, int type);
-void blockForKeys(client *c, int btype, robj **keys, int numkeys, mstime_t timeout, robj *target, struct listPos *listpos, streamID *ids);
+
+void blockForKeys(client *c, int btype, robj **keys, int numkeys, mstime_t timeout, robj *target,
+                  struct listPos *listpos, streamID *ids);
+
 void updateStatsOnUnblock(client *c, long blocked_us, long reply_us);
 
 /* timeout.c -- Blocked clients timeout and connections timeout. */
 void addClientToTimeoutTable(client *c);
+
 void removeClientFromTimeoutTable(client *c);
+
 void handleBlockedClientsTimeout(void);
+
 int clientsCronHandleTimeout(client *c, mstime_t now_ms);
 
 /* expire.c -- Handling of expired keys */
 void activeExpireCycle(int type);
+
 void expireSlaveKeys(void);
+
 void rememberSlaveKeyWithExpire(redisDb *db, robj *key);
+
 void flushSlaveKeysWithExpireList(void);
+
 size_t getSlaveKeyWithExpireCount(void);
 
 /* evict.c -- maxmemory handling and LRU eviction. */
 void evictionPoolAlloc(void);
+
 #define LFU_INIT_VAL 5
+
 unsigned long LFUGetTimeInMinutes(void);
+
 uint8_t LFULogIncr(uint8_t value);
+
 unsigned long LFUDecrAndReturn(robj *o);
+
 #define EVICT_OK 0
 #define EVICT_RUNNING 1
 #define EVICT_FAIL 2
+
 int performEvictions(void);
 
 
 /* Keys hashing / comparison functions for dict.c hash tables. */
 uint64_t dictSdsHash(const void *key);
+
 int dictSdsKeyCompare(void *privdata, const void *key1, const void *key2);
+
 void dictSdsDestructor(void *privdata, void *val);
 
 /* Git SHA1 */
 char *redisGitSHA1(void);
+
 char *redisGitDirty(void);
+
 uint64_t redisBuildId(void);
+
 char *redisBuildIdString(void);
 
 /* Commands prototypes */
 void authCommand(client *c);
+
 void pingCommand(client *c);
+
 void echoCommand(client *c);
+
 void commandCommand(client *c);
+
 void setCommand(client *c);
+
 void setnxCommand(client *c);
+
 void setexCommand(client *c);
+
 void psetexCommand(client *c);
+
 void getCommand(client *c);
+
 void getexCommand(client *c);
+
 void getdelCommand(client *c);
+
 void delCommand(client *c);
+
 void unlinkCommand(client *c);
+
 void existsCommand(client *c);
+
 void setbitCommand(client *c);
+
 void getbitCommand(client *c);
+
 void bitfieldCommand(client *c);
+
 void bitfieldroCommand(client *c);
+
 void setrangeCommand(client *c);
+
 void getrangeCommand(client *c);
+
 void incrCommand(client *c);
+
 void decrCommand(client *c);
+
 void incrbyCommand(client *c);
+
 void decrbyCommand(client *c);
+
 void incrbyfloatCommand(client *c);
+
 void selectCommand(client *c);
+
 void swapdbCommand(client *c);
+
 void randomkeyCommand(client *c);
+
 void keysCommand(client *c);
+
 void scanCommand(client *c);
+
 void dbsizeCommand(client *c);
+
 void lastsaveCommand(client *c);
+
 void saveCommand(client *c);
+
 void bgsaveCommand(client *c);
+
 void bgrewriteaofCommand(client *c);
+
 void shutdownCommand(client *c);
+
 void moveCommand(client *c);
+
 void copyCommand(client *c);
+
 void renameCommand(client *c);
+
 void renamenxCommand(client *c);
+
 void lpushCommand(client *c);
+
 void rpushCommand(client *c);
+
 void lpushxCommand(client *c);
+
 void rpushxCommand(client *c);
+
 void linsertCommand(client *c);
+
 void lpopCommand(client *c);
+
 void rpopCommand(client *c);
+
 void llenCommand(client *c);
+
 void lindexCommand(client *c);
+
 void lrangeCommand(client *c);
+
 void ltrimCommand(client *c);
+
 void typeCommand(client *c);
+
 void lsetCommand(client *c);
+
 void saddCommand(client *c);
+
 void sremCommand(client *c);
+
 void smoveCommand(client *c);
+
 void sismemberCommand(client *c);
+
 void smismemberCommand(client *c);
+
 void scardCommand(client *c);
+
 void spopCommand(client *c);
+
 void srandmemberCommand(client *c);
+
 void sinterCommand(client *c);
+
 void sinterstoreCommand(client *c);
+
 void sunionCommand(client *c);
+
 void sunionstoreCommand(client *c);
+
 void sdiffCommand(client *c);
+
 void sdiffstoreCommand(client *c);
+
 void sscanCommand(client *c);
+
 void syncCommand(client *c);
+
 void flushdbCommand(client *c);
+
 void flushallCommand(client *c);
+
 void sortCommand(client *c);
+
 void lremCommand(client *c);
+
 void lposCommand(client *c);
+
 void rpoplpushCommand(client *c);
+
 void lmoveCommand(client *c);
+
 void infoCommand(client *c);
+
 void mgetCommand(client *c);
+
 void monitorCommand(client *c);
+
 void expireCommand(client *c);
+
 void expireatCommand(client *c);
+
 void pexpireCommand(client *c);
+
 void pexpireatCommand(client *c);
+
 void getsetCommand(client *c);
+
 void ttlCommand(client *c);
+
 void touchCommand(client *c);
+
 void pttlCommand(client *c);
+
 void persistCommand(client *c);
+
 void replicaofCommand(client *c);
+
 void roleCommand(client *c);
+
 void debugCommand(client *c);
+
 void msetCommand(client *c);
+
 void msetnxCommand(client *c);
+
 void zaddCommand(client *c);
+
 void zincrbyCommand(client *c);
+
 void zrangeCommand(client *c);
+
 void zrangebyscoreCommand(client *c);
+
 void zrevrangebyscoreCommand(client *c);
+
 void zrangebylexCommand(client *c);
+
 void zrevrangebylexCommand(client *c);
+
 void zcountCommand(client *c);
+
 void zlexcountCommand(client *c);
+
 void zrevrangeCommand(client *c);
+
 void zcardCommand(client *c);
+
 void zremCommand(client *c);
+
 void zscoreCommand(client *c);
+
 void zmscoreCommand(client *c);
+
 void zremrangebyscoreCommand(client *c);
+
 void zremrangebylexCommand(client *c);
+
 void zpopminCommand(client *c);
+
 void zpopmaxCommand(client *c);
+
 void bzpopminCommand(client *c);
+
 void bzpopmaxCommand(client *c);
+
 void zrandmemberCommand(client *c);
+
 void multiCommand(client *c);
+
 void execCommand(client *c);
+
 void discardCommand(client *c);
+
 void blpopCommand(client *c);
+
 void brpopCommand(client *c);
+
 void brpoplpushCommand(client *c);
+
 void blmoveCommand(client *c);
+
 void appendCommand(client *c);
+
 void strlenCommand(client *c);
+
 void zrankCommand(client *c);
+
 void zrevrankCommand(client *c);
+
 void hsetCommand(client *c);
+
 void hsetnxCommand(client *c);
+
 void hgetCommand(client *c);
+
 void hmsetCommand(client *c);
+
 void hmgetCommand(client *c);
+
 void hdelCommand(client *c);
+
 void hlenCommand(client *c);
+
 void hstrlenCommand(client *c);
+
 void zremrangebyrankCommand(client *c);
+
 void zunionstoreCommand(client *c);
+
 void zinterstoreCommand(client *c);
+
 void zdiffstoreCommand(client *c);
+
 void zunionCommand(client *c);
+
 void zinterCommand(client *c);
+
 void zrangestoreCommand(client *c);
+
 void zdiffCommand(client *c);
+
 void zscanCommand(client *c);
+
 void hkeysCommand(client *c);
+
 void hvalsCommand(client *c);
+
 void hgetallCommand(client *c);
+
 void hexistsCommand(client *c);
+
 void hscanCommand(client *c);
+
 void hrandfieldCommand(client *c);
+
 void configCommand(client *c);
+
 void hincrbyCommand(client *c);
+
 void hincrbyfloatCommand(client *c);
+
 void subscribeCommand(client *c);
+
 void unsubscribeCommand(client *c);
+
 void psubscribeCommand(client *c);
+
 void punsubscribeCommand(client *c);
+
 void publishCommand(client *c);
+
 void pubsubCommand(client *c);
+
 void watchCommand(client *c);
+
 void unwatchCommand(client *c);
+
 void clusterCommand(client *c);
+
 void restoreCommand(client *c);
+
 void migrateCommand(client *c);
+
 void askingCommand(client *c);
+
 void readonlyCommand(client *c);
+
 void readwriteCommand(client *c);
+
 void dumpCommand(client *c);
+
 void objectCommand(client *c);
+
 void memoryCommand(client *c);
+
 void clientCommand(client *c);
+
 void helloCommand(client *c);
+
 void evalCommand(client *c);
+
 void evalShaCommand(client *c);
+
 void scriptCommand(client *c);
+
 void timeCommand(client *c);
+
 void bitopCommand(client *c);
+
 void bitcountCommand(client *c);
+
 void bitposCommand(client *c);
+
 void replconfCommand(client *c);
+
 void waitCommand(client *c);
+
 void geoencodeCommand(client *c);
+
 void geodecodeCommand(client *c);
+
 void georadiusbymemberCommand(client *c);
+
 void georadiusbymemberroCommand(client *c);
+
 void georadiusCommand(client *c);
+
 void georadiusroCommand(client *c);
+
 void geoaddCommand(client *c);
+
 void geohashCommand(client *c);
+
 void geoposCommand(client *c);
+
 void geodistCommand(client *c);
+
 void geosearchCommand(client *c);
+
 void geosearchstoreCommand(client *c);
+
 void pfselftestCommand(client *c);
+
 void pfaddCommand(client *c);
+
 void pfcountCommand(client *c);
+
 void pfmergeCommand(client *c);
+
 void pfdebugCommand(client *c);
+
 void latencyCommand(client *c);
+
 void moduleCommand(client *c);
+
 void securityWarningCommand(client *c);
+
 void xaddCommand(client *c);
+
 void xrangeCommand(client *c);
+
 void xrevrangeCommand(client *c);
+
 void xlenCommand(client *c);
+
 void xreadCommand(client *c);
+
 void xgroupCommand(client *c);
+
 void xsetidCommand(client *c);
+
 void xackCommand(client *c);
+
 void xpendingCommand(client *c);
+
 void xclaimCommand(client *c);
+
 void xautoclaimCommand(client *c);
+
 void xinfoCommand(client *c);
+
 void xdelCommand(client *c);
+
 void xtrimCommand(client *c);
+
 void lolwutCommand(client *c);
+
 void aclCommand(client *c);
+
 void stralgoCommand(client *c);
+
 void resetCommand(client *c);
+
 void failoverCommand(client *c);
 
 #if defined(__GNUC__)
 void *calloc(size_t count, size_t size) __attribute__ ((deprecated));
+
 void free(void *ptr) __attribute__ ((deprecated));
+
 void *malloc(size_t size) __attribute__ ((deprecated));
+
 void *realloc(void *ptr, size_t size) __attribute__ ((deprecated));
 #endif
 
 /* Debugging stuff */
 void _serverAssertWithInfo(const client *c, const robj *o, const char *estr, const char *file, int line);
+
 void _serverAssert(const char *estr, const char *file, int line);
 #ifdef __GNUC__
 void _serverPanic(const char *file, int line, const char *msg, ...)
-    __attribute__ ((format (printf, 3, 4)));
+__attribute__ ((format (printf, 3, 4)));
 #else
 void _serverPanic(const char *file, int line, const char *msg, ...);
 #endif
 void serverLogObjectDebugInfo(const robj *o);
+
 void sigsegvHandler(int sig, siginfo_t *info, void *secret);
+
 const char *getSafeInfoString(const char *s, size_t len, char **tmp);
+
 sds genRedisInfoString(const char *section);
+
 sds genModulesInfoString(sds info);
+
 void enableWatchdog(int period);
+
 void disableWatchdog(void);
+
 void watchdogScheduleSignal(int period);
+
 void serverLogHexDump(int level, char *descr, void *value, size_t len);
+
 int memtest_preserving_test(unsigned long *m, size_t bytes, int passes);
+
 void mixDigest(unsigned char *digest, void *ptr, size_t len);
+
 void xorDigest(unsigned char *digest, void *ptr, size_t len);
+
 int populateCommandTableParseFlags(struct redisCommand *c, char *strflags);
+
 void debugDelay(int usec);
+
 void killIOThreads(void);
+
 void killThreads(void);
+
 void makeThreadKillable(void);
 
 /* Use macro for checking log level to avoid evaluating arguments in cases log
@@ -2765,7 +3584,9 @@ void makeThreadKillable(void);
 
 /* TLS stuff */
 void tlsInit(void);
+
 void tlsCleanup(void);
+
 int tlsConfigure(redisTLSContextConfig *ctx_config);
 
 #define redisDebug(fmt, ...) \

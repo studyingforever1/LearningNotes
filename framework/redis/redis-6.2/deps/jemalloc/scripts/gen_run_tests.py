@@ -2,8 +2,8 @@
 
 import sys
 from itertools import combinations
-from os import uname
 from multiprocessing import cpu_count
+from os import uname
 
 # Later, we want to test extended vaddr support.  Apparently, the "real" way of
 # checking this is flaky on OS X.

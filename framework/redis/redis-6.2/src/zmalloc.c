@@ -87,7 +87,7 @@ static redisAtomic size_t used_memory = 0;
 
 static void zmalloc_default_oom(size_t size) {
     fprintf(stderr, "zmalloc: Out of memory trying to allocate %zu bytes\n",
-        size);
+            size);
     fflush(stderr);
     abort();
 }
@@ -98,7 +98,7 @@ static void (*zmalloc_oom_handler)(size_t) = zmalloc_default_oom;
  * '*usable' is set to the usable size if non NULL. */
 void *ztrymalloc_usable(size_t size, size_t *usable) {
     ASSERT_NO_SIZE_OVERFLOW(size);
-    void *ptr = malloc(MALLOC_MIN_SIZE(size)+PREFIX_SIZE);
+    void *ptr = malloc(MALLOC_MIN_SIZE(size) + PREFIX_SIZE);
 
     if (!ptr) return NULL;
 #ifdef HAVE_MALLOC_SIZE
@@ -107,10 +107,10 @@ void *ztrymalloc_usable(size_t size, size_t *usable) {
     if (usable) *usable = size;
     return ptr;
 #else
-    *((size_t*)ptr) = size;
+    *((size_t *) ptr) = size;
     update_zmalloc_stat_alloc(size+PREFIX_SIZE);
     if (usable) *usable = size;
-    return (char*)ptr+PREFIX_SIZE;
+    return (char *) ptr + PREFIX_SIZE;
 #endif
 }
 
@@ -158,7 +158,7 @@ void zfree_no_tcache(void *ptr) {
  * '*usable' is set to the usable size if non NULL. */
 void *ztrycalloc_usable(size_t size, size_t *usable) {
     ASSERT_NO_SIZE_OVERFLOW(size);
-    void *ptr = calloc(1, MALLOC_MIN_SIZE(size)+PREFIX_SIZE);
+    void *ptr = calloc(1, MALLOC_MIN_SIZE(size) + PREFIX_SIZE);
     if (ptr == NULL) return NULL;
 
 #ifdef HAVE_MALLOC_SIZE
@@ -167,10 +167,10 @@ void *ztrycalloc_usable(size_t size, size_t *usable) {
     if (usable) *usable = size;
     return ptr;
 #else
-    *((size_t*)ptr) = size;
+    *((size_t *) ptr) = size;
     update_zmalloc_stat_alloc(size+PREFIX_SIZE);
     if (usable) *usable = size;
-    return (char*)ptr+PREFIX_SIZE;
+    return (char *) ptr + PREFIX_SIZE;
 #endif
 }
 
@@ -229,19 +229,19 @@ void *ztryrealloc_usable(void *ptr, size_t size, size_t *usable) {
     if (usable) *usable = size;
     return newptr;
 #else
-    realptr = (char*)ptr-PREFIX_SIZE;
-    oldsize = *((size_t*)realptr);
-    newptr = realloc(realptr,size+PREFIX_SIZE);
+    realptr = (char *) ptr - PREFIX_SIZE;
+    oldsize = *((size_t *) realptr);
+    newptr = realloc(realptr, size + PREFIX_SIZE);
     if (newptr == NULL) {
         if (usable) *usable = 0;
         return NULL;
     }
 
-    *((size_t*)newptr) = size;
+    *((size_t *) newptr) = size;
     update_zmalloc_stat_free(oldsize);
     update_zmalloc_stat_alloc(size);
     if (usable) *usable = size;
-    return (char*)newptr+PREFIX_SIZE;
+    return (char *) newptr + PREFIX_SIZE;
 #endif
 }
 
@@ -271,12 +271,13 @@ void *zrealloc_usable(void *ptr, size_t size, size_t *usable) {
  * information as the first bytes of every allocation. */
 #ifndef HAVE_MALLOC_SIZE
 size_t zmalloc_size(void *ptr) {
-    void *realptr = (char*)ptr-PREFIX_SIZE;
-    size_t size = *((size_t*)realptr);
-    return size+PREFIX_SIZE;
+    void *realptr = (char *) ptr - PREFIX_SIZE;
+    size_t size = *((size_t *) realptr);
+    return size + PREFIX_SIZE;
 }
+
 size_t zmalloc_usable_size(void *ptr) {
-    return zmalloc_size(ptr)-PREFIX_SIZE;
+    return zmalloc_size(ptr) - PREFIX_SIZE;
 }
 #endif
 
@@ -291,8 +292,8 @@ void zfree(void *ptr) {
     update_zmalloc_stat_free(zmalloc_size(ptr));
     free(ptr);
 #else
-    realptr = (char*)ptr-PREFIX_SIZE;
-    oldsize = *((size_t*)realptr);
+    realptr = (char *) ptr - PREFIX_SIZE;
+    oldsize = *((size_t *) realptr);
     update_zmalloc_stat_free(oldsize+PREFIX_SIZE);
     free(realptr);
 #endif
@@ -310,24 +311,24 @@ void zfree_usable(void *ptr, size_t *usable) {
     update_zmalloc_stat_free(*usable = zmalloc_size(ptr));
     free(ptr);
 #else
-    realptr = (char*)ptr-PREFIX_SIZE;
-    *usable = oldsize = *((size_t*)realptr);
+    realptr = (char *) ptr - PREFIX_SIZE;
+    *usable = oldsize = *((size_t *) realptr);
     update_zmalloc_stat_free(oldsize+PREFIX_SIZE);
     free(realptr);
 #endif
 }
 
 char *zstrdup(const char *s) {
-    size_t l = strlen(s)+1;
+    size_t l = strlen(s) + 1;
     char *p = zmalloc(l);
 
-    memcpy(p,s,l);
+    memcpy(p, s, l);
     return p;
 }
 
 size_t zmalloc_used_memory(void) {
     size_t um;
-    atomicGet(used_memory,um);
+    atomicGet(used_memory, um);
     return um;
 }
 
@@ -497,7 +498,7 @@ int zmalloc_get_allocator_info(size_t *allocated,
 }
 
 void set_jemalloc_bg_thread(int enable) {
-    /* let jemalloc do purging asynchronously, required when there's no traffic 
+    /* let jemalloc do purging asynchronously, required when there's no traffic
      * after flushdb */
     char val = !!enable;
     je_mallctl("background_thread", NULL, 0, &val, 1);
@@ -526,7 +527,7 @@ int zmalloc_get_allocator_info(size_t *allocated,
 }
 
 void set_jemalloc_bg_thread(int enable) {
-    ((void)(enable));
+    ((void) (enable));
 }
 
 int jemalloc_purge() {
@@ -619,7 +620,7 @@ size_t zmalloc_get_smap_bytes_by_field(char *field, long pid) {
  * call can be slow, exceeding 1000ms!
  */
 size_t zmalloc_get_private_dirty(long pid) {
-    return zmalloc_get_smap_bytes_by_field("Private_Dirty:",pid);
+    return zmalloc_get_smap_bytes_by_field("Private_Dirty:", pid);
 }
 
 /* Returns the size of physical memory (RAM) in bytes.
@@ -654,7 +655,7 @@ size_t zmalloc_get_memory_size(void) {
 
 #elif defined(_SC_PHYS_PAGES) && defined(_SC_PAGESIZE)
     /* FreeBSD, Linux, OpenBSD, and Solaris. -------------------- */
-    return (size_t)sysconf(_SC_PHYS_PAGES) * (size_t)sysconf(_SC_PAGESIZE);
+    return (size_t) sysconf(_SC_PHYS_PAGES) * (size_t) sysconf(_SC_PAGESIZE);
 
 #elif defined(CTL_HW) && (defined(HW_PHYSMEM) || defined(HW_REALMEM))
     /* DragonFly BSD, FreeBSD, NetBSD, OpenBSD, and OSX. -------- */

@@ -190,3 +190,14 @@
 3278	4743	1723790164436873900	CMakeFiles/redis-server.dir/src/t_stream.c.o	2ab255f2d915d6f5
 2977	4873	1723790164136768300	CMakeFiles/redis-server.dir/src/sentinel.c.o	8f65d387ed174443
 4873	5784	1723790166031782900	/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.exe	7bacf359c5ad406
+129	358	1724055681197975700	CMakeFiles/redis-cli.dir/src/release.c.o	e5d1b4b55f1f0c15
+179	390	1724055681248281600	CMakeFiles/redis-cli.dir/src/crc64.c.o	8e972e881b6a395f
+70	435	1724055681140331100	CMakeFiles/redis-cli.dir/src/adlist.c.o	57f3c12cfbf49848
+102	436	1724055681171083400	CMakeFiles/redis-cli.dir/src/zmalloc.c.o	73e572bf83aa8d68
+260	469	1724055681328658200	CMakeFiles/redis-cli.dir/src/siphash.c.o	db4ab47d0a5e7479
+142	484	1724055681211094800	CMakeFiles/redis-cli.dir/src/ae.c.o	24a24150f7e9895f
+30	530	1724055681100306900	CMakeFiles/redis-cli.dir/src/anet.c.o	4ec8f8c6394b59a6
+206	531	1724055681275654400	CMakeFiles/redis-cli.dir/src/crc16.c.o	d7e57b64754a31bb
+55	550	1724055681124824000	CMakeFiles/redis-cli.dir/src/sds.c.o	85e9dad798df8086
+228	593	1724055681297654400	CMakeFiles/redis-cli.dir/src/dict.c.o	a2f85f3c43fe89ef
+86	1525	1724055681155333200	CMakeFiles/redis-cli.dir/src/redis-cli.c.o	3bd05b0342aaa87a

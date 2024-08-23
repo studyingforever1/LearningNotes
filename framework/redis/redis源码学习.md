@@ -29,7 +29,9 @@ typedef struct redisObject {
 } robj;
 ```
 
+**createSharedObjects**
 
+共享对象
 
 ### sds
 
@@ -285,6 +287,14 @@ static inline void sdssetalloc(sds s, size_t newlen) {
 
 #### sds创建
 
+<img src=".\images\sds04.jpg" style="zoom: 33%;" />
+
+**嵌入式字符串**
+
+在进行**createEmbeddedStringObject** 函数分配的时候，不采用上面的**createRawStringObject**的两次分配方式，通过zmalloc(sizeof(robj) + sizeof(struct sdshdr8) + len + 1); 进行一次内存分配，避免内存碎片和两次内存分配的开销
+
+<img src=".\images\sds03.jpg" style="zoom: 33%;" />
+
 ```c
 //object.c
 
@@ -315,6 +325,7 @@ robj *createStringObject(const char *ptr, size_t len) {
 robj *createEmbeddedStringObject(const char *ptr, size_t len) {
     //分配内存 大小为robj的结构体大小+sdshdr8的结构体大小 + len + 1
     // + 1 是最后还会放一个"\0"
+    //只分配一次的嵌入式字符串
     robj *o = zmalloc(sizeof(robj) + sizeof(struct sdshdr8) + len + 1);
     // o是robj类型 +1也就是 o + sizeof(robj) 取到sdshdr8的基地址
     struct sdshdr8 *sh = (void *) (o + 1);
@@ -2606,6 +2617,8 @@ int dictResize(dict *d)
 3. **渐进式rehash** 原因：数组的长度是固定的，当扩容和缩容时，数组长度变化，下标必然变化，所以要rehash 支持：ht[0]和ht[1] 渐进式：每次和批量
 
 
+
+### intset
 
 
 

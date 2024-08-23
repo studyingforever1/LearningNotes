@@ -201,3 +201,6 @@
 55	550	1724055681124824000	CMakeFiles/redis-cli.dir/src/sds.c.o	85e9dad798df8086
 228	593	1724055681297654400	CMakeFiles/redis-cli.dir/src/dict.c.o	a2f85f3c43fe89ef
 86	1525	1724055681155333200	CMakeFiles/redis-cli.dir/src/redis-cli.c.o	3bd05b0342aaa87a
+46	744	1724296585455739100	CMakeFiles/redis-server.dir/src/ziplist.c.o	92a39d9bb3f52371
+123	793	1724296585533631600	CMakeFiles/redis-server.dir/src/object.c.o	f07876a37c17e545
+793	1430	1724296586202684600	/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.exe	7bacf359c5ad406

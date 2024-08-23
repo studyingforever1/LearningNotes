@@ -201,15 +201,25 @@
                                representing the previous entry len. */
 
 /* Different encoding/length possibilities */
+//11000000
 #define ZIP_STR_MASK 0xc0
+//00110000
 #define ZIP_INT_MASK 0x30
+//00000000
 #define ZIP_STR_06B (0 << 6)
+//01000000
 #define ZIP_STR_14B (1 << 6)
+//10000000
 #define ZIP_STR_32B (2 << 6)
+//11000000
 #define ZIP_INT_16B (0xc0 | 0<<4)
+//11010000
 #define ZIP_INT_32B (0xc0 | 1<<4)
+//11100000
 #define ZIP_INT_64B (0xc0 | 2<<4)
+//11110000
 #define ZIP_INT_24B (0xc0 | 3<<4)
+//11111110
 #define ZIP_INT_8B 0xfe
 
 /* 4 bit integer immediate encoding |1111xxxx| with xxxx between

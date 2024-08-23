@@ -204,3 +204,5 @@
 46	744	1724296585455739100	CMakeFiles/redis-server.dir/src/ziplist.c.o	92a39d9bb3f52371
 123	793	1724296585533631600	CMakeFiles/redis-server.dir/src/object.c.o	f07876a37c17e545
 793	1430	1724296586202684600	/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.exe	7bacf359c5ad406
+38	804	1724383288048126400	CMakeFiles/redis-server.dir/src/ziplist.c.o	92a39d9bb3f52371
+804	1464	1724383288813632400	/cygdrive/d/doc/my/studymd/LearningNotes/framework/redis/redis-6.2/src/redis-server.exe	7bacf359c5ad406

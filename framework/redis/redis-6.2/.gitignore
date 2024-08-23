@@ -39,3 +39,4 @@ Makefile.dep
 compile_commands.json
 redis.code-workspace
 cmake-build-debug/*
+/cmake-build-debug/

@@ -961,6 +961,7 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
         update[i]->level[i].forward = x;
 		
         //以rank来计算插入节点的每一层span值 rank的差值就是小线段数量
+	//计算的实际上是 插入后结点的span = update[0]层结点到tail的小线段数量 = update[i].span - (rank[0]-rank[i])
         /* update span covered by update[i] as x is inserted here */
         x->level[i].span = update[i]->level[i].span - (rank[0] - rank[i]);
         //更新update[i]节点的span值

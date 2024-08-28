@@ -525,5 +525,134 @@ public class ReferenceQueue<T> {
 
 
 
+## Unsafe类的一些知识
+
+Unsafe类中 arrayBaseOffset()是用于获取指定数组类型的第一个元素距离数组首地址的偏移量，因为java的数组类型可能含有头部长度、类型等信息，所以实际的首地址距离第一个元素的地址有一定偏移。arrayIndexScale则是获取指定数组元素的每个元素占用的字节数。
+
+```java
+//有了第一个元素的地址偏移量和每个元素占用的字节大小，就可以通过地址偏移量操作任意一个数组中的元素
+public static void main(String[] args) throws Exception {
+        Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
+        theUnsafe.setAccessible(true);
+        Unsafe unsafe = (Unsafe) theUnsafe.get(null);
+
+        int[] arr = new int[]{1, 2, 3, 4, 5};
+		
+    	//第一个元素的偏移量
+        int arrayBaseOffset = unsafe.arrayBaseOffset(int[].class);
+    	//每一个int的偏移量 这里是4个字节
+        int arrayIndexScale = unsafe.arrayIndexScale(int[].class);
+        //操作arr数组的第三个元素地址，写一个200的int数字 4个字节进去
+        unsafe.putInt(arr, arrayBaseOffset + arrayIndexScale * 3L, 200);
+
+}
+```
+
+Unsafe类中allocateMemory()方法用于分配指定大小的空间，返回当前空间的首地址，setMemory()用于将指定的byte放在指定地址中，放几个字节
+
+```java
+		//分配4个字节大小的空间 返回这个空间的首地址
+        long allocateMemory = unsafe.allocateMemory(4);
+		//通过putInt方法在指定地址位置放4个字节的数字进去
+        unsafe.putInt(allocateMemory, 200);
+		//在指定地址读4个字节当作数字出来
+        int anInt = unsafe.getInt(allocateMemory);
+        System.out.println("读出来的数字:" + anInt);//200
+		//在指定地址位置 放一个68的二进制进去
+        unsafe.setMemory(allocateMemory, 1, new Integer(68).byteValue());
+        System.out.println("读出来的数字:" + unsafe.getInt(allocateMemory));//68
+		//而3则是代表顺序写三个字节位 68这个数字的最后一个字节进去
+		//1000100
+		//10001000,10001000,10001000,1000100
+		//就像这样 不足的位补0 
+ 		unsafe.setMemory(allocateMemory, 3, new Integer(68).byteValue());
+		System.out.println("读出来的数字:" + unsafe.getInt(allocateMemory));//1145324612
+		
+
+		//如果放置的数字大于一个字节255的上限，那么就会截断，只取最后一个字节写入，
+	    unsafe.setMemory(allocateMemory, 1, new Integer(377).byteValue());//读出来的数字:31097 写一个字节 读四个字节 后三个全是0 所以变大了
+
+```
+
+### 大小端
+
+> ### 大端（Big Endian）
+>
+> 在大端字节顺序中，高字节存储在低地址处，低字节存储在高地址处。也就是说，最显著的字节（即最高有效字节）位于地址最低的内存位置上，而最低显著的字节位于地址最高的内存位置上。
+>
+> #### 示例
+>
+> - 最高**有效字节**（MSB）为 `0x12`。
+> - 最低**有效字节**（LSB）为 `0x34`。
+>
+> 那么，在大端系统中，这个整数会被存储为：
+>
+> - 地址 `0x0000`：`0x12`（最高有效字节）
+> - 地址 `0x0001`：`0x34`（最低有效字节）
+>
+> #### 二进制表示
+>
+> - 地址 `0x0000`：`00010010`（最高有效字节）
+> - 地址 `0x0001`：`00110100`（最低有效字节）
+>
+> ### 小端（Little Endian）
+>
+> 在小端字节顺序中，低字节存储在低地址处，高字节存储在高地址处。也就是说，最低显著的字节位于地址最低的内存位置上，而最显著的字节位于地址最高的内存位置上。
+>
+> #### 示例
+>
+> - 最高**有效字节**（MSB）为 `0x12`。
+> - 最低**有效字节**（LSB）为 `0x34`。
+>
+> 那么，在小端系统中，这个整数会被存储为：
+>
+> - 地址 `0x0000`：`0x34`（最低有效字节）
+> - 地址 `0x0001`：`0x12`（最高有效字节）
+>
+> #### 二进制表示
+>
+> - 地址 `0x0000`：`00110100`（最低有效字节）
+> - 地址 `0x0001`：`00010010`（最高有效字节）
+
+**大小端的差异是以字节为单位的字节序不同，而不是以bit为单位**
+
+这里引申出一个大小端的问题，Java的读都是大端排列结果，屏蔽了底层机器的大小端差异，这里举一个例子，我的机器是小端
+
+```java
+        ByteOrder order = ByteOrder.nativeOrder();
+        System.out.println(order);      	//LITTLE_ENDIAN 小端
+
+		int x = 0x0104;
+        System.out.println(Integer.toBinaryString(x));
+		//通过Integer.reverseBytes方法可以反转字节 以字节为单位反转 而不是bit
+        System.out.println(Integer.toBinaryString(Integer.reverseBytes(x)));
+        //00000000,00000000,00000001,00000100 大端排列
+        //00000100,00000001,00000000,00000000 小端排列
+
+//由此可以看到 即使我的机器是小端 正常情况下并没有打印出如上的小端排列 这是因为java做了兼容 对小端机器进行了大端排序处理
+```
+
+又引出了一个有趣的问题，当写入字节到内存中的时候，到底是用Java的大端还是机器的小端呢？
+
+```java
+   		//申请一块4个字节的空间	
+		long allocateMemory = unsafe.allocateMemory(4);
+		//写入一个不超过4个字节的数字
+		//即 1110111001101011001010000000000
+        unsafe.putInt(allocateMemory, 2000000000);
+		//再写入一个68数字的一个字节的数据 即 01000100
+        unsafe.setMemory(allocateMemory, 1, new Integer(68).byteValue());
+		//理想中 这个68的一个字节数据会写入到四个字节的第一个字节的位置 形成 01000100 01101011001010000000000 这样的拼接的东西
+        System.out.println("读出来的数字:" + unsafe.getInt(allocateMemory));
+		//可实质上 读出的数字是 2000000068 
+		//对比来看一下
+		//1110111001101011001010000000000 2000000000
+		//1110111001101011001010001000100 2000000068
+		//                       01000100  68
+		//也就是说 68被直接写到了最后一个字节位置上 
+		//那么证明这台机器其实是小端排列 最后一个字节在第一个位置 写入的时候覆盖了第一个字节 读取的时候Java做了大小端屏蔽 统一大端输出 所以才出现了这样的结果
+		//这里实际上是因为本台机器是小端 那么低地址存储的是低位字节 所以在写入一个字节时 覆盖低位
+```
+
 
 

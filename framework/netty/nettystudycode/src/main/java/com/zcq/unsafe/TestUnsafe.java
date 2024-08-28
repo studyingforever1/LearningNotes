@@ -50,16 +50,25 @@ public class TestUnsafe {
 //
 //        System.out.println(Arrays.toString(arr));
 
-//        test();
+        test();
 
     }
 
 
     public static void test() {
+        System.out.println(ByteOrder.nativeOrder());
+
         int x = 0x0104;
         System.out.println(Integer.toBinaryString(x));
         System.out.println(Integer.toBinaryString(Integer.reverseBytes(x)));
         //00000000,00000000,00000001,00000100
         //00000100,00000001,00000000,00000000
+
+        int x1 = 0x01020304;
+        System.out.println(Integer.toBinaryString(x1));
+        System.out.println(Integer.toBinaryString(Integer.reverseBytes(x1)));
+
+        //00000001,00000010,00000011,00000100
+        //00000100,00000011,00000010,00000001
     }
 }

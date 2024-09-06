@@ -656,3 +656,15 @@ Unsafe类中allocateMemory()方法用于分配指定大小的空间，返回当�
 
 
 
+## Class
+
+```java
+//通过应用类加载器可以加载到java.class.path下的文件   	
+ClassLoader classLoader = Main.class.getClassLoader();
+        URL resource = classLoader.getResource("hello.c");
+        System.out.println(resource);
+//通常java.class.path的所有扫描路径保存在properties中
+        Properties properties = System.getProperties();
+        System.out.println(System.getProperty("java.class.path"));
+```
+

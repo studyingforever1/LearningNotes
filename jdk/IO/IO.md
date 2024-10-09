@@ -6,9 +6,9 @@
 
 > **直接内存访问**（**D**irect **M**emory **A**ccess，**DMA**）是[计算机科学](https://zh.wikipedia.org/wiki/计算机科学)中的一种内存访问技术。它允许某些[电脑](https://zh.wikipedia.org/wiki/電腦)内部的硬件子系统（电脑外设），可以独立地直接读写系统[内存](https://zh.wikipedia.org/wiki/記憶體)，而不需[中央处理器](https://zh.wikipedia.org/wiki/中央處理器)（CPU）介入处理 。在同等程度的处理器负担下，DMA是一种快速的数据传送方式。很多硬件的系统会使用DMA，包含[硬盘](https://zh.wikipedia.org/wiki/硬碟)控制器、[绘图显卡](https://zh.wikipedia.org/wiki/繪圖顯示卡)、[网卡](https://zh.wikipedia.org/wiki/网络卡)和[声卡](https://zh.wikipedia.org/wiki/声卡)。
 
-当进行其他设备与内存进行数据读写交互的时候，采用的是DMA拷贝，而平时内存与内存之间的读写交互，采用的是CPU拷贝的方式
+**当进行其他设备与内存进行数据读写交互的时候，采用的是DMA拷贝，而平时内存与内存之间的读写交互，采用的是CPU拷贝的方式**
 
-### 传统 Linux 中的零拷贝技术
+#### 传统 Linux 中的零拷贝技术
 
 所谓零拷贝，就是在数据操作时，不需要将数据从一个内存位置拷贝到另外一个内存位置，这样可以减少一次内存拷贝的损耗，从而节省了 CPU 时钟周期和内存带宽。
 
@@ -27,7 +27,7 @@
 
 接下来我们介绍下使用零拷贝技术之后数据传输的流程。重新回顾一遍传统数据拷贝的过程，可以发现第二次和第三次拷贝是可以去除的，DMA 引擎从文件读取数据后放入到内核缓冲区，然后可以直接从内核缓冲区传输到 Socket 缓冲区，从而减少内存拷贝的次数。
 
-在 Linux 中系统调用 sendfile() 可以实现将数据从一个文件描述符传输到另一个文件描述符，从而实现了零拷贝技术。在 Java 中也使用了零拷贝技术，它就是 NIO FileChannel 类中的 transferTo() 方法，transferTo() 底层就依赖了操作系统零拷贝的机制，它可以将数据从 FileChannel 直接传输到另外一个 Channel。transferTo() 方法的定义如下：
+在 Linux 中系统调用 **sendfile**() 可以实现将数据从一个文件描述符传输到另一个文件描述符，从而实现了零拷贝技术。在 Java 中也使用了零拷贝技术，它就是 NIO FileChannel 类中的 transferTo() 方法，transferTo() 底层就依赖了操作系统零拷贝的机制，它可以将数据从 FileChannel 直接传输到另外一个 Channel。transferTo() 方法的定义如下：
 
 ```java
 public abstract long transferTo(long position, long count, WritableByteChannel target) throws IOException;
@@ -66,3 +66,114 @@ public void testTransferTo() throws IOException {
 <img src=".\images\零拷贝02.png" style="zoom:50%;" />
 
 通过上述 Linux 零拷贝技术的介绍，你也许还会存在疑问，最终使用零拷贝之后，不是还存在着数据拷贝操作吗？其实从 Linux 操作系统的角度来说，零拷贝就是为了避免用户态和内存态之间的数据拷贝。无论是传统的数据拷贝还是使用零拷贝技术，其中有 2 次 DMA 的数据拷贝必不可少，只是这 2 次 DMA 拷贝都是依赖硬件来完成，不需要 CPU 参与。所以，在这里我们讨论的零拷贝是个广义的概念，**只要能够减少不必要的 CPU 拷贝，都可以被称为零拷贝。**
+
+
+
+## IO模型
+
+数据到达（接收数据）：网卡会把接收到的数据写入内存中的socket接收缓存区中（DMA），网卡向CPU发出一个中断信号，CPU就知道数据到了，所以可以读取数据。
+
+cpu在接到中断信号后，执行中断处理程序：
+
+1. 将数据从socket的接收缓冲区中拷贝到用户应用的接收区中
+2. 将进程放入工作队列中
+
+
+
+### 同步IO
+
+#### BIO
+
+![](.\images\BIO01.jpg)
+
+```c
+s=socket(ip,port)
+    bind()
+    listen()
+int c=accept(s) //client连接
+    data=recv(c)//接收client发送的数据 阻塞 只有recv这个方法才将数据从socket的读取缓冲区拷贝到用户空间来
+```
+
+
+
+#### select
+
+select模式是I/O多路复用模式的一种早期实现。也是支持操作系统最多的模式(windows)。
+
+<img src=".\images\select01.jpg" style="zoom: 67%;" />
+
+<img src=".\images\select02.jpg" style="zoom:67%;" />
+
+```c
+#define MAXCLINE 5       // 连接队列中的个数
+int fd[MAXCLINE];        // 连接的文件描述符队列
+
+int main(void)
+{
+      sock_fd = socket(AF_INET,SOCK_STREAM,0)          // 建立主机间通信的 socket 结构体
+      .....
+      bind(sock_fd, (struct sockaddr *)&server_addr, sizeof(server_addr);         // 绑定socket到当前服务器
+      listen(sock_fd, 5);  // 监听 5 个TCP连接
+
+      fd_set fdsr;         // bitmap类型的文件描述符集合，01100 表示第1、2位有数据到达
+      int max;
+
+      for(i = 0; i < 5; i++)
+      {
+          .....
+          fd[i] = accept(sock_fd, (struct sockaddr *)&client_addr, &sin_size);   // 跟 5 个客户端依次建立 TCP 连接，并将连接放入 fd 文件描述符队列
+      }
+
+      while(1)               // 循环监听连接上的数据是否到达
+      {
+        FD_ZERO(&fdsr);      // 对 fd_set 即 bitmap 类型进行复位，即全部重置为0
+
+        for(i = 0; i < 5; i++)
+        {
+             FD_SET(fd[i], &fdsr);      // 将要监听的TCP连接对应的文件描述符所在的bitmap的位置置1，比如 0110010110 表示需要监听第 1、2、5、7、8个文件描述符对应的 TCP 连接
+        }
+
+        ret = select(max + 1, &fdsr, NULL, NULL, NULL);  // 调用select系统函数进入内核检查哪个连接的数据到达
+
+        for(i=0;i<5;i++)
+        {
+            if(FD_ISSET(fd[i], &fdsr))      // fd_set中为1的位置表示的连接，意味着有数据到达，可以让用户进程读取
+            {
+                //recv这个方法才将数据从socket的读取缓冲区拷贝到用户空间来
+                ret = recv(fd[i], buf,sizeof(buf), 0);
+                ......
+            }
+        }
+  }
+```
+
+#### poll
+
+管理多个描述符也是进行轮询，根据描述符的状态进行处理，但 **poll 无最大文件描述符数量的限制**，**因其基于链表存储**。
+
+select 和 poll 在内部机制方面并没有太大的差异。相比于 select 机制，poll 只是取消了最大监控文件描述符数限制，并没有从根本上解决 select 存在的问题。
+
+#### epoll
+
+<img src=".\images\epoll01.jpg" style="zoom:67%;" />
+
+<img src=".\images\epoll02.jpg" alt="epoll02"  />
+
+### 异步IO
+
+**异步I/O**是计算机操作系统对[输入输出](https://zh.wikipedia.org/wiki/输入输出)的一种处理方式：发起I/O请求的线程不等I/O操作完成，就继续执行随后的代码，I/O结果用其他方式通知发起I/O请求的程序。与异步I/O相对的是更为常见的“同步（阻塞）I/O”：发起I/O请求的线程不从正在调用的I/O操作函数返回（即被阻塞），直至I/O操作完成。
+
+POSIX提供下述API函数：
+
+|      |    阻塞     |           非阻塞            |
+| :--: | :---------: | :-------------------------: |
+| 同步 | write, read | write, read + poll / select |
+| 异步 |      -      |     aio_write, aio_read     |
+
+- aio
+- io_uring (Linux 5.1以后支持)
+
+JDK1.7开始支持的异步IOAPI **AsynchronousServerSocketChannel** 在linux5.1以前 底层依然使用epoll来实现 5.1后引入io_uring后暂时不清楚
+
+
+

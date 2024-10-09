@@ -5660,5 +5660,49 @@ public class ClipboardSetDemo {
 
 
 
+### 关于@PostMapping
 
+```java
+//此行代表 接收的content-type是application/x-www-form-urlencoded 而输出的content-type为application/json
+@PostMapping(value = "xxx",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
+
+@RequestParam 只处理application/x-www-form-urlencoded
+    
+@RequestBody 处理content-type为application/json的数据请求
+    
+当使用MultipartFile时 consumes自动设置为multipart/form-data 接收文件+其他参数
+    
+当单纯接收二进制数据时使用 application/octet-stream     
+```
+
+当使用 application/x-www-form-urlencoded时 并不是 http://www.baidu.com?key=value 的形式 而是
+
+```http
+POST /submit_form HTTP/1.1
+Host: example.com
+Content-Type: application/x-www-form-urlencoded
+
+key1=value1&key2=value2
+```
+
+当使用 application/json时
+
+```http
+POST /submit_form HTTP/1.1
+Host: example.com
+Content-Type: application/x-www-form-urlencoded
+
+{
+    "schoolId":432630,
+    "productId":81,
+    "addPurchaseMoney":3000,
+    "addPurchaseMoneyRemark":"xxx",
+    "serviceList":[
+        {
+            "productServiceId": 29,
+            "addPurchaseYear": 1
+        }
+    ]
+}
+```
 

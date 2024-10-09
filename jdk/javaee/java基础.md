@@ -668,3 +668,33 @@ ClassLoader classLoader = Main.class.getClassLoader();
         System.out.println(System.getProperty("java.class.path"));
 ```
 
+
+
+## String
+
+在 Java 9 之前，Java 字符串使用的是 `char[]` 数组来存储字符数据，其中每个 `char` 占用 16 位（2 字节）。这意味着即使字符串中只包含 ASCII 字符（每个字符只需要 1 个字节），也会占用 2 倍于实际所需的内存。这种浪费在内存资源有限的情况下尤其明显。
+
+```java
+public static void main(String[] args) {
+    String w = new String("😀"); //超过ascii，utf-8编码占用4个字节
+    String a = new String("a");//ascii字符，utf-8编码占用1个字节
+    String s = new String("a😀");
+    System.out.println(w);
+}
+```
+
+<img src=".\images\String01.png" alt="image-20241009145648963" style="zoom:50%;" />
+
+### COMPACT_STRINGS 的实现
+
+> **Latin-1**，也称为 ISO 8859-1，是一种字符编码标准，广泛用于早期的计算机系统和互联网协议中。它定义了一个单字节编码方案，能够表示 256 个不同的字符。这些字符包括：
+>
+> - **ASCII 字符**（0-127）：包括英文大小写字母、数字、标点符号以及一些控制字符。
+> - **西欧语言特殊字符**（128-255）：包括德语、法语、西班牙语、意大利语等西欧语言中常用的字母和符号。如 ä, ö, ü, é, è, ç 等
+
+从 Java 9 开始，Java 引入了 `COMPACT_STRINGS` 特性，默认启用。该特性允许 JVM 根据字符串内容自动选择使用 1 字节或 2 字节的编码来存储字符串：
+
+- 如果字符串中的所有字符都在 Latin-1 编码范围内（即 0 到 255），则使用 1 字节的编码。即coder = LATIN1 = 0
+- 如果字符串中有任何字符超出了 Latin-1 编码范围，则使用 2 字节的编码。即coder = UTF16 = 1
+
+<img src=".\images\String02.png" alt="image-20241009145547146" style="zoom:50%;" />

@@ -1,31 +1,11 @@
-# 多线程
-## volatile
-volatile修饰的变量在多线程环境下，每次修改都可以被同步到各个线程中，确保了线程的可见性。
-实际上，volatile有两个核心作用保证了线程的可见性：
-1.内存屏障确保读写操作的顺序
-2.内存屏障保证写操作刷新到内存，写操作触发硬件的MESI协议的缓存一致性协议.读操作触发硬件的MESI协议的缓存一致性协议，保证读操作从内存中读取最新值。
+package com.zcq.threadlocal;
 
-写操作（Write）:
-StoreStore Barrier（写-写屏障）: 在写入volatile变量之前，会插入一个StoreStore屏障，确保所有之前的写操作都已经完成，不会被随后的写操作重排序。
-StoreLoad Barrier（写-读屏障）: 在写入volatile变量之后，会隐含地插入一个StoreLoad屏障，确保所有随后的读操作不会被重排序到这个写操作之前。
-读操作（Read）:
-LoadLoad Barrier（读-读屏障）: 在读取volatile变量之前，会插入一个LoadLoad屏障，确保所有之前的读操作已经完成，不会被随后的读操作重排序。
-LoadStore Barrier（读-写屏障）: 在读取volatile变量之后，会隐含地插入一个LoadStore屏障，确保所有随后的写操作不会被重排序到这个读操作之前。
+import com.alibaba.ttl.TransmittableThreadLocal;
+import com.alibaba.ttl.TtlRunnable;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-### 疑问
-getObjectVolatile/getObject
-putObject/putObjectVolatile/putObjectOrdered
-
-
-
-## ThreadLocal
-
-@todo 贴上ThreadLocal的核心源码
-
-
-
-```java
 public class ThreadLocalTest {
 
     static ThreadLocal<TestUser> inheritableThreadLocal = new InheritableThreadLocal<>();
@@ -48,7 +28,6 @@ public class ThreadLocalTest {
         Thread.sleep(20);
         executorService.execute(() -> System.out.println(inheritableThreadLocal.get()));
 
-        //非父子线程间的threadlocal传递 可以使用transmittableThreadLocal
         TestUser testUser2 = new TestUser();
         testUser2.setAge(30);
         transmittableThreadLocal.set(testUser2);
@@ -77,9 +56,3 @@ class TestUser {
                 '}';
     }
 }
-```
-
-
-
-
-

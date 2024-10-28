@@ -1,5 +1,53 @@
 # Linux内核
 
+## 系统结构
+
+Linux内核是将计算机硬件资源通过系统调用接口分配调度给用户进程的中间层级
+
+<img src=".\images\linux01.png" alt="image-20241024114750178" style="zoom:50%;" />
+
+体系结构arch封装了对不同体系结构的不同代码，如x86 arm等
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\linux02.png" alt="image-20241028104613935" style="zoom: 67%;" />
+
+
+
+## 进程管理
+
+
+
+
+
+
+
+
+
+
+
+## 内存管理
+
+
+
+
+
+
+
+## 文件系统
+
+
+
+
+
+## 网络
+
+
+
+
+
+
+
+
+
 
 ## 其他知识
 进程间通讯

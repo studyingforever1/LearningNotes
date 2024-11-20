@@ -3133,9 +3133,26 @@ static void tasklet_action_common(struct softirq_action *a,
 
 ###### work queue
 
-工作队列和softirq机制不同，工作队列可以把工作推后，交由一个内核线程来完成，这个下半部分总会在进程上下文中执行，这样工作队列就会占尽进程进程上下文的所有优势。最主要的是工作队列允许重新调度甚至是睡眠。
+工作队列和softirq机制不同，工作队列可以把工作推后，交由一个内核线程来完成，这个下半部分总会在进程上下文中执行，这样工作队列就会占尽进程进程上下文的所有优势。最主要的是工作队列允许重新调度甚至是睡眠。而softirq在中断上下文中执行，不允许睡眠和阻塞，ksoftirqd线程是在进程上下文执行。
 
+> **中断上下文**：CPU跳到内核设置好的中断处理代码中去，由这部分内核代码来处理中断，这个处理过程中的上下文就是**中断上下文**。
+>
+> **进程上下文**：线程被抽象成为一个task_struct，可以被内核进行进程调度。
 
+**work_struct**
+
+```c
+// include/linux/workqueue.h
+
+struct work_struct {
+    atomic_long_t data;
+    struct list_head entry; //当前work所属的work队列
+    work_func_t func;
+#ifdef CONFIG_LOCKDEP
+    struct lockdep_map lockdep_map;
+#endif
+};
+```
 
 
 

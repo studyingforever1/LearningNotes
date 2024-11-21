@@ -382,7 +382,25 @@ IOAPIC 主要负责接收外部的硬件中断，将硬件产生的中断信号�
 
 **重定向表项 RTE(Redirection Table Entry)**
 
-了解 IOAPIC 的工作，最重要的就是了解重定向表项/寄存器，每个管脚都对应着一个 64 位的重定向表项，来具体看看这 64 位代表的具体信息：
+了解 IOAPIC 的工作，最重要的就是了解重定向表项/寄存器，**每个管脚都对应着一个 64 位的重定向表项**，来具体看看这 64 位代表的具体信息：
+
+```c
+//一个类似的表如下
+// vector代表中断向量号
++-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
+| Vector            | Delivery Mode     | Destination Mode  | Destination       | Polarization      | Trigger Mode      |
++-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
+| 0x20              | Fixed             | Physical          | 0x01              | Active High       | Edge              |
++-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
+| 0x21              | Low Priority      | Logical           | 0x02              | Active Low        | Level             |
++-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
+| 0x22              | SMI               | Physical          | 0x03              | Active High       | Edge              |
++-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
+| 0x23              | NMI               | Physical          | 0x04              | Active High       | Edge              |
++-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
+```
+
+
 
 <img src=".\images\APIC02.png" style="zoom:67%;" />
 
@@ -392,9 +410,78 @@ IOAPIC 主要负责接收外部的硬件中断，将硬件产生的中断信号�
 
 - Destination Field (目的字段) 和 Destination Mode（目的地模式） 字段决定了该中断发送给哪个或哪些 LAPIC
 
-- Interrupt Vector（中断向量），中断控制器很重要的一项工作就是将中断信号翻译成中断向量，这个中断向量就是 IDT(中断描述符表) 的索引，IDT 里面的中断描述符就存放着中断处理程序的地址。在 PIC 中，vector = 起始vector+IRQ，而在 APIC 模式下，IRQ 对应的 vector 由操作系统对 IOAPIC 初始化的时候设置分配。
+- Interrupt Vector（中断向量），中断控制器很重要的一项工作就是将中断信号翻译成中断向量，这个中断向量就是 IDT(中断描述符表) 的索引，IDT 里面的中断描述符就存放着中断处理程序的地址。
 
+  在 PIC 中，vector = 起始vector+IRQ，而在 APIC 模式下，IRQ 对应的 vector 由操作系统对 IOAPIC 初始化的时候设置分配。
 
+```c
+// arch/x86/include/asm/io_apic.h
+
+//IOAPIC中的RET条目
+struct IO_APIC_route_entry {
+        __u32  vector        :  8,
+               delivery_mode  :  3,  /* 000: FIXED
+                                     * 001: lowest prio
+                                     * 111: ExtINT
+                                     */
+               dest_mode      :  1,  /* 0: physical, 1: logical */
+               delivery_status        :  1,
+               polarity       :  1,
+               irr           :  1,
+               trigger               :  1,  /* 0: edge, 1: level */
+               mask          :  1,  /* 0: enabled, 1: disabled */
+               __reserved_2   : 15;
+
+        __u32  __reserved_3   : 24,
+               dest          :  8;
+} __attribute__ ((packed));
+
+//配置RET 
+static void ioapic_configure_entry(struct irq_data *irqd)
+{
+	struct mp_chip_data *mpd = irqd->chip_data;
+	struct irq_cfg *cfg = irqd_cfg(irqd);
+	struct irq_pin_list *entry;
+
+	/*
+	 * Only update when the parent is the vector domain, don't touch it
+	 * if the parent is the remapping domain. Check the installed
+	 * ioapic chip to verify that.
+	 */
+	if (irqd->chip == &ioapic_chip) {
+		mpd->entry.dest = cfg->dest_apicid;
+		mpd->entry.vector = cfg->vector;
+	}
+    //遍历IOAPIC的引脚 将每一个RET写入引脚
+	for_each_irq_pin(entry, mpd->irq_2_pin)
+		__ioapic_write_entry(entry->apic, entry->pin, mpd->entry);
+}
+```
+
+**ISA和PCI**
+
+ISA（Industry Standard Architecture）中断是早期PC系统中用于处理硬件设备请求的一种机制。ISA总线上的每个设备都会被分配一个中断请求线（Interrupt Request Line，简称IRQ），当设备需要CPU的服务时，它会触发相应的IRQ，从而中断CPU的当前操作，使CPU能够处理该设备的请求。
+
+在现代PC中，ISA总线已经被更先进的标准如PCI（Peripheral Component Interconnect）和USB（Universal Serial Bus）所取代，并且多个设备可以共享同一个IRQ线。
+
+ISA系统中共有16个中断请求线，编号从IRQ 0到IRQ 15。下面是这些中断请求线的标准分配情况：
+
+- **IRQ 0** - 系统定时器 (通常映射到向量号32)
+- **IRQ 1** - 键盘 (通常映射到向量号33)
+- **IRQ 2** - 用于级联第二个PIC（可编程中断控制器），实际上管理着IRQ 8 到 IRQ 15 (通常映射到向量号34)
+- **IRQ 3** - 串行端口COM2 (通常映射到向量号35)
+- **IRQ 4** - 串行端口COM1 (通常映射到向量号36)
+- **IRQ 5** - 并行端口LPT1 或者声卡 (通常映射到向量号37)
+- **IRQ 6** - 软盘控制器 (通常映射到向量号38)
+- **IRQ 7** - 并行端口LPT2 (通常映射到向量号39)
+- **IRQ 8** - 实时时钟RTC (通常映射到向量号40)
+- **IRQ 9** - 可用于PCI设备，也常用于网络适配器 (通常映射到向量号41)
+- **IRQ 10** - 可用于PCI设备 (通常映射到向量号42)
+- **IRQ 11** - 可用于PCI设备 (通常映射到向量号43)
+- **IRQ 12** - 鼠标PS/2接口 (通常映射到向量号44)
+- **IRQ 13** - 数学协处理器 (通常映射到向量号45)
+- **IRQ 14** - IDE主控制器 (通常映射到向量号46)
+- **IRQ 15** - IDE次控制器 (通常映射到向量号47)
 
 
 
@@ -436,7 +523,7 @@ LAPIC 本身还能作为中断源产生中断，**LVT(Local Vector Table)** 就�
 <img src=".\images\APIC06.png" style="zoom:80%;" />
 
 1. **Timer**: 时钟中断
-   - **Vector**: 指定中断服务程序的入口点。
+   - **Vector**: 中断向量号
    - **Delivery Status**: 表明中断状态，0表示空闲，1表示待发送。
    - **Delivery Mode**: 确定中断传递方式，包括固定、SMI、NMI、EXTINT、INIT等。
    - **Trigger Mode**: 触发模式，0代表边沿触发，1代表电平触发。
@@ -879,8 +966,70 @@ static inline void native_load_idt(const struct desc_ptr *dtr)
 
 //start_kernel()
 //      init_IRQ()
-//          native_init_IRQ()
-//              idt_setup_apic_and_irq_gates()
+
+
+//arch/x86/include/asm/hw_irq.h
+
+//中断向量和对应的irq_desc表
+typedef struct irq_desc* vector_irq_t[NR_VECTORS];
+DECLARE_PER_CPU(vector_irq_t, vector_irq);
+
+/*
+ * Vectors 0x30-0x3f are used for ISA interrupts.
+ *   round up to the next 16-vector boundary
+ * 0-15编号IRQ线的中断向量在ISA中默认对应 32 + IRQ编号 
+ */
+#define ISA_IRQ_VECTOR(irq)		(((FIRST_EXTERNAL_VECTOR + 16) & ~15) + irq)
+
+//中断栈
+/* Per CPU interrupt stacks */
+struct irq_stack {
+	char		stack[IRQ_STACK_SIZE];
+} __aligned(IRQ_STACK_SIZE);
+
+//每个cpu的中断栈
+DECLARE_PER_CPU(struct irq_stack *, hardirq_stack_ptr);
+
+
+// arch/x86/kernel/irqinit.c 
+
+//初始化IRQ
+void __init init_IRQ(void)
+{
+        int i;
+
+        /*
+         * On cpu 0, Assign ISA_IRQ_VECTOR(irq) to IRQ 0..15.
+         * If these IRQ's are handled by legacy interrupt-controllers like PIC,
+         * then this configuration will likely be static after the boot. If
+         * these IRQ's are handled by more mordern controllers like IO-APIC,
+         * then this vector space can be freed and re-used dynamically as the
+         * irq's migrate etc.
+         */
+        //设置cpu0的vector_irq表的从0x30-0x3f即IRQ线的0-15编号
+        for (i = 0; i < nr_legacy_irqs(); i++)
+               per_cpu(vector_irq, 0)[ISA_IRQ_VECTOR(i)] = irq_to_desc(i);
+
+        //初始化cpu的中断栈
+        BUG_ON(irq_init_percpu_irqstack(smp_processor_id()));
+        //调用native_init_IRQ
+        x86_init.irqs.intr_init();
+}
+
+void __init native_init_IRQ(void)
+{
+	/* Execute any quirks before the call gates are initialised: */
+	x86_init.irqs.pre_vector_init();
+
+    //设置idt表上的中断向量号和对应的中断条目
+	idt_setup_apic_and_irq_gates();
+	lapic_assign_system_vectors();
+
+    //如果没用apic 那么使用的是传统的PIC 那么设置IRQ线2号为级联芯片
+	if (!acpi_ioapic && !of_ioapic && nr_legacy_irqs())
+		setup_irq(2, &irq2);
+}
+
 
 //在内核启动过程中，前面对IDT设置了默认的条目，用于处理常见的异常条目。
 //idt_setup_apic_and_irq_gates()则设置了与APIC相关的中断条目 包括cpu间的中断等
@@ -934,6 +1083,7 @@ static void set_intr_gate(unsigned int n, const void *addr)
 	//将idt_data设置到IDT中
 	idt_setup_from_table(idt_table, &data, 1, false);
 }
+
 
 ```
 
@@ -996,11 +1146,9 @@ struct irq_desc irq_desc[NR_IRQS] __cacheline_aligned_in_smp = {
                .lock         = __RAW_SPIN_LOCK_UNLOCKED(irq_desc->lock),
         }
 };
-```
 
 
 
-```c
 // include/linux/irqdesc.h
 
 
@@ -1102,27 +1250,6 @@ static struct irqaction irq0  = {
 ```
 
 
-
-**常见设备的IRQ编号与中断向量号**
-
-以8259A为例，中断向量号 = IRQ + 32
-
-- **IRQ 0** - 系统定时器 (通常映射到向量号32)
-- **IRQ 1** - 键盘 (通常映射到向量号33)
-- **IRQ 2** - 用于级联第二个PIC（可编程中断控制器），实际上管理着IRQ 8 到 IRQ 15 (通常映射到向量号34)
-- **IRQ 3** - 串行端口COM2 (通常映射到向量号35)
-- **IRQ 4** - 串行端口COM1 (通常映射到向量号36)
-- **IRQ 5** - 并行端口LPT1 或者声卡 (通常映射到向量号37)
-- **IRQ 6** - 软盘控制器 (通常映射到向量号38)
-- **IRQ 7** - 并行端口LPT2 (通常映射到向量号39)
-- **IRQ 8** - 实时时钟RTC (通常映射到向量号40)
-- **IRQ 9** - 可用于PCI设备，也常用于网络适配器 (通常映射到向量号41)
-- **IRQ 10** - 可用于PCI设备 (通常映射到向量号42)
-- **IRQ 11** - 可用于PCI设备 (通常映射到向量号43)
-- **IRQ 12** - 鼠标PS/2接口 (通常映射到向量号44)
-- **IRQ 13** - 数学协处理器 (通常映射到向量号45)
-- **IRQ 14** - IDE主控制器 (通常映射到向量号46)
-- **IRQ 15** - IDE次控制器 (通常映射到向量号47)
 
 
 

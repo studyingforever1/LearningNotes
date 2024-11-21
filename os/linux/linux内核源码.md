@@ -3139,11 +3139,11 @@ static void tasklet_action_common(struct softirq_action *a,
 >
 > **进程上下文**：线程被抽象成为一个task_struct，可以被内核进行进程调度。
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列.png)
+![](.\images\工作队列.png)
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列02.png)
+![](.\images\工作队列02.png)
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列04.png)
+![](.\images\工作队列04.png)
 
 1. `work_struct`：工作队列调度的最小单位，`work`；
 2. `workqueue_struct`：工作队列，`work`都挂入到工作队列中；
@@ -3394,7 +3394,7 @@ struct worker {
 
 **work_struct**
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列03.png)
+![](.\images\工作队列03.png)
 
 ```c
 // include/linux/workqueue.h
@@ -3516,7 +3516,7 @@ enum {
 
 **workqueue_init_early**
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列05.png)
+![](.\images\工作队列05.png)
 
 ```c
 // kernel/workqueue.c
@@ -3703,7 +3703,7 @@ static int init_worker_pool(struct worker_pool *pool)
 
 **alloc_workqueue**
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列06.png)
+![](.\images\工作队列06.png)
 
 
 
@@ -4040,7 +4040,7 @@ static int init_rescuer(struct workqueue_struct *wq)
 
 **workqueue_init**
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列07.png)
+![](.\images\工作队列07.png)
 
 - 主要完成的工作是给之前创建好的`worker_pool`，添加一个初始的`worker`；
 - `create_worker`函数中，创建的内核线程名字为`kworker/XX:YY`或者`kworker/uXX:YY`，其中`XX`表示`worker_pool`的编号，`YY`表示`worker`的编号，`u`表示`unbound`；
@@ -4170,7 +4170,7 @@ fail:
 
 **调度执行**
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列08.png)
+![](.\images\工作队列08.png)
 
 - `schedule_work`默认是将`work`添加到系统的`system_work`工作队列中；
 - `queue_work_on`接口中的操作判断要添加`work`的标志位，如果已经置位了`WORK_STRUCT_PENDING_BIT`，表明已经添加到了队列中等待执行了，否则，需要调用`__queue_work`来进行添加。注意了，这个操作是在关中断的情况下进行的，因为工作队列使用`WORK_STRUCT_PENDING_BIT`位来同步`work`的插入和删除操作，设置了这个比特后，然后才能执行`work`，这个过程可能被中断或抢占打断；
@@ -4390,7 +4390,7 @@ static void insert_work(struct pool_workqueue *pwq, struct work_struct *work,
 
 **worker_thread**
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列09.png)
+![](.\images\工作队列09.png)
 
 - 在创建`worker`时，创建内核线程，执行函数为`worker_thread`；
 - `worker_thread`在开始执行时，设置标志位`PF_WQ_WORKER`，调度器在进行调度处理时会对task进行判断，针对`workerqueue worker`有特殊处理；
@@ -4402,7 +4402,7 @@ static void insert_work(struct pool_workqueue *pwq, struct work_struct *work,
   1. 管理`worker_pool`的内核线程池时，如果有`PENDING`状态的`work`，并且发现没有正在运行的工作线程(`worker_pool->nr_running == 0`)，唤醒空闲状态的内核线程，或者动态创建内核线程；
   2. 如果`work`已经在同一个`worker_pool`的其他`worker`中执行，不再对该`work`进行处理；
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列10.png)
+![](.\images\工作队列10.png)
 
 ```c
 // kernel/workqueue.c
@@ -4672,7 +4672,7 @@ __acquires(&pool->lock)
 
 **worker动态管理**
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列11.png)
+![](.\images\工作队列11.png)
 
 - `worker_pool`通过`nr_running`字段来在不同的状态机之间进行切换；
 - `worker_pool`中有`work`需要处理时，需要至少保证有一个运行状态的`worker`，当`nr_running`大于1时，将多余的`worker`进入IDLE状态，没有`work`需要处理时，所有的`worker`都会进入IDLE状态；
@@ -4709,7 +4709,7 @@ static void idle_worker_timeout(struct timer_list *t)
 }
 ```
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列12.png)
+![](.\images\工作队列12.png)
 
 - 当`worker`进入睡眠状态时，如果该`worker_pool`没有其他的`worker`处于运行状态，那么是需要唤醒一个空闲的`worker`来维持并发处理的能力；
 
@@ -4811,7 +4811,7 @@ void wq_worker_sleeping(struct task_struct *task)
 }
 ```
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\工作队列13.png)
+![](.\images\工作队列13.png)
 
 - 睡眠状态可以通过`wake_up_worker`来进行唤醒处理，最终判断如果该`worker`不在运行状态，则增加`worker_pool`的`nr_running`值；
 
@@ -6053,7 +6053,7 @@ smpboot: Booting Node 0 Processor 4 APIC 0x1
 
 ![img](.\images\内存模型.png)
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\进程内存布局.png" alt="image-20241115095644533" style="zoom: 50%;" />
+<img src=".\images\进程内存布局.png" alt="image-20241115095644533" style="zoom: 50%;" />
 
 **堆**
 

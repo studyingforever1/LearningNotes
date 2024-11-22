@@ -568,7 +568,7 @@ APIC 寄存器是一段起始地址为 0xFEE00000 、长度为 4KB 的物理地�
 
 **本地中断**
 
-LAPIC 在收到后会设置好 LVT(Local Vector Table)的相关寄存器，通过 interrupt delivery protocol 送达 CPU。
+LAPIC 在收到本地中断后会设置好 LVT(Local Vector Table)的相关寄存器，通过 interrupt delivery protocol 送达 CPU。
 
 LVT 实际上是一片连续的地址空间，每 32-bit 一项，作为各个本地中断源的 APIC register ：
 
@@ -590,7 +590,9 @@ register 被划分成多个部分：
 - bit 16: 为Mask，取0表示允许接受中断，取1表示禁止，reset后初始值为1
 - bit 17/17-18: Timer Mode，只有LVT Timer Register有，用于切换APIC Timer的三种模式
 
-最后两种中断通过写 ICR 来发送。当对 ICR 进行写入时，将产生 interrupt message 并通过 system bus(Pentium 4 / Intel Xeon) 或 APIC bus(Pentium / P6 family) 送达目标 LAPIC 。
+**IPI中断和硬件中断**
+
+最后两种中断通过写 ICR 来发送。当对 ICR 进行写入时，将产生 interrupt message 并通过 system bus(Pentium 4 / Intel Xeon) 或 APIC bus(Pentium / P6 family) 送达目标 LAPIC 。IOAPIC通过interrupt message给APIC发送中断，在message中已经指定了Interrupt Vector，因此不需要APIC通过LVT表来进行配置。
 
 当有多个 APIC 向通过 system bus / APIC bus 发送 message 时，需要进行仲裁。每个 LAPIC 会被分配一个仲裁优先级(范围为 0-15)，优先级最高的拿到 bus，从而能够发送消息。在消息发送完成后，刚刚发送消息的 LAPIC 的仲裁优先级会被设置为 0，其他的 LAPIC 会加 1。
 

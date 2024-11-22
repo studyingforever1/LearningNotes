@@ -301,11 +301,54 @@ X86 体系结构的每个中断都被赋予一个唯一的编号或者向量（8
 - 故障(fault)，故障是程序遇到了问题需要修复，问题不一定是错误，如果问题能够修复，那么中断处理完成后会重新执行之前的指令，如果问题无法修复那就是错误，当前进程将会被杀死。即 **CPU异常**
 - 中止(abort)，系统遇到了很严重的错误，无法修改，一般系统会崩溃。即 **CPU异常**
 
-### 中断控制器
+### 中断控制
 
-X86计算机的 CPU 为中断只提供了两条外接引脚：NMI 和 INTR。其中 NMI 是不可屏蔽中断，它通常用于电源掉电和物理存储器奇偶校验；INTR是可屏蔽中断，可以通过设置中断屏蔽位来进行中断屏蔽，它主要用于接受外部硬件的中断信号，这些信号由中断控制器传递给 CPU。
+中断控制从8259A PIC中断控制器到82093AA APIC中断控制器再到消息信号中断MSI
+
+
+
+**ISA和PCI**
+
+ISA（Industry Standard Architecture）中断是早期PC系统中用于处理硬件设备请求的一种机制。ISA总线上的每个设备都会被分配一个中断请求线（Interrupt Request Line，简称IRQ），当设备需要CPU的服务时，它会触发相应的IRQ，从而中断CPU的当前操作，使CPU能够处理该设备的请求。
+
+> 在现代PC中，ISA总线已经被更先进的标准如PCI（Peripheral Component Interconnect）和PCIe(PCI Express)所取代，并且多个设备可以共享同一个IRQ线。
+>
+> | 特性       | ISA          | PCI           | PCIe        |
+> | ---------- | ------------ | ------------- | ----------- |
+> | 数据宽度   | 8/16 位      | 32/64 位      | 多个 lane   |
+> | 频率       | 8 MHz        | 33/66 MHz     | 2.5-64 GT/s |
+> | 传输速率   | 最大 8 MB/s  | 最大 533 MB/s | 最大 4 GB/s |
+> | 插槽数量   | 较大         | 中等          | 多种长度    |
+> | 中断和 DMA | 易冲突       | 较少冲突      | 无冲突      |
+> | 即插即用   | 不完全支持   | 支持          | 完全支持    |
+> | 适用设备   | 声卡、网卡等 | 显卡、网卡等  | 显卡、SSD等 |
+>
+> - **ISA**：已基本被淘汰，仅在一些老旧系统中仍可能见到。
+> - **PCI**：仍在一些旧系统和工业应用中使用，但逐渐被 PCIe 取代。
+> - **PCIe**：广泛应用于现代计算机系统中，包括台式机、服务器、笔记本电脑等，支持高性能显卡、固态硬盘（SSD）、网络适配器等多种设备。
+
+ISA系统中共有16个中断请求线，编号从IRQ 0到IRQ 15。下面是这些中断请求线的标准分配情况：
+
+- **IRQ 0** - 系统定时器 (通常映射到向量号32)
+- **IRQ 1** - 键盘 (通常映射到向量号33)
+- **IRQ 2** - 用于级联第二个PIC（可编程中断控制器），实际上管理着IRQ 8 到 IRQ 15 (通常映射到向量号34)
+- **IRQ 3** - 串行端口COM2 (通常映射到向量号35)
+- **IRQ 4** - 串行端口COM1 (通常映射到向量号36)
+- **IRQ 5** - 并行端口LPT1 或者声卡 (通常映射到向量号37)
+- **IRQ 6** - 软盘控制器 (通常映射到向量号38)
+- **IRQ 7** - 并行端口LPT2 (通常映射到向量号39)
+- **IRQ 8** - 实时时钟RTC (通常映射到向量号40)
+- **IRQ 9** - 可用于PCI设备，也常用于网络适配器 (通常映射到向量号41)
+- **IRQ 10** - 可用于PCI设备 (通常映射到向量号42)
+- **IRQ 11** - 可用于PCI设备 (通常映射到向量号43)
+- **IRQ 12** - 鼠标PS/2接口 (通常映射到向量号44)
+- **IRQ 13** - 数学协处理器 (通常映射到向量号45)
+- **IRQ 14** - IDE主控制器 (通常映射到向量号46)
+- **IRQ 15** - IDE次控制器 (通常映射到向量号47)
 
 #### 可编程中断控制器8259A
+
+X86计算机的 CPU 为中断只提供了两条外接引脚：NMI 和 INTR。其中 NMI 是不可屏蔽中断，它通常用于电源掉电和物理存储器奇偶校验；INTR是可屏蔽中断，可以通过设置中断屏蔽位来进行中断屏蔽，它主要用于接受外部硬件的中断信号，这些信号由中断控制器传递给 CPU。
 
 传统的 PIC（Programmable Interrupt Controller，可编程中断控制器）是由两片 8259A 风格的外部芯片以“级联”的方式连接在一起。每个芯片可处理多达 8 个不同的 IRQ。因为从 PIC 的 INT 输出线连接到主 PIC 的 IRQ2 引脚，所以可用 IRQ 线的个数达到 15 个
 
@@ -349,70 +392,93 @@ X86计算机的 CPU 为中断只提供了两条外接引脚：NMI 和 INTR。其
 - **特殊完全嵌套方式**
   其特点是：IR7～IR0 的优先级顺序与普通嵌套方式相同；不同之处是在CPU中断服务期间，除了允许高级别中断请求进入外，还允许同级中断请求进入，从而实现了对同级中断请求的特殊嵌套。
 
-Linux 曾经支持嵌套中断，但为了避免堆栈溢出问题的解决方案越来越复杂，Linux 不久前取消了该功能 - 只允许一层嵌套，允许多层嵌套，直至达到一定的内核堆栈深度，等等。
-
-但是，异常（系统调用）和中断（硬件中断）之间仍然可以嵌套，但规则相当严格：
-
-- 异常（例如页面错误、系统调用）不能抢占中断；如果发生这种情况，则被视为错误
-
-- 中断可以抢占异常
-
-- 中断不能抢占另一个中断（以前是可以的）
 
 
 
 
-
-
-
-#### 高级可编程中断控制器（APIC）
+#### 高级可编程中断控制器（82093AA APIC）
 
 8259A 只适合单 CPU 的情况，为了充分挖掘 SMP 体系结构的并行性，能够把中断传递给系统中的每个 CPU 至关重要。基于此理由，Intel 引入了一种名为 I/O 高级可编程控制器的新组件，来替代老式的 8259A 可编程中断控制器。
 
 APIC 分成两部分 LAPIC 和 IOAPIC，前者 LAPIC 位于 CPU 内部，每个 CPU 都有一个 LAPIC，后者 IOAPIC 与外设相连。外设发出的中断信号经过 IOAPIC 处理之后发送某个或多个 LAPIC，再由 LAPIC 决定是否交由 CPU 进行实际的中断处理。
 
-- **LAPIC**，主要负责传递中断信号到指定的处理器；举例来说，一台具有三个处理器的机器，则它必须相对的要有三个本地 APIC。
-- **I/O APIC**，主要是收集来自 I/O 装置的 Interrupt 信号且在当那些装置需要中断时发送信号到本地 APIC，系统中最多可拥有 8 个 I/O APIC。
+- **LAPIC**，主要负责传递中断信号到指定的处理器。
+- **I/O APIC**，主要是收集来自 I/O 装置的 Interrupt 信号且在当那些装置需要中断时发送信号到本地 APIC。
 
 ![](.\images\APIC01.png)
 
 ##### IOAPIC
 
+IOAPIC (I/O Advanced Programmable Interrupt Controller) 属于 Intel 芯片组的一部分，也就是说通常位于南桥。
+
 IOAPIC 主要负责接收外部的硬件中断，将硬件产生的中断信号翻译成具有一定格式的消息，然后通过总线将消息发送给一个或者多个 LAPIC。
+
+像 PIC 一样，连接各个设备，负责接收外部 IO 设备 (Externally connected I/O devices) 发来的中断，典型的 IOAPIC 有 24 个中断输入管脚(INTIN0~INTIN23)，没有优先级之分。
+
+<img src=".\images\IOAPIC.jpg" style="zoom:50%;" />
+
+在某个管脚收到中断后，会进行查询RTE，把中断转换为中断消息转发给对应的 LAPIC 。
+
+**IOAPIC中的寄存器**
+
+IOAPIC 的寄存器同样是通过映射一片物理地址空间实现的
+
+- IOREGSEL(I/O REGISTER SELECT REGISTER): 选择要读写的寄存器
+- IOWIN(I/O WINDOW REGISTER): 读写 IOREGSEL 选中的寄存器
+- IOAPICVER(IOAPIC VERSION REGISTER): IOAPIC 的硬件版本
+- IOAPICARB(IOAPIC ARBITRATION REGISTER): IOAPIC 在总线上的仲裁优先级
+- IOAPICID(IOAPIC IDENTIFICATION REGISTER): IOAPIC 的 ID，在仲裁时将作为 ID 加载到 IOAPICARB 中
+- IOREDTBL(I/O REDIRECTION TABLE REGISTERS): 有 0-23 共 24 个，对应 24 个引脚，每个长 64bit。当该引脚收到中断信号时，将根据该寄存器产生中断消息送给相应的 LAPIC，其中每一项简称RTE（Redirection Table Entry）。
+
+<img src=".\images\重定向表项寄存器组.png" alt="image-20241122145656489" style="zoom:50%;" />
+
+**中断转发**
+
+当一个中断通过INTIN针脚输入到IOAPIC后，IOAPIC通过IOREDTBL寄存器组来查找对应的REDIRECTION TABLE REGISTERS寄存器，然后通过寄存器来获取对应的RTE，然后发送给LAPIC。
 
 **重定向表项 RTE(Redirection Table Entry)**
 
-了解 IOAPIC 的工作，最重要的就是了解重定向表项/寄存器，**每个管脚都对应着一个 64 位的重定向表项**，来具体看看这 64 位代表的具体信息：
+- 第56-63位为Destination，代表目的CPU(s)，Physical模式则为APIC ID，Logical模式则为MDA
 
-```c
-//一个类似的表如下
-// vector代表中断向量号
-+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
-| Vector            | Delivery Mode     | Destination Mode  | Destination       | Polarization      | Trigger Mode      |
-+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
-| 0x20              | Fixed             | Physical          | 0x01              | Active High       | Edge              |
-+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
-| 0x21              | Low Priority      | Logical           | 0x02              | Active Low        | Level             |
-+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
-| 0x22              | SMI               | Physical          | 0x03              | Active High       | Edge              |
-+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
-| 0x23              | NMI               | Physical          | 0x04              | Active High       | Edge              |
-+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+
-```
+  - Physical模式下，仅第56-59位有效，第60-63位必须取0
 
+- 第16位为Mask，取0表示允许接受中断，取1表示禁止，reset后初始值为1
 
+- 第15位为Trigger Mode，取0表示edge triggered，取1表示level triggered
 
-<img src=".\images\APIC02.png" style="zoom:67%;" />
+- 第14位为Remote IRR，只读且只对level triggered中断有意义，取1代表目的CPU已经接受中断，当收到CPU发来的EOI后，变回0表示中断已经完成
 
-<img src=".\images\APIC03.png" style="zoom:67%;" />
+  > **Note:** Remote IRR取1时的作用，实际上是阻止Level Triggered的IRQ line上的Active信号再次触发一个中断。设想若Active信号会产生中断，则只要信号保持Active（e.g. 高电平），就会不断触发中断，这显然是不正确的，故需要由Remote IRR位将中断阻塞。由此可见，CPU应该先设法让IRQ line回到Inactive状态，然后再进行EOI，否则该中断将再次产生。
 
-<img src=".\images\APIC04.png" style="zoom:67%;" />
+- 第13位为Interrupt Input Pin Polarity，取0表示active high，取1表示active low
 
-- Destination Field (目的字段) 和 Destination Mode（目的地模式） 字段决定了该中断发送给哪个或哪些 LAPIC
+- 第12位为Delivery Status（只读），取0表示空闲，取1表示CPU尚未接受中断（尚未将中断存入IRR）
 
-- Interrupt Vector（中断向量），中断控制器很重要的一项工作就是将中断信号翻译成中断向量，这个中断向量就是 IDT(中断描述符表) 的索引，IDT 里面的中断描述符就存放着中断处理程序的地址。
+  - 若目的CPU对某Vector已经有两个中断在Pending，IOAPIC等于可以为该Vector提供第三个Pending的中断
 
-  在 PIC 中，vector = 起始vector+IRQ，而在 APIC 模式下，IRQ 对应的 vector 由操作系统对 IOAPIC 初始化的时候设置分配。
+- 第11位为Destination Mode，取0表示Physical，取1表示Logical
+
+- 第8-10位为Delivery Mode，有以下几种取值：
+
+  - 000 (Fixed)：按Vector的值向目标CPU(s)发送相应的中断向量号
+
+  - 001 (Lowest Priority)：按Vector的值向Destination决定的所有目标CPU(s)中Priority最低的CPU发送相应的中断向量号
+
+    - 关于该模式，详见Intel IA32手册第三册第十章
+
+  - 010 (SMI)：向目标CPU(s)发送一个SMI，此模式下Vector必须为0，SMI必须是edge triggered的
+
+  - 100 (NMI)：向目标CPU(s)发送一个NMI（走#NMI引脚），此时Vector会被忽略，NMI必须是edge triggered的
+
+  - 101 (INIT)：向目标CPU(s)发送一个INIT IPI，导致该CPU发生一次INIT（INIT后的CPU状态参考Intel IA32手册第三册表9-1），此模式下Vector必须为0，且必须是edge triggered
+
+    > **Info:** CPU在INIT后其APIC ID和Arb ID（只在奔腾和P6上存在）不变
+
+  - 111（ExtINT）：向目标CPU(s)发送一个与8259A兼容的中断信号，将会引起一个INTA周期，CPU(s)在该周期向外部控制器索取Vector，ExtINT必须是edge triggered的
+
+- 第0-7位为Vector，即目标CPU收到的中断向量号，有效范围为16-254（0-15保留，255为全局广播）
+
+在 PIC 中，vector = 起始vector+IRQ，而在 APIC 模式下，IRQ 对应的 vector 由操作系统对 IOAPIC 初始化的时候设置分配。
 
 ```c
 // arch/x86/include/asm/io_apic.h
@@ -458,46 +524,18 @@ static void ioapic_configure_entry(struct irq_data *irqd)
 }
 ```
 
-**ISA和PCI**
-
-ISA（Industry Standard Architecture）中断是早期PC系统中用于处理硬件设备请求的一种机制。ISA总线上的每个设备都会被分配一个中断请求线（Interrupt Request Line，简称IRQ），当设备需要CPU的服务时，它会触发相应的IRQ，从而中断CPU的当前操作，使CPU能够处理该设备的请求。
-
-在现代PC中，ISA总线已经被更先进的标准如PCI（Peripheral Component Interconnect）和USB（Universal Serial Bus）所取代，并且多个设备可以共享同一个IRQ线。
-
-ISA系统中共有16个中断请求线，编号从IRQ 0到IRQ 15。下面是这些中断请求线的标准分配情况：
-
-- **IRQ 0** - 系统定时器 (通常映射到向量号32)
-- **IRQ 1** - 键盘 (通常映射到向量号33)
-- **IRQ 2** - 用于级联第二个PIC（可编程中断控制器），实际上管理着IRQ 8 到 IRQ 15 (通常映射到向量号34)
-- **IRQ 3** - 串行端口COM2 (通常映射到向量号35)
-- **IRQ 4** - 串行端口COM1 (通常映射到向量号36)
-- **IRQ 5** - 并行端口LPT1 或者声卡 (通常映射到向量号37)
-- **IRQ 6** - 软盘控制器 (通常映射到向量号38)
-- **IRQ 7** - 并行端口LPT2 (通常映射到向量号39)
-- **IRQ 8** - 实时时钟RTC (通常映射到向量号40)
-- **IRQ 9** - 可用于PCI设备，也常用于网络适配器 (通常映射到向量号41)
-- **IRQ 10** - 可用于PCI设备 (通常映射到向量号42)
-- **IRQ 11** - 可用于PCI设备 (通常映射到向量号43)
-- **IRQ 12** - 鼠标PS/2接口 (通常映射到向量号44)
-- **IRQ 13** - 数学协处理器 (通常映射到向量号45)
-- **IRQ 14** - IDE主控制器 (通常映射到向量号46)
-- **IRQ 15** - IDE次控制器 (通常映射到向量号47)
-
 
 
 
 ##### **LAPIC**
 
-LAPIC 要比 IOAPIC 复杂的多，其主要功能是接收中断消息然后交由 CPU 处理，再者就是自身也能作为中断源产生中断发送给自身或其他 CPU。所以其实 LAPIC 能够收到三个来源的中断：
+LAPIC (Local Advanced Programmable Interrupt Controller) 是一种负责接收 / 发送中断的芯片，集成在 CPU 内部，每个 CPU 有一个属于自己的 LAPIC。它们通过 APIC ID 进行区分。
 
-- 本地中断：时钟，温度监测等
+<img src=".\images\LAPIC.png" alt="image-20241122114222016" style="zoom: 50%;" />
 
-- 外部中断：IOAPIC 发来的
-- IPI：处理器间中断，其他 LAPIC 发来的
+**LAPIC寄存器**
 
-<img src=".\images\APIC05.png" style="zoom: 80%;" />
-
-**主要寄存器**
+APIC 寄存器是一段起始地址为 0xFEE00000 、长度为 4KB 的物理地址区域。IOAPIC 的寄存器同样是通过映射一片物理地址空间实现的。
 
 - **IRR(Interrupt Request Register)**
   中断请求寄存器，256 位，每位代表着一个中断。当某个中断消息发来时，如果该中断没有被屏蔽，则将 IRR 对应的 bit 置 1，表示收到了该中断请求但 CPU 还未处理。
@@ -516,28 +554,57 @@ LAPIC 要比 IOAPIC 复杂的多，其主要功能是接收中断消息然后交
 - **ICR(Interrupt Command Register)**
   中断指令寄存器，当一个 CPU 想把中断发送给另一个 CPU 时，就在 ICR 中填写相应的中断向量和目标 LAPIC 标识，然后通过总线向目标 LAPIC 发送消息。ICR 寄存器的字段和 IOAPIC 重定向表项较为相似，都有 destination field, delivery mode, destination mode, level 等等。
 
+
+
+**LAPIC处理中断类型**
+
+- APIC Timer 产生的中断(APIC timer generated interrupts)    本地中断
+- Performance Monitoring Counter 在 overflow 时产生的中断(Performance monitoring counter interrupts)    本地中断
+- 温度传感器产生的中断(Thermal Sensor interrupts)    本地中断
+- LAPIC 内部错误时产生的中断(APIC internal error interrupts)   本地中断
+- 本地直连 IO 设备 (Locally connected I/O devices) 通过 LINT0 和 LINT1 引脚发来的中断   本地中断
+- 其他 CPU (甚至是自己，称为 self-interrupt)发来的 IPI(Inter-processor interrupts)   IPI中断
+- IOAPIC 发来的中断   硬件中断
+
 **本地中断**
 
-LAPIC 本身还能作为中断源产生中断，**LVT(Local Vector Table)** 就是自身作为中断源的一个配置表，总共 7 项(不同架构下可能不同)，每项 32 位，同 IOAPIC，每一项也是一个寄存器，如下所示：
+LAPIC 在收到后会设置好 LVT(Local Vector Table)的相关寄存器，通过 interrupt delivery protocol 送达 CPU。
+
+LVT 实际上是一片连续的地址空间，每 32-bit 一项，作为各个本地中断源的 APIC register ：
 
 <img src=".\images\APIC06.png" style="zoom:80%;" />
 
-1. **Timer**: 时钟中断
-   - **Vector**: 中断向量号
-   - **Delivery Status**: 表明中断状态，0表示空闲，1表示待发送。
-   - **Delivery Mode**: 确定中断传递方式，包括固定、SMI、NMI、EXTINT、INIT等。
-   - **Trigger Mode**: 触发模式，0代表边沿触发，1代表电平触发。
-   - **Interrupt Input Pin Polarity**: 输入引脚的极性。
-   - **Remote IRR**: 远程IRR（In Service Register）。
-   - **Mask**: 中断屏蔽标志，0未屏蔽，1已屏蔽。
-   - **Timer Mode**: 定时器工作模式，包括单次触发、周期性触发和TSC截止日期模式。
-2. **CMCI**: 核心多线程兼容中断。
-3. **LINT0/LINT1**: 局部中断输入0/1。
-4. **Error**: 错误报告。
-5. **Performance Mon. Counters**: 性能监视计数器。
-6. **Thermal Sensor**: 温度传感器。
+register 被划分成多个部分：
 
+- bit 0-7: Vector，即CPU收到的中断向量号，其中0-15号被视为非法，会产生一个Illegal Vector错误（即ESR的bit 6，详下）
+- bit 8-10: Delivery Mode，有以下几种取值：
+  - 000 (Fixed)：按Vector的值向CPU发送相应的中断向量号
+  - 010 (SMI)：向CPU发送一个SMI，此模式下Vector必须为0
+  - 100 (NMI)：向CPU发送一个NMI，此时Vector会被忽略
+  - 101 (INIT)：向CPU发送一个 INIT，此模式下Vector必须为0
+  - 111 (ExtINT)：令CPU按照响应外部8259A的方式响应中断，这将会引起一个INTA周期，CPU在该周期向外部控制器索取Vector。APIC只支持一个ExtINT中断源，整个系统中应当只有一个CPU的其中一个LVT表项配置为ExtINT模式
+- bit 12: Delivery Status（只读），取0表示空闲，取1表示CPU尚未接受该中断（尚未EOI）
+- bit 13: Interrupt Input Pin Polarity，取0表示active high，取1表示active low
+- bit 14: Remote IRR Flag（只读），若当前接受的中断为fixed mode且是level triggered的，则该位为1表示CPU已经接受中断（已将中断加入IRR），但尚未进行EOI。CPU执行EOI后，该位就恢复到0
+- bit 15: Trigger Mode，取0表示edge triggered，取1表示level triggered（具体使用时尚有许多注意点，详见手册10.5.1节）
+- bit 16: 为Mask，取0表示允许接受中断，取1表示禁止，reset后初始值为1
+- bit 17/17-18: Timer Mode，只有LVT Timer Register有，用于切换APIC Timer的三种模式
 
+最后两种中断通过写 ICR 来发送。当对 ICR 进行写入时，将产生 interrupt message 并通过 system bus(Pentium 4 / Intel Xeon) 或 APIC bus(Pentium / P6 family) 送达目标 LAPIC 。
+
+当有多个 APIC 向通过 system bus / APIC bus 发送 message 时，需要进行仲裁。每个 LAPIC 会被分配一个仲裁优先级(范围为 0-15)，优先级最高的拿到 bus，从而能够发送消息。在消息发送完成后，刚刚发送消息的 LAPIC 的仲裁优先级会被设置为 0，其他的 LAPIC 会加 1。
+
+**LAPIC中断处理过程**
+
+1. 判断自己是否属于消息指定的 destination ，如果不是，抛弃该消息
+2. 如果中断的 Delivery Mode 为 NMI / SMI / INIT / ExtINT / SIPI ，则直接将中断发送给 CPU
+3. 如果不是以上的 Mode ，则设置中断消息在 IRR 中对应的 bit。如果 IRR 中 bit 已被设置(没有 open slot)，则拒绝该请求，然后给 sender 发送一个 retry 的消息
+4. 对于 IRR 中的中断，LAPIC 每次会根据中断的优先级和当前 CPU 的优先级 PPR 选出一个发送给 CPU，会清空该中断在 IRR 中对应的 bit，并设置该中断在 ISR 中对应的 bit
+5. CPU 在收到 LAPIC 发来的中断后，通过中断 / 异常处理机制进行处理。处理完毕后，向 LAPIC 的 EOI(end-of-interrupt)寄存器进行写入(NMI / SMI / INIT / ExtINT / SIPI 无需写入)
+6. LAPIC 清除 ISR 中该中断对应的 bit(只针对 level-triggered interrupts)
+7. 对于 level-triggered interrupt， EOI 会被发送给所有的 IOAPIC。可以通过设置 Spurious Interrupt Vector Register 的 bit12 来避免 EOI 广播
+
+<img src=".\images\LAPIC中断处理过程.jpg" style="zoom:50%;" />
 
 **APIC 中断过程**
 
@@ -548,6 +615,37 @@ LAPIC 本身还能作为中断源产生中断，**LVT(Local Vector Table)** 就�
 - 如果该中断的优先级高于当前 CPU 正在执行的中断，而且当前 CPU 没有屏蔽中断的话，则中断当前正处理的中断，先处理该高优先级中断，否则等待
 - 准备处理下一个中断时，从 IRR 中挑选优先级最大的中断，相应位置 0，ISR 相应位置 1，然后送 CPU 执行。
 - 中断处理完成后写 EOI 表示中断处理已经完成，写 EOI 导致 ISR 相应位置 0，对于 level 触发的中断，还会向所有的 I/O APIC 发送 EOI 消息，通知中断处理已经完成。
+
+
+
+
+
+#### 消息信号中断MSI
+
+消息信号中断(Message Signaled Interrupts) PCI Specification 2.2 引入，设备通过向某个 MMIO 地址写入 system-specified message 可实现向LAPIC发送中断的效果。写入的数据仅能用来决定发送给哪个 LAPIC，而不能携带更多的信息。
+
+- 传统中断基于的引脚 (pin) 往往被多个设备所共享。中断触发后，OS 需要调用对应的中断处理例程来确定产生中断的设备，耗时较长。而 MSI 中断只属于一个特定的设备，不存在该问题。
+- 传统中断先发送到 IOAPIC 后再转发给对应的 LAPIC ，路径较长。MSI 能让设备直接将中断送达 LAPIC 。
+
+具体的实现方式为设备通过 PCI write command 向 Message Address Register 指示的地址写入 Message Data Register 中内容来向 LAPIC 发送中断。
+
+**寄存器**
+
+- Message Address Register
+
+  Destination ID 字段存放了中断要发往 LAPIC ID。Redirection hint indication 指定了 MSI 是否直接送达 CPU。 Destination mode 指定了 Destination ID 字段存放的是逻辑还是物理 APIC ID 。
+
+<img src=".\images\Message Address Register.jpg" style="zoom:50%;" />
+
+- Message Data Register
+
+  Vector 指定了中断向量号， Delivery Mode 定义同传统中断，表示中断类型。Trigger Mode 为触发模式，0 为边缘触发，1 为水平触发。 Level 指定了水平触发中断时处于的电位(边缘触发无须设置该字段)。
+
+<img src=".\images\Message Data Register.jpg" style="zoom:50%;" />
+
+
+
+
 
 
 

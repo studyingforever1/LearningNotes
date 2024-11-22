@@ -899,6 +899,7 @@ struct desc_ptr idt_descr __ro_after_init = {
 	.address	= (unsigned long) idt_table,
 };
 
+//setup_arch();
 
 /**
  * idt_setup_early_traps - Initialize the idt table with early traps
@@ -1225,7 +1226,9 @@ struct irqaction {
         void __percpu         *percpu_dev_id;
    		//下一个action
         struct irqaction       *next;
+        //中断处理线程的函数
         irq_handler_t         thread_fn;
+        //中断处理线程
         struct task_struct     *thread;
         struct irqaction       *secondary;
         unsigned int          irq;
@@ -1367,6 +1370,7 @@ int request_threaded_irq(unsigned int irq, irq_handler_t handler,
 	 * Also IRQF_COND_SUSPEND only makes sense for shared interrupts and
 	 * it cannot be set along with IRQF_NO_SUSPEND.
 	 */
+    //共享设备必须有真实的dev_id 否则无法确认中断来源
 	if (((irqflags & IRQF_SHARED) && !dev_id) ||
 	    (!(irqflags & IRQF_SHARED) && (irqflags & IRQF_COND_SUSPEND)) ||
 	    ((irqflags & IRQF_NO_SUSPEND) && (irqflags & IRQF_COND_SUSPEND)))
@@ -1381,9 +1385,11 @@ int request_threaded_irq(unsigned int irq, irq_handler_t handler,
 	    WARN_ON(irq_settings_is_per_cpu_devid(desc)))
 		return -EINVAL;
 
+    //如果handler和thread_fn都为空
 	if (!handler) {
 		if (!thread_fn)
 			return -EINVAL;
+        //默认处理函数 默认启动一个中断处理线程
 		handler = irq_default_primary_handler;
 	}
 
@@ -1561,11 +1567,13 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	 * and the interrupt does not nest into another interrupt
 	 * thread.
 	 */
+    //如果设置了thread_fn 那么启动一个中断处理线程
 	if (new->thread_fn && !nested) {
         //创建硬件irq处理线程
 		ret = setup_irq_thread(new, irq, false);
 		if (ret)
 			goto out_mput;
+        //如果设置了new->secondary 再启动一个中断处理线程
 		if (new->secondary) {
 			ret = setup_irq_thread(new->secondary, irq, true);
 			if (ret)
@@ -1828,6 +1836,7 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	 * Strictly no need to wake it up, but hung_task complains
 	 * when no hard interrupt wakes the thread up.
 	 */
+    //唤醒中断处理线程
 	if (new->thread)
 		wake_up_process(new->thread);
 	if (new->secondary)
@@ -1879,18 +1888,120 @@ out_mput:
 
 
 
+//在目录下创建与SMP相关的文件 /proc/irq/123/
+void register_irq_proc(unsigned int irq, struct irq_desc *desc)
+{
+	static DEFINE_MUTEX(register_lock);
+	void __maybe_unused *irqp = (void *)(unsigned long) irq;
+	char name [MAX_NAMELEN];
+
+	if (!root_irq_dir || (desc->irq_data.chip == &no_irq_chip))
+		return;
+
+	/*
+	 * irq directories are registered only when a handler is
+	 * added, not when the descriptor is created, so multiple
+	 * tasks might try to register at the same time.
+	 */
+	mutex_lock(&register_lock);
+
+	if (desc->dir)
+		goto out_unlock;
+
+	sprintf(name, "%d", irq);
+
+    //创建irq号的目录
+	/* create /proc/irq/1234 */
+	desc->dir = proc_mkdir(name, root_irq_dir);
+	if (!desc->dir)
+		goto out_unlock;
+
+#ifdef CONFIG_SMP
+    // 允许用户设置和查看中断处理程序的 CPU 亲和性掩码。
+	/* create /proc/irq/<irq>/smp_affinity */
+	proc_create_data("smp_affinity", 0644, desc->dir,
+			 &irq_affinity_proc_ops, irqp);
+
+    //显示中断处理程序的 CPU 亲和性建议，格式为十六进制字符串。
+	/* create /proc/irq/<irq>/affinity_hint */
+	proc_create_single_data("affinity_hint", 0444, desc->dir,
+			irq_affinity_hint_proc_show, irqp);
+
+    //允许用户设置和查看中断处理程序的 CPU 亲和性列表。
+	/* create /proc/irq/<irq>/smp_affinity_list */
+	proc_create_data("smp_affinity_list", 0644, desc->dir,
+			 &irq_affinity_list_proc_ops, irqp);
+
+    //显示中断处理程序所属的 NUMA 节点编号。
+	proc_create_single_data("node", 0444, desc->dir, irq_node_proc_show,
+			irqp);
+# ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
+    //显示当前中断处理程序实际运行的 CPU 亲和性掩码。
+	proc_create_single_data("effective_affinity", 0444, desc->dir,
+			irq_effective_aff_proc_show, irqp);
+    //显示当前中断处理程序实际运行的 CPU 亲和性列表。
+	proc_create_single_data("effective_affinity_list", 0444, desc->dir,
+			irq_effective_aff_list_proc_show, irqp);
+# endif
+#endif
+    //记录虚假中断 没有有效中断源的次数
+	proc_create_single_data("spurious", 0444, desc->dir,
+			irq_spurious_proc_show, (void *)(long)irq);
+
+out_unlock:
+	mutex_unlock(&register_lock);
+}
+
+
+//用于创建目录 /proc/irq/123/i8042
+void register_handler_proc(unsigned int irq, struct irqaction *action)
+{
+	char name [MAX_NAMELEN];
+	struct irq_desc *desc = irq_to_desc(irq);
+
+	if (!desc->dir || action->dir || !action->name ||
+					!name_unique(irq, action))
+		return;
+
+	snprintf(name, MAX_NAMELEN, "%s", action->name);
+
+    //创建目录 对应的设备名称
+	/* create /proc/irq/1234/handler/ */
+	action->dir = proc_mkdir(name, desc->dir);
+}
+
 
 
 ```
 
+```shell
+#/proc/irq/1
+-r--------. 1 root root 0 11月 22 10:27 affinity_hint
+dr-xr-xr-x. 2 root root 0 11月 22 10:27 i8042 #键盘
+-r--r--r--. 1 root root 0 11月 22 10:27 node
+-rw-------. 1 root root 0 11月 22 10:27 smp_affinity
+-rw-------. 1 root root 0 11月 22 10:27 smp_affinity_list
+-r--r--r--. 1 root root 0 11月 22 10:27 spurious
+```
 
 
-**内核线程**
+
+
+
+**中断线程化**
+
+中断线程化是指 注册中断处理函数时，可以设置线程中断处理函数，从而启动一个中断处理线程，在对应的硬件设备产生中断时，由具体的中断处理过程由中断处理线程负责，内核只负责对中断的快速接收确认和应答。
+
+```shell
+ps aux | grep irq #展示所有irq线程
+```
+
+
 
 ```c
 //kernel/irq/manage.c
 
-//创建内核硬件处理线程
+//创建中断处理线程 irq
 
 static int
 setup_irq_thread(struct irqaction *new, unsigned int irq, bool secondary)
@@ -2722,6 +2833,12 @@ static __always_inline int preempt_count(void)
 
 
 **ksoftirqd线程**
+
+```shell
+ps aux | grep ksoftirqd #展示所有ksoftirqd线程
+```
+
+
 
 ```c
 
@@ -4228,6 +4345,7 @@ int __init workqueue_init(void)
         return 0;
 }
 
+// ps aux | grep ksoftirqd #展示所有kworker线程
 
 //创建worker线程
 static struct worker *create_worker(struct worker_pool *pool)

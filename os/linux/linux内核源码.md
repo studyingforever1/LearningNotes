@@ -2239,6 +2239,59 @@ static inline void generic_handle_irq_desc(struct irq_desc *desc)
 }
 
 
+//退出中断上下文 处理softirq
+/*
+ * Exit an interrupt context. Process softirqs if needed and possible:
+ */
+void irq_exit(void)
+{
+#ifndef __ARCH_IRQ_EXIT_IRQS_DISABLED
+	local_irq_disable();
+#else
+	lockdep_assert_irqs_disabled();
+#endif
+	account_irq_exit_time(current);
+	preempt_count_sub(HARDIRQ_OFFSET);
+    //如果有挂起的softirq 处理softirq
+	if (!in_interrupt() && local_softirq_pending())
+		invoke_softirq();
+
+	tick_irq_exit();
+	rcu_irq_exit();
+	trace_hardirq_exit(); /* must be last! */
+}
+
+
+
+static inline void invoke_softirq(void)
+{
+    //如果有ksoftirqd线程正在运行 那么就交给线程就行了
+	if (ksoftirqd_running(local_softirq_pending()))
+		return;
+
+    //如果不是强制使用ksoftirqd线程处理
+	if (!force_irqthreads) {
+#ifdef CONFIG_HAVE_IRQ_EXIT_ON_IRQ_STACK
+		/*
+		 * We can safely execute softirq on the current stack if
+		 * it is the irq stack, because it should be near empty
+		 * at this stage.
+		 */
+        //处理softirq
+		__do_softirq();
+#else
+		/*
+		 * Otherwise, irq_exit() is called on the task stack that can
+		 * be potentially deep already. So call softirq in its own stack
+		 * to prevent from any overrun.
+		 */
+		do_softirq_own_stack();
+#endif
+	} else {
+        //强制使用ksoftirqd线程处理 唤醒线程
+		wakeup_softirqd();
+	}
+}
 
 ```
 
@@ -3665,7 +3718,7 @@ struct worker_pool {
          * from other CPUs during try_to_wake_up(), put it in a separate
          * cacheline.
          */
-        atomic_t              nr_running ____cacheline_aligned_in_smp;
+        atomic_t              nr_running ____cacheline_aligned_in_smp; //当前正在运行的线程数量
 
         /*
          * Destruction of pool is RCU protected to allow dereferences
@@ -3696,8 +3749,8 @@ struct worker_pool {
 struct worker {
 	/* on idle list while idle, on busy hash table while busy */
 	union {
-		struct list_head	entry;	/* L: while idle */ ////用于添加到worker_pool的空闲链表中
-		struct hlist_node	hentry;	/* L: while busy */ ////用于添加到worker_pool的忙碌列表中
+		struct list_head	entry;	/* L: while idle */ //用于添加到worker_pool的空闲链表中
+		struct hlist_node	hentry;	/* L: while busy */ //用于添加到worker_pool的忙碌列表中
 	};
 
 	struct work_struct	*current_work;	/* L: work being processed */ //当前正在执行的work
@@ -4445,7 +4498,7 @@ int __init workqueue_init(void)
         return 0;
 }
 
-// ps aux | grep ksoftirqd #展示所有kworker线程
+// ps aux | grep kworker #展示所有kworker线程
 
 //创建worker线程
 static struct worker *create_worker(struct worker_pool *pool)
@@ -5172,6 +5225,26 @@ void wq_worker_sleeping(struct task_struct *task)
 
 ##### 以网卡中断为例的中断全流程
 
+@todo 缺少网卡的实际处理逻辑
+
+![image-20241125165903286](.\images\以网卡为例的中断全流程01.png)
+
+![image-20241125165948669](.\images\以网卡为例的硬件中断全流程02.png)
+
+<img src=".\images\以网卡为例的硬件中断全流程03.png" alt="image-20241125170214221" style="zoom:150%;" />
+
+![image-20241125170313733](.\images\以网卡为例的硬件中断全流程04.png)
+
+![image-20241125170338940](.\images\以网卡为例的硬件中断全流程05.png)
+
+![image-20241125170424755](.\images\以网卡为例的硬件中断全流程06.png)
+
+![image-20241125170440794](.\images\以网卡为例的硬件中断全流程07.png)
+
+
+
+**softirq注册**
+
 ```c
 
 //net/core/dev.c
@@ -5255,6 +5328,7 @@ static int __init net_dev_init(void)
         if (register_pernet_device(&default_device_ops))
                goto out;
 
+        //注册网卡softirq的中断处理函数
         open_softirq(NET_TX_SOFTIRQ, net_tx_action);
         open_softirq(NET_RX_SOFTIRQ, net_rx_action);
 
@@ -5269,13 +5343,101 @@ out:
 subsys_initcall(net_dev_init);
 ```
 
+**网卡中断处理函数**
+
+```c
+//drivers/net/ethernet/intel/e1000e/netdev.c
+
+//触发硬件中断后 中断处理函数
+static irqreturn_t e1000_intr(int __always_unused irq, void *data)
+{
+        struct net_device *netdev = data;
+        struct e1000_adapter *adapter = netdev_priv(netdev);
+        struct e1000_hw *hw = &adapter->hw;
+        u32 rctl, icr = er32(ICR);
+
+        //检查当前中断是否由网卡产生
+        if (!icr || test_bit(__E1000_DOWN, &adapter->state))
+               return IRQ_NONE;       /* Not our interrupt */
+
+        /* IMS will not auto-mask if INT_ASSERTED is not set, and if it is
+         * not set, then the adapter didn't send an interrupt
+         */
+        if (!(icr & E1000_ICR_INT_ASSERTED))
+               return IRQ_NONE;
+
+        /* Interrupt Auto-Mask...upon reading ICR,
+         * interrupts are masked.  No need for the
+         * IMC write
+         */
+
+        if (icr & E1000_ICR_LSC) {
+               hw->mac.get_link_status = true;
+               /* ICH8 workaround-- Call gig speed drop workaround on cable
+                * disconnect (LSC) before accessing any PHY registers
+                */
+               if ((adapter->flags & FLAG_LSC_GIG_SPEED_DROP) &&
+                   (!(er32(STATUS) & E1000_STATUS_LU)))
+                   //使用work queue 处理
+                      schedule_work(&adapter->downshift_task);
+
+               /* 80003ES2LAN workaround--
+                * For packet buffer work-around on link down event;
+                * disable receives here in the ISR and
+                * reset adapter in watchdog
+                */
+               if (netif_carrier_ok(netdev) &&
+                   (adapter->flags & FLAG_RX_NEEDS_RESTART)) {
+                      /* disable receives */
+                      rctl = er32(RCTL);
+                      ew32(RCTL, rctl & ~E1000_RCTL_EN);
+                      adapter->flags |= FLAG_RESTART_NOW;
+               }
+               /* guard against interrupt when we're going down */
+               if (!test_bit(__E1000_DOWN, &adapter->state))
+                      mod_timer(&adapter->watchdog_timer, jiffies + 1);
+        }
+
+        /* Reset on uncorrectable ECC error */
+        if ((icr & E1000_ICR_ECCER) && (hw->mac.type >= e1000_pch_lpt)) {
+               u32 pbeccsts = er32(PBECCSTS);
+
+               adapter->corr_errors +=
+                   pbeccsts & E1000_PBECCSTS_CORR_ERR_CNT_MASK;
+               adapter->uncorr_errors +=
+                   (pbeccsts & E1000_PBECCSTS_UNCORR_ERR_CNT_MASK) >>
+                   E1000_PBECCSTS_UNCORR_ERR_CNT_SHIFT;
+
+               /* Do the reset outside of interrupt context */
+               schedule_work(&adapter->reset_task);
+
+               /* return immediately since reset is imminent */
+               return IRQ_HANDLED;
+        }
+
+        if (napi_schedule_prep(&adapter->napi)) {
+               adapter->total_tx_bytes = 0;
+               adapter->total_tx_packets = 0;
+               adapter->total_rx_bytes = 0;
+               adapter->total_rx_packets = 0;
+               //使用softirq处理
+               __napi_schedule(&adapter->napi);
+        }
+
+        return IRQ_HANDLED;
+}
+```
 
 
 
+**NAPI**
 
+NAPI（New API）是Linux内核中的一种机制，旨在提高网络设备在高负载下的性能。NAPI通过减少中断频率和增加每次中断处理的数据量，从而降低CPU的中断处理开销，提高系统的整体吞吐量。
 
-
-
+> 随着网络带宽的发展，网速越来越快，之前的中断收包模式已经无法适应目前千兆，万兆的带宽了。如果每个数据包大小等于MTU大小1460字节。当驱动以千兆网速收包时，CPU将每秒被中断91829次。在以MTU收包的情况下都会出现每秒被中断10万次的情况。过多的中断会引起一个问题，CPU一直陷入硬中断而没有时间来处理别的事情了。为了解决这个问题，内核在2.6中引入了NAPI机制。
+>
+> NAPI就是混合中断和轮询的方式来收包，当有中断来了，驱动关闭中断，通知内核收包，内核软中断轮询当前网卡，在规定时间尽可能多的收包。时间用尽或者没有数据可收，内核再次开启中断，准备下一次收包。
+>
 
 
 

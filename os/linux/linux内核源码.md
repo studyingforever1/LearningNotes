@@ -539,18 +539,27 @@ APIC 寄存器是一段起始地址为 0xFEE00000 、长度为 4KB 的物理地�
 
 - **IRR(Interrupt Request Register)**
   中断请求寄存器，256 位，每位代表着一个中断。当某个中断消息发来时，如果该中断没有被屏蔽，则将 IRR 对应的 bit 置 1，表示收到了该中断请求但 CPU 还未处理。
+  
 - **ISR(In Service Register)**
   服务中寄存器，256 位，每位代表着一个中断。当 IRR 中某个中断请求发送个 CPU 时，ISR 对应的 bit 上便置 1，表示 CPU 正在处理该中断。
+  
 - **EOI(End of Interrupt)**
-  中断结束寄存器，32 位，写 EOI 表示中断处理完成。写 EOI 寄存器会导致 LAPIC 清理 ISR 的对应 bit，对于 level 触发的中断，还会向所有的 IOAPIC 发送 EOI 消息，通告中断处理已经完成。
+  中断结束寄存器，32 位，写 EOI 表示中断处理完成。写 EOI 寄存器会导致 LAPIC 清理 ISR 的对应 bit。
+  
+  对于 level 触发的中断，还会向所有的 IOAPIC 发送 EOI 消息，通告中断处理已经完成。
+  
 - **ID**
   用来唯一标识一个 LAPIC，LAPIC 与 CPU 一一对应，所以也用 LAPIC ID 来标识 CPU。
+  
 - **TPR(Task Priority Register)**
-  任务优先级寄存器，确定当前 CPU 能够处理什么优先级别的中断，CPU 只处理比 TPR 中级别更高的中断。比它低的中断暂时屏蔽掉，也就是在 IRR 中继续等到。另外优先级别=vector/16，vector 为每个中断对应的中断向量号。
+  任务优先级寄存器，确定当前 CPU 能够处理什么优先级别的中断，CPU 只处理比 TPR 中级别更高的中断。比它低的中断暂时屏蔽掉，也就是在 IRR 中继续等待。另外优先级别=vector/16，vector 为每个中断对应的中断向量号。
+  
 - **PPR(Processor Priority Register)**
   处理器优先级寄存器，表示当前正处理的中断的优先级，以此来决定处于 IRR 中的中断是否发送给 CPU。处于 IRR 中的中断只有优先级高于处理器优先级才会被发送给处理器。PPR 的值为 ISR 中正服务的最高优先级中断和 TPR 两者之间选取优先级较大的，所以 TPR 就是靠间接控制 PPR 来实现暂时屏蔽比 TPR 优先级小的中断的。
+  
 - **SVR(Spurious Interrupt Vector Register)**
   可以通过设置这个寄存器来使 APIC 工作，原话 To enable the APIC。
+  
 - **ICR(Interrupt Command Register)**
   中断指令寄存器，当一个 CPU 想把中断发送给另一个 CPU 时，就在 ICR 中填写相应的中断向量和目标 LAPIC 标识，然后通过总线向目标 LAPIC 发送消息。ICR 寄存器的字段和 IOAPIC 重定向表项较为相似，都有 destination field, delivery mode, destination mode, level 等等。
 
@@ -592,7 +601,7 @@ register 被划分成多个部分：
 
 **IPI中断和硬件中断**
 
-最后两种中断通过写 ICR 来发送。当对 ICR 进行写入时，将产生 interrupt message 并通过 system bus(Pentium 4 / Intel Xeon) 或 APIC bus(Pentium / P6 family) 送达目标 LAPIC 。IOAPIC通过interrupt message给APIC发送中断，在message中已经指定了Interrupt Vector，因此不需要APIC通过LVT表来进行配置。
+IPI中断通过写 ICR 来发送。当对 ICR 进行写入时，将产生 interrupt message 并通过 system bus(Pentium 4 / Intel Xeon) 或 APIC bus(Pentium / P6 family) 送达目标 LAPIC 。IOAPIC通过interrupt message给APIC发送中断，在message中已经指定了Interrupt Vector，因此不需要APIC通过LVT表来进行配置。
 
 当有多个 APIC 向通过 system bus / APIC bus 发送 message 时，需要进行仲裁。每个 LAPIC 会被分配一个仲裁优先级(范围为 0-15)，优先级最高的拿到 bus，从而能够发送消息。在消息发送完成后，刚刚发送消息的 LAPIC 的仲裁优先级会被设置为 0，其他的 LAPIC 会加 1。
 
@@ -1343,12 +1352,6 @@ struct irqaction {
 // 中断处理程序 IRQ线的编号 设备号
 typedef irqreturn_t (*irq_handler_t)(int, void *);
 
-//示例 时钟中断
-static struct irqaction irq0  = {
-	.handler = timer_interrupt, //时钟中断处理程序
-	.flags = IRQF_NOBALANCING | IRQF_IRQPOLL | IRQF_TIMER, //标记
-	.name = "timer" // 中断处理程序名称
-};
 
 ```
 
@@ -3253,51 +3256,6 @@ static void wakeup_softirqd(void)
 
 
 ```
-
-
-
-**jiffies**
-
-`jiffies` 是Linux内核中用于时间管理的一个重要概念。它是一个全局变量，用于记录自系统启动以来发生的时钟滴答（ticks）数量。每个时钟滴答被称为一个“jiffy”，而 `jiffies` 变量就是一个累积的计数器，记录了从系统启动以来的总滴答数。
-
-- **时钟滴答**: 每次时钟中断发生时，`jiffies` 的值会增加1。
-- **频率**: 时钟滴答的频率由内核配置参数 `HZ` 决定，表示每秒发生的时钟中断次数。常见的值有100、250、1000等。
-
-```c
-// include/uapi/asm-generic/param.h
-
-//默认是100 即 每秒钟产生100次时钟中断
-
-#ifndef HZ
-#define HZ 100
-#endif
-
-//include/linux/jiffies.h
-
-/*
- * The 64-bit value is not atomic - you MUST NOT read it
- * without sampling the sequence number in jiffies_lock.
- * get_jiffies_64() will do this for you as appropriate.
- */
-extern u64 __cacheline_aligned_in_smp jiffies_64;
-extern unsigned long volatile __cacheline_aligned_in_smp __jiffy_arch_data jiffies;
-
-
-```
-
-`grep CONFIG_HZ /boot/config-$(uname -r) ` 查看当前Linux系统的HZ设置
-
-```bash
-[root@localhost ~]# grep CONFIG_HZ /boot/config-$(uname -r)
-# CONFIG_HZ_PERIODIC is not set
-# CONFIG_HZ_100 is not set
-# CONFIG_HZ_250 is not set
-# CONFIG_HZ_300 is not set
-CONFIG_HZ_1000=y
-CONFIG_HZ=1000 #每秒钟产生1000次时钟中断
-```
-
-
 
 
 
@@ -5217,9 +5175,13 @@ void wq_worker_sleeping(struct task_struct *task)
 
 
 
+**三种机制比较**
 
-
-
+| 下半部机制 | 执行函数时是否会禁止中断 | 执行上下文 | 能否睡眠 | 并发一致性                                    | 开销                         |
+| ---------- | ------------------------ | ---------- | -------- | --------------------------------------------- | ---------------------------- |
+| softirq    | 不会                     | 中断上下文 | 否       | 当前cpu的同类型softirq会被禁止，其他cpu不保证 |                              |
+| tasklet    | 不会                     | 中断上下文 | 否       | 多个cpu也无法并发执行同一个tasklet            |                              |
+| work queue | 不会                     | 进程上下文 | 能       | 无                                            | 大，涉及到内核进程上下文切换 |
 
 
 
@@ -5438,6 +5400,463 @@ NAPI（New API）是Linux内核中的一种机制，旨在提高网络设备在�
 >
 > NAPI就是混合中断和轮询的方式来收包，当有中断来了，驱动关闭中断，通知内核收包，内核软中断轮询当前网卡，在规定时间尽可能多的收包。时间用尽或者没有数据可收，内核再次开启中断，准备下一次收包。
 >
+
+@todo
+
+
+
+
+
+
+
+## 定时器和时间管理
+
+> 时间概念对计算机来说有些模糊，事实上内核必须在硬件的帮助下才能计算和管理时间。硬件为内核提供了一个**系统定时器**用以计算流逝的时间，该时钟在内核中可看成是一个电子时间资源，比如数字时钟或处理器频率等。**系统定时器以某种频率自行触发时钟中断**，该频率可以通过编程预定，称作**节拍率**(tickrate)。当时钟中断发生时，内核就通过一种特殊的中断处理程序对其进行处理
+
+### 节拍率
+
+```c
+//include/uapi/asm-generic/param.h
+
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
+#ifndef _UAPI__ASM_GENERIC_PARAM_H
+#define _UAPI__ASM_GENERIC_PARAM_H
+
+#ifndef HZ
+#define HZ 100 //每秒钟触发100次内核时钟中断 增加100次内核jiffies
+#endif
+
+#ifndef EXEC_PAGESIZE
+#define EXEC_PAGESIZE	4096
+#endif
+
+#ifndef NOGROUP
+#define NOGROUP		(-1)
+#endif
+
+#define MAXHOSTNAMELEN	64	/* max length of hostname */
+
+
+#endif /* _UAPI__ASM_GENERIC_PARAM_H */
+
+
+
+```
+
+**用户节拍率**
+
+为了避免内核在修改HZ时，用户空间如果继续使用HZ来计算系统运行时间造成问题，引入了USER_HZ，内核可以使用宏 jiffies_to_clock_t()将一个有HZ表示的节拍计数转换为一个由USER_HZ表示的节拍计数，这样即使更改内核HZ，只要在使用用户jiffies时做转换，用户空间的时间计算就不会受到影响。
+
+```c
+// include/asm-generic/param.h
+
+/* SPDX-License-Identifier: GPL-2.0 */
+#ifndef __ASM_GENERIC_PARAM_H
+#define __ASM_GENERIC_PARAM_H
+
+#include <uapi/asm-generic/param.h>
+
+# undef HZ
+# define HZ		CONFIG_HZ	/* Internal kernel timer frequency */
+# define USER_HZ	100		/* some user interfaces are */ // 增加100次用户jiffies
+# define CLOCKS_PER_SEC	(USER_HZ)       /* in "ticks" like times() */
+#endif /* __ASM_GENERIC_PARAM_H */
+
+
+
+//kernel/time/time.c
+//将一个有HZ表示的节拍计数转换为一个由USER_HZ表示的节拍计数
+u64 jiffies_64_to_clock_t(u64 x)
+{
+#if (TICK_NSEC % (NSEC_PER_SEC / USER_HZ)) == 0
+# if HZ < USER_HZ
+	x = div_u64(x * USER_HZ, HZ);
+# elif HZ > USER_HZ
+	x = div_u64(x, HZ / USER_HZ);
+# else
+	/* Nothing to do */
+# endif
+#else
+	/*
+	 * There are better ways that don't overflow early,
+	 * but even this doesn't overflow in hundreds of years
+	 * in 64 bits, so..
+	 */
+	x = div_u64(x * TICK_NSEC, (NSEC_PER_SEC / USER_HZ));
+#endif
+	return x;
+}
+
+```
+
+查看CONFIG_HZ
+
+```shell
+[root@localhost ~]# grep CONFIG_HZ /boot/config-$(uname -r) # 查看当前Linux系统的HZ设置
+# CONFIG_HZ_PERIODIC is not set
+# CONFIG_HZ_100 is not set
+# CONFIG_HZ_250 is not set
+# CONFIG_HZ_300 is not set
+CONFIG_HZ_1000=y
+CONFIG_HZ=1000 #每秒钟产生1000次时钟中断
+```
+
+
+
+
+
+### jiffies
+
+`jiffies` 是Linux内核中用于时间管理的一个重要概念。它是一个全局变量，用于记录自系统启动以来发生的时钟滴答（ticks）数量。每个时钟滴答被称为一个“jiffy”，而 `jiffies` 变量就是一个累积的计数器，记录了从系统启动以来的总滴答数。
+
+- **时钟滴答**: 每次时钟中断发生时，`jiffies` 的值会增加1。
+- **频率**: 时钟滴答的频率由内核配置参数 `HZ` 决定，表示每秒发生的时钟中断次数。常见的值有100、250、1000等。
+
+全局变量jiffies用来记录自系统启动以来产生的节拍的总数。启动时，内核将该变量初始化为0，此后，每次时钟中断处理程序都会增加该变量的值。因为一秒内时钟中断的次数等于Hz，所以jiffies一秒内增加的值也就为Hz。系统运行时间以秒为单位计算，就等于jiffies/Hz。
+
+<img src=".\images\jiffies.png" alt="image-20241127110246522" style="zoom:50%;" />
+
+```c
+// include/uapi/asm-generic/param.h
+
+//默认是100 即 每秒钟产生100次时钟中断
+
+#ifndef HZ
+#define HZ 100
+#endif
+
+//include/linux/jiffies.h
+
+/*
+ * The 64-bit value is not atomic - you MUST NOT read it
+ * without sampling the sequence number in jiffies_lock.
+ * get_jiffies_64() will do this for you as appropriate.
+ */
+//jiffies_64 64位
+extern u64 __cacheline_aligned_in_smp jiffies_64;
+//jiffies 在32位架构上只取jiffies_64的低32位 在64位架构上取jiffies_64的64位
+extern unsigned long volatile __cacheline_aligned_in_smp __jiffy_arch_data jiffies;
+
+#if (BITS_PER_LONG < 64)
+u64 get_jiffies_64(void);
+#else
+static inline u64 get_jiffies_64(void)
+{
+	return (u64)jiffies;
+}
+#endif
+
+```
+
+### LAPIC中时钟工作原理
+
+#### 晶振
+
+> **石英晶体谐振器**（英文**quartz crystal unit**或**quartz crystal resonator**），或**晶体振荡器**（英文**crystal oscillator**），简写为**晶振**，英文简写为**Xtal**或**X'tal**（或全大写)，简称**石英晶体**或**晶振**，是利用[石英](https://zh.wikipedia.org/wiki/石英)[晶体](https://zh.wikipedia.org/wiki/晶體)（又称[水晶](https://zh.wikipedia.org/wiki/水晶)）的[压电效应](https://zh.wikipedia.org/wiki/壓電效應)，用来产生高精度振荡频率的一种电子器件
+
+**石英晶体谐振器** 能够产生中央处理器（CPU）执行指令所必须的时钟频率信号，CPU一切指令的执行都是建立在这个基础上的，时钟信号频率越高，通常CPU的运行速度也就越快。晶振常用标称频率在1～200MHz之间，比如32768Hz、8MHz、12MHz、24MHz、125MHz等，更高的输出频率也常用PLL（锁相环）将低频进行倍频至1GHz以上。晶振可以**高精度**和**高稳定性**的产生一定频率的信号。
+
+拥有晶振后，现在可以准确的在计算机架构中衡量时间，一个完整的晶振频率周期为1s。
+
+#### 时钟分频器
+
+时钟分频器（Clock Divider）是一种电路或逻辑模块，用于将输入的高频时钟信号转换为较低频率的时钟信号。
+
+> 时钟分频器的基本功能是将输入的时钟信号的频率降低一定的倍数。这个倍数通常是一个整数，称为分频比（Division Ratio）。例如，如果输入时钟信号的频率是 100 MHz，分频比是 10，那么输出时钟信号的频率就是 10 MHz。
+
+#### 时钟工作原理
+
+- **计数器**：LAPIC 内部有一个计数器（通常称为初始计数器 Initial Count Register），它使用从时钟分频器得到的时钟信号进行递减计数。
+- **比较器**：还有一个比较器（Current Count Register），用于存储当前的计数值。
+- **中断生成**：当计数器的值递减到零时，LAPIC 会生成一个定时器中断。此时，计数器可以重新加载初始值，继续递减计数，从而实现周期性的中断。
+
+```c
+//arch/x86/include/asm/apicdef.h
+
+//计数器
+/*380*/ struct { /* Timer Initial Count Register */
+               u32   initial_count;
+               u32 __reserved_2[3];
+        } timer_icr;
+
+//比较器
+/*390*/ const
+        struct { /* Timer Current Count Register */
+               u32   curr_count;
+               u32 __reserved_2[3];
+        } timer_ccr;
+```
+
+
+
+**工作原理**
+
+- 在系统启动时，LAPIC 的定时器会被初始化。初始计数器（Initial Count Register）被设置为一个预定的值，这个值决定了定时器中断的周期。
+
+  例如，如果初始计数器设置为 100000，并且时钟频率为 1 MHz（每秒 1 百万次），那么定时器中断的周期将是 100 毫秒（100000 / 1000000 = 0.1 秒）。
+
+- LAPIC 内部的计数器开始递减计数，每次时钟脉冲到来时，计数器的值减少 1。
+
+- 当计数器的值递减到零时，LAPIC 生成一个定时器中断。这个中断被发送到 CPU，触发中断处理程序。
+
+- 计数器可以自动重新加载初始值，继续递减计数，从而实现周期性的中断。
+
+
+
+### 系统定时器和实时时钟
+
+#### 实时时钟
+
+实时时钟(RTC)是用来持久存放系统时间的设备，即便系统关闭后，它也可以靠主板上的微型电池提供的电力保持系统的计时。在PC体系结构中，RTC和CMOS集成在一起，而且RTC的运行和BIOS的保存设置都是通过同一个电池供电的。当系统启动时，内核通过读取RTC来初始化墙上时间，该时间存放在xtime变量中。虽然内核通常不会在系统启动后再读取xtime变量，但是有些体系结构，比如x86，会周期性地将当前时间值存回RTC中。尽管如此，实时时钟最主要的作用仍是在启动时初始化xtime变量。
+
+#### 系统定时器
+
+系统定时器是内核定时机制中最为重要的角色。尽管不同体系结构中的定时器实现不尽相同但是系统定时器的根本思想并没有区别--提供一种周期性触发中断机制。有些体系结构是通过对电子晶振进行分频来实现系统定时器;还有些体系结构则提供了一个衰减测量器(decrementer)-衰减测量器设置一个初始值，该值以固定频率递减，当减到零时，触发一个中断。无论哪种情况。其效果都一一样。
+
+在0x86体系结构中，主要采用可编程中断时钟(PIT)。PIT在PC机器中普遍存在，而且从DOS时代，就开始以它作时钟中断源了。内核在启动时对PIT进行编程初始化，使其能够以Hz/秒的频率产生时钟中断。虽然PIT设备很简单，功能也有限，但它却足以满足我们的需要。x86体系结构中的其他的时钟资源还包括本地APIC时钟和时间戳计数(TSC)等。
+
+
+
+
+
+### 时钟中断
+
+从LAPIC的timer产生中断，cpu接收中断从IDTR找到IDT，从接收到的中断向量找到对应的中断处理程序。
+
+```c
+//arch/x86/kernel/idt.c
+INTG(LOCAL_TIMER_VECTOR,	apic_timer_interrupt) //LAPIC时钟中断向量和中断处理程序
+```
+
+```assembly
+# arch/x86/entry/entry_64.S
+apicinterrupt LOCAL_TIMER_VECTOR       apic_timer_interrupt      smp_apic_timer_interrupt
+```
+
+```c
+// arch/x86/kernel/apic/apic.c
+
+/*
+   处理LAPIC时钟中断
+ * Local APIC timer interrupt. This is the most natural way for doing
+ * local interrupts, but local timer interrupts can be emulated by
+ * broadcast interrupts too. [in case the hw doesn't support APIC timers]
+ *
+ * [ if a single-CPU system runs an SMP kernel then we call the local
+ *   interrupt as well. Thus we cannot inline the local irq ... ]
+ */
+__visible void __irq_entry smp_apic_timer_interrupt(struct pt_regs *regs)
+{
+    //保存寄存器
+	struct pt_regs *old_regs = set_irq_regs(regs);
+
+	/*
+	 * NOTE! We'd better ACK the irq immediately,
+	 * because timer handling can be slow.
+	 *
+	 * update_process_times() expects us to have done irq_enter().
+	 * Besides, if we don't timer interrupts ignore the global
+	 * interrupt lock, which is the WrongThing (tm) to do.
+	 */
+    //通过apic_eoi()立刻响应LAPIC 清除ISR的标志位 因为时钟处理可能很慢，而时钟中断触发频率很快
+	entering_ack_irq();
+    //跟踪记录触发时钟中断
+	trace_local_timer_entry(LOCAL_TIMER_VECTOR);
+    //时钟中断处理
+	local_apic_timer_interrupt();
+	trace_local_timer_exit(LOCAL_TIMER_VECTOR);
+	exiting_irq();
+
+    //恢复寄存器
+	set_irq_regs(old_regs);
+}
+
+
+static inline void entering_ack_irq(void)
+{
+	entering_irq();
+	ack_APIC_irq();
+}
+
+static inline void ack_APIC_irq(void)
+{
+	/*
+	 * ack_APIC_irq() actually gets compiled as a single instruction
+	 * ... yummie.
+	 */
+	apic_eoi();
+}
+
+//cpu独有的时钟事件设备结构体
+static DEFINE_PER_CPU(struct clock_event_device, lapic_events);
+
+
+/*
+ * The guts of the apic timer interrupt
+ */
+static void local_apic_timer_interrupt(void)
+{
+    //获取当前cpu的时钟事件设备
+	struct clock_event_device *evt = this_cpu_ptr(&lapic_events);
+
+	/*
+	 * Normally we should not be here till LAPIC has been initialized but
+	 * in some cases like kdump, its possible that there is a pending LAPIC
+	 * timer interrupt from previous kernel's context and is delivered in
+	 * new kernel the moment interrupts are enabled.
+	 *
+	 * Interrupts are enabled early and LAPIC is setup much later, hence
+	 * its possible that when we get here evt->event_handler is NULL.
+	 * Check for event_handler being NULL and discard the interrupt as
+	 * spurious.
+	 */
+	if (!evt->event_handler) {
+		pr_warn("Spurious LAPIC timer interrupt on cpu %d\n",
+			smp_processor_id());
+		/* Switch it off */
+		lapic_timer_shutdown(evt);
+		return;
+	}
+
+	/*
+	 * the NMI deadlock-detector uses this.
+	 */
+	inc_irq_stat(apic_timer_irqs);
+
+    //调用evt的event_handler
+	evt->event_handler(evt);
+}
+
+
+/**
+设置event_handler的过程
+setup_boot_APIC_clock()
+    calibrate_APIC_clock()
+    setup_APIC_timer()
+        evt = this_cpu_ptr(&lapic_events);
+        memcpy(levt, &lapic_clockevent, sizeof(*levt));
+        clockevents_register_device(evt)
+            tick_check_new_device(dev);
+                tick_setup_device(td, newdev, cpu, cpumask_of(cpu));
+                    tick_setup_periodic(newdev, 0);
+                        tick_set_periodic_handler(dev, broadcast);
+                            dev->event_handler = tick_handle_periodic;
+*/                            
+
+//kernel/time/tick-common.c
+
+//时钟中断处理函数
+/*
+ * Event handler for periodic ticks
+ */
+void tick_handle_periodic(struct clock_event_device *dev)
+{
+	int cpu = smp_processor_id();
+	ktime_t next = dev->next_event;
+
+	tick_periodic(cpu);
+
+#if defined(CONFIG_HIGH_RES_TIMERS) || defined(CONFIG_NO_HZ_COMMON)
+	/*
+	 * The cpu might have transitioned to HIGHRES or NOHZ mode via
+	 * update_process_times() -> run_local_timers() ->
+	 * hrtimer_run_queues().
+	 */
+	if (dev->event_handler != tick_handle_periodic)
+		return;
+#endif
+
+	if (!clockevent_state_oneshot(dev))
+		return;
+	for (;;) {
+		/*
+		 * Setup the next period for devices, which do not have
+		 * periodic mode:
+		 */
+		next = ktime_add(next, tick_period);
+
+		if (!clockevents_program_event(dev, next, false))
+			return;
+		/*
+		 * Have to be careful here. If we're in oneshot mode,
+		 * before we call tick_periodic() in a loop, we need
+		 * to be sure we're using a real hardware clocksource.
+		 * Otherwise we could get trapped in an infinite
+		 * loop, as the tick_periodic() increments jiffies,
+		 * which then will increment time, possibly causing
+		 * the loop to trigger again and again.
+		 */
+		if (timekeeping_valid_for_hres())
+			tick_periodic(cpu);
+	}
+}
+
+
+/*
+ * tick_do_timer_cpu is a timer core internal variable which holds the CPU NR
+ * which is responsible for calling do_timer(), i.e. the timekeeping stuff. This
+ * variable has two functions:
+ *
+ * 1) Prevent a thundering herd issue of a gazillion of CPUs trying to grab the
+ *    timekeeping lock all at once. Only the CPU which is assigned to do the
+ *    update is handling it.
+ *
+ * 2) Hand off the duty in the NOHZ idle case by setting the value to
+ *    TICK_DO_TIMER_NONE, i.e. a non existing CPU. So the next cpu which looks
+ *    at it will take over and keep the time keeping alive.  The handover
+ *    procedure also covers cpu hotplug.
+ */
+//只有指定的cpu才能执行do_timer() 避免争抢和惊群现象
+int tick_do_timer_cpu __read_mostly = TICK_DO_TIMER_BOOT;
+
+//时钟中断处理
+/*
+ * Periodic tick
+ */
+static void tick_periodic(int cpu)
+{
+    //只有指定的cpu才能去执行do_timer()
+	if (tick_do_timer_cpu == cpu) {
+		write_seqlock(&jiffies_lock);
+
+		/* Keep track of the next tick event */
+		tick_next_period = ktime_add(tick_next_period, tick_period);
+
+        //更新jiffies
+		do_timer(1);
+		write_sequnlock(&jiffies_lock);
+        //更新墙上时间
+		update_wall_time();
+	}
+
+    //判断当前是用户空间还是内核空间
+    //更新进程相关
+	update_process_times(user_mode(get_irq_regs()));
+	profile_tick(CPU_PROFILING);
+}
+
+
+/*
+   必须在持有jiffies_lock锁的情况下才能执行
+ * Must hold jiffies_lock
+ */
+void do_timer(unsigned long ticks)
+{
+    //jiffies加上ticks的值
+	jiffies_64 += ticks;
+	calc_global_load(ticks);
+}
+
+
+```
+
+
+
+
+
+
+
+
 
 
 

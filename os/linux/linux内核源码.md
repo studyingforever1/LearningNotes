@@ -6104,7 +6104,7 @@ struct timer_base {
 
 **定时器**
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\timer_flags.png)
+![](.\images\timer_flags.png)
 
 - `TIMER_MIGRATING`表示定时器正在从一个CPU迁移到另外一个CPU。
 - `TIMER_DEFERRABLE`表示该定时器是可延迟的。

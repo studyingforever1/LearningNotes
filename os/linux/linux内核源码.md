@@ -2152,30 +2152,6 @@ setup_irq_thread(struct irqaction *new, unsigned int irq, bool secondary)
 
 
 
-```c
-static struct irqaction irq0  = {
-        .handler = timer_interrupt,
-        .flags = IRQF_NOBALANCING | IRQF_IRQPOLL | IRQF_TIMER,
-        .name = "timer"
-};
-
-//时钟中断的注册
-static void __init setup_default_timer_irq(void)
-{
-        /*
-         * Unconditionally register the legacy timer; even without legacy
-         * PIC/PIT we need this for the HPET0 in legacy replacement mode.
-         */
-    	//注册到irq_desc中 IRQ线的编号为0
-        if (setup_irq(0, &irq0))
-               pr_info("Failed to register legacy timer interrupt\n");
-}
-```
-
-
-
-
-
 ###### 硬件中断处理
 
 在当前CPU开始处理硬件中断时，会禁用当前CPU的中断响应，但在SMP架构中，多个CPU接收到同一个中断信号的并发控制需要在代码内部加上某种锁来保障
@@ -5617,6 +5593,117 @@ static inline u64 get_jiffies_64(void)
 
 
 
+### 时间
+
+**实时时间**
+
+实时时间（Real-Time Clock，RTC）是指系统中用于记录和提供当前日期和时间的硬件或软件机制。在计算机系统中，RTC 通常指的是硬件时钟，它独立于系统电源，可以在系统关闭或重启后仍然保持正确的日期和时间。
+
+> RTC 芯片是一个专门的硬件设备，用于持续记录当前的日期和时间。它通常由一个小电池供电，即使系统断电，RTC 也能保持时间的准确性。
+
+- **CLOCK_REALTIME**：表示系统当前的日期和时间，通常与硬件 RTC 同步。这个时钟可以被用户或管理员手动设置。
+- **CLOCK_MONOTONIC**：表示系统启动以来经过的时间，不受系统时间调整的影响。
+
+```c
+// include/linux/timekeeper_internal.h
+
+/**
+ * struct timekeeper - Structure holding internal timekeeping values.
+ * @tkr_mono:          The readout base structure for CLOCK_MONOTONIC
+ * @tkr_raw:           The readout base structure for CLOCK_MONOTONIC_RAW
+ * @xtime_sec:         Current CLOCK_REALTIME time in seconds
+ * @ktime_sec:         Current CLOCK_MONOTONIC time in seconds
+ * @wall_to_monotonic:  CLOCK_REALTIME to CLOCK_MONOTONIC offset
+ * @offs_real:         Offset clock monotonic -> clock realtime
+ * @offs_boot:         Offset clock monotonic -> clock boottime
+ * @offs_tai:          Offset clock monotonic -> clock tai
+ * @tai_offset:        The current UTC to TAI offset in seconds
+ * @clock_was_set_seq:  The sequence number of clock was set events
+ * @cs_was_changed_seq: The sequence number of clocksource change events
+ * @next_leap_ktime:    CLOCK_MONOTONIC time value of a pending leap-second
+ * @raw_sec:           CLOCK_MONOTONIC_RAW  time in seconds
+ * @monotonic_to_boot:  CLOCK_MONOTONIC to CLOCK_BOOTTIME offset
+ * @cycle_interval:     Number of clock cycles in one NTP interval
+ * @xtime_interval:     Number of clock shifted nano seconds in one NTP
+ *                    interval.
+ * @xtime_remainder:    Shifted nano seconds left over when rounding
+ *                    @cycle_interval
+ * @raw_interval:       Shifted raw nano seconds accumulated per NTP interval.
+ * @ntp_error:         Difference between accumulated time and NTP time in ntp
+ *                    shifted nano seconds.
+ * @ntp_error_shift:    Shift conversion between clock shifted nano seconds and
+ *                    ntp shifted nano seconds.
+ * @last_warning:       Warning ratelimiter (DEBUG_TIMEKEEPING)
+ * @underflow_seen:     Underflow warning flag (DEBUG_TIMEKEEPING)
+ * @overflow_seen:      Overflow warning flag (DEBUG_TIMEKEEPING)
+ *
+ * Note: For timespec(64) based interfaces wall_to_monotonic is what
+ * we need to add to xtime (or xtime corrected for sub jiffie times)
+ * to get to monotonic time.  Monotonic is pegged at zero at system
+ * boot time, so wall_to_monotonic will be negative, however, we will
+ * ALWAYS keep the tv_nsec part positive so we can use the usual
+ * normalization.
+ *
+ * wall_to_monotonic is moved after resume from suspend for the
+ * monotonic time not to jump. We need to add total_sleep_time to
+ * wall_to_monotonic to get the real boot based time offset.
+ *
+ * wall_to_monotonic is no longer the boot time, getboottime must be
+ * used instead.
+ *
+ * @monotonic_to_boottime is a timespec64 representation of @offs_boot to
+ * accelerate the VDSO update for CLOCK_BOOTTIME.
+ */
+struct timekeeper {
+        struct tk_read_base    tkr_mono;
+        struct tk_read_base    tkr_raw;
+        u64                  xtime_sec; //实际时间（墙上时间） 在系统初始化后通过rtc赋值给xtime_sec
+        unsigned long         ktime_sec; //系统运行时间
+        struct timespec64      wall_to_monotonic;
+        ktime_t                      offs_real;
+        ktime_t                      offs_boot;
+        ktime_t                      offs_tai;
+        s32                  tai_offset;
+        unsigned int          clock_was_set_seq;
+        u8                   cs_was_changed_seq;
+        ktime_t                      next_leap_ktime;
+        u64                  raw_sec;
+        struct timespec64      monotonic_to_boot;
+
+        /* The following members are for timekeeping internal use */
+        u64                  cycle_interval;
+        u64                  xtime_interval;
+        s64                  xtime_remainder;
+        u64                  raw_interval;
+        /* The ntp_tick_length() value currently being used.
+         * This cached copy ensures we consistently apply the tick
+         * length for an entire tick, as ntp_tick_length may change
+         * mid-tick, and we don't want to apply that new value to
+         * the tick in progress.
+         */
+        u64                  ntp_tick;
+        /* Difference between accumulated time and NTP time in ntp
+         * shifted nano seconds. */
+        s64                  ntp_error;
+        u32                  ntp_error_shift;
+        u32                  ntp_err_mult;
+        /* Flag used to avoid updating NTP twice with same second */
+        u32                  skip_second_overflow;
+#ifdef CONFIG_DEBUG_TIMEKEEPING
+        long                 last_warning;
+        /*
+         * These simple flag variables are managed
+         * without locks, which is racy, but they are
+         * ok since we don't really care about being
+         * super precise about how many events were
+         * seen, just that a problem was observed.
+         */
+        int                  underflow_seen;
+        int                  overflow_seen;
+#endif
+};
+```
+
 
 
 ### 时钟中断
@@ -5848,9 +5935,511 @@ void do_timer(unsigned long ticks)
 }
 
 
+
+/**
+ * update_wall_time - Uses the current clocksource to increment the wall time
+ * 更新墙上时间
+ */
+void update_wall_time(void)
+{
+	timekeeping_advance(TK_ADV_TICK);
+}
+
+
+/*
+ * Called from the timer interrupt handler to charge one tick to the current
+ * process.  user_tick is 1 if the tick is user time, 0 for system.
+ */
+void update_process_times(int user_tick)
+{
+	struct task_struct *p = current;
+
+	/* Note: this timer irq context must be accounted for as well. */
+    //更新进程在用户态和内核态的运行时间
+	account_process_tick(p, user_tick);
+    //处理本地定时器事件
+	run_local_timers();
+    //更新 RCU（Read-Copy-Update）调度时钟
+	rcu_sched_clock_irq(user_tick);
+#ifdef CONFIG_IRQ_WORK
+	if (in_irq())
+		irq_work_tick();
+#endif
+    //处理调度器的周期性任务
+	scheduler_tick();
+	if (IS_ENABLED(CONFIG_POSIX_TIMERS))
+		run_posix_cpu_timers();
+}
+
+
+/*
+ * Called by the local, per-CPU timer interrupt on SMP.
+ */
+void run_local_timers(void)
+{
+	struct timer_base *base = this_cpu_ptr(&timer_bases[BASE_STD]);
+
+	hrtimer_run_queues();
+	/* Raise the softirq only if required. */
+	if (time_before(jiffies, base->clk)) {
+		if (!IS_ENABLED(CONFIG_NO_HZ_COMMON))
+			return;
+		/* CPU is awake, so check the deferrable base. */
+		base++;
+		if (time_before(jiffies, base->clk))
+			return;
+	}
+    //触发softirq的TIMER_SOFTIRQ事件
+	raise_softirq(TIMER_SOFTIRQ);
+}
+
 ```
 
+**timer_base**
 
+系统中可能同时存在成千上万个定时器，如果处理不好效率会非常低下。`Linux`目前会将定时器按照绑定的`CPU`和`种类`（普通定时器还是可延迟定时器两种）进行区分，由`timer_base`结构体组织起来：
+
+<img src=".\images\timer_base.png" style="zoom: 67%;" />
+
+```c
+//kernel/time/timer.c
+
+//每个cpu都包含1-2个timer_base
+static DEFINE_PER_CPU(struct timer_base, timer_bases[NR_BASES]);
+
+
+//
+struct timer_base {
+	raw_spinlock_t		lock; //锁
+	struct timer_list	*running_timer; //当前正在处理的timer_list
+#ifdef CONFIG_PREEMPT_RT
+	spinlock_t		expiry_lock;
+	atomic_t		timer_waiters;
+#endif
+	unsigned long		clk; //当前定时器所经过的jiffies，用来判断包含的定时器是否已经到期或超时
+	unsigned long		next_expiry;  //该字段指向该CPU下一个即将到期的定时器 最早 (距离超时最近的 timer) 的超时时间
+	unsigned int		cpu; //所属cpu
+	bool			is_idle;
+	bool			must_forward_clk;
+	DECLARE_BITMAP(pending_map, WHEEL_SIZE); //时间轮中有几个桶就有几个比特位。如果某个桶内有定时器存在，那么就将相应的比特位置1。
+	struct hlist_head	vectors[WHEEL_SIZE]; //时间轮所有桶的数组，每一个元素是一个链表
+} ____cacheline_aligned;
+```
+
+**定时器层级Level**
+
+```c
+// kernel/time/timer.c
+
+//定时器层级Level 8-9层
+/* Level depth */
+#if HZ > 100
+# define LVL_DEPTH  9
+# else
+# define LVL_DEPTH  8
+#endif
+
+
+//每一个Level里面有64个桶
+/* Size of each clock level */
+#define LVL_BITS	6
+#define LVL_SIZE	(1UL << LVL_BITS)
+#define LVL_MASK	(LVL_SIZE - 1)
+#define LVL_OFFS(n)	((n) * LVL_SIZE)
+
+
+//每个timer_base的桶总数 = 9 * 64 = 576
+/*
+ * The resulting wheel size. If NOHZ is configured we allocate two
+ * wheels so we have a separate storage for the deferrable timers.
+ */
+#define WHEEL_SIZE	(LVL_SIZE * LVL_DEPTH)
+
+
+// 定时器粒度 
+/**
+系统至少要过多少个jiffy才会检查某一个级里面的所有定时器。
+每一级的64个桶的检查粒度是一样的，而不同级内的桶之间检查的粒度不同，级数越小，检查粒度越细。
+每一级粒度的jiffy数由宏定义LVL_CLK_DIV的值决定：
+
+也就是第0级内64个桶中存放的所有定时器每个Tick都会检查，第1级内64个桶中存放的所有定时器每8个jiffy才会检查，第2级内64个桶中存放的所有定时器每64个jiffy才会检查，以此类推。8的level次方。
+
+**/
+/* Clock divisor for the next level */
+#define LVL_CLK_SHIFT	3
+#define LVL_CLK_DIV	(1UL << LVL_CLK_SHIFT)
+#define LVL_CLK_MASK	(LVL_CLK_DIV - 1)
+#define LVL_SHIFT(n)	((n) * LVL_CLK_SHIFT)
+#define LVL_GRAN(n)	(1UL << LVL_SHIFT(n))
+
+
+//每一级的范围
+/*
+ * The time start value for each level to select the bucket at enqueue
+ * time.
+ */
+#define LVL_START(n)	((LVL_SIZE - 1) << (((n) - 1) * LVL_CLK_SHIFT))
+
+
+
+```
+
+下面具体举个例子，内核配置选项将`HZ`配置位`1000`，那么就一共需要`9`个级别，每个级别里面有`64`个桶，所以一共需要`576`个桶。每个级别的情况如下表：
+
+| 级别 | 编号偏移 | 粒度（Granularity）） |                                  差值范围 |
+| :--- | -------: | --------------------: | ----------------------------------------: |
+| 0    |        0 |                  1 ms |                              0 ms - 63 ms |
+| 1    |       64 |                  8 ms |                            64 ms - 511 ms |
+| 2    |      128 |                 64 ms |            512 ms - 4095 ms (512ms - ~4s) |
+| 3    |      192 |                512 ms |           4096 ms - 32767 ms (~4s - ~32s) |
+| 4    |      256 |         4096 ms (~4s) |         32768 ms - 262143 ms (~32s - ~4m) |
+| 5    |      320 |       32768 ms (~32s) |       262144 ms - 2097151 ms (~4m - ~34m) |
+| 6    |      384 |       262144 ms (~4m) |     2097152 ms - 16777215 ms (~34m - ~4h) |
+| 7    |      448 |     2097152 ms (~34m) |    16777216 ms - 134217727 ms (~4h - ~1d) |
+| 8    |      512 |     16777216 ms (~4h) | 134217728 ms - 1073741822 ms (~1d - ~12d) |
+
+因为配置的是`1000Hz`，所以每次`Tick`之间经过`1`毫秒。可以看出来，定时到期时间距离现在越久，那粒度就越差，误差也越大。
+
+
+
+**定时器**
+
+![](D:\doc\my\studymd\LearningNotes\os\linux\images\timer_flags.png)
+
+- `TIMER_MIGRATING`表示定时器正在从一个CPU迁移到另外一个CPU。
+- `TIMER_DEFERRABLE`表示该定时器是可延迟的。
+- `TIMER_PINNED`表示定时器已经绑死了当前的CPU，无论如何都不会迁移到别的CPU上。
+- `TIMER_IRQSAFE`表示定时器是中断安全的，使用的时候只需要加锁，不需要关中断。
+
+```c
+//include/linux/timer.h
+
+struct timer_list {
+        /*
+         * All fields that change during normal runtime grouped to the
+         * same cacheline
+         */
+        struct hlist_node      entry; //定时器链表的节点
+        unsigned long         expires;//过期时间 用jiffies表示
+        void                 (*function)(struct timer_list *);//执行函数
+        u32                  flags;//标识
+
+#ifdef CONFIG_LOCKDEP
+        struct lockdep_map     lockdep_map;
+#endif
+};
+
+//flags其最高10位记录了定时器放置到桶的编号，后面会提到一共最多只有576个桶，所以10位足够了。而最低的18位指示了该定时器绑定到了哪个CPU上
+#define TIMER_CPUMASK		0x0003FFFF
+#define TIMER_MIGRATING		0x00040000
+#define TIMER_BASEMASK		(TIMER_CPUMASK | TIMER_MIGRATING)
+#define TIMER_DEFERRABLE	0x00080000
+#define TIMER_PINNED		0x00100000
+#define TIMER_IRQSAFE		0x00200000
+#define TIMER_ARRAYSHIFT	22
+#define TIMER_ARRAYMASK		0xFFC00000
+
+/**
+ * timer_setup - prepare a timer for first use
+ * @timer: the timer in question
+ * @callback: the function to call when timer expires
+ * @flags: any TIMER_* flags
+ *
+ * Regular timer initialization should use either DEFINE_TIMER() above,
+ * or timer_setup(). For timers on the stack, timer_setup_on_stack() must
+ * be used and must be balanced with a call to destroy_timer_on_stack().
+ */
+//初始化一个定时器
+#define timer_setup(timer, callback, flags)			\
+	__init_timer((timer), (callback), (flags))
+
+
+//通过add_timer()或者mod_timer()会将timer_list放置到一个桶中
+int mod_timer(struct timer_list *timer, unsigned long expires)
+{
+	return __mod_timer(timer, expires, 0);
+}
+
+void add_timer(struct timer_list *timer)
+{
+	BUG_ON(timer_pending(timer));
+	mod_timer(timer, timer->expires);
+}
+
+static inline int
+__mod_timer(struct timer_list *timer, unsigned long expires, unsigned int options)
+{
+	struct timer_base *base, *new_base;
+	unsigned int idx = UINT_MAX;
+	unsigned long clk = 0, flags;
+	int ret = 0;
+
+	BUG_ON(!timer->function);
+
+	/*
+	 * This is a common optimization triggered by the networking code - if
+	 * the timer is re-modified to have the same timeout or ends up in the
+	 * same array bucket then just return:
+	 */
+	if (timer_pending(timer)) {
+		/*
+		 * The downside of this optimization is that it can result in
+		 * larger granularity than you would get from adding a new
+		 * timer with this expiry.
+		 */
+		long diff = timer->expires - expires;
+
+		if (!diff)
+			return 1;
+		if (options & MOD_TIMER_REDUCE && diff <= 0)
+			return 1;
+
+		/*
+		 * We lock timer base and calculate the bucket index right
+		 * here. If the timer ends up in the same bucket, then we
+		 * just update the expiry time and avoid the whole
+		 * dequeue/enqueue dance.
+		 */
+		base = lock_timer_base(timer, &flags);
+		forward_timer_base(base);
+
+		if (timer_pending(timer) && (options & MOD_TIMER_REDUCE) &&
+		    time_before_eq(timer->expires, expires)) {
+			ret = 1;
+			goto out_unlock;
+		}
+
+		clk = base->clk;
+        //根据过期时间jiffies计算把当前timer_list放到哪个桶中
+		idx = calc_wheel_index(expires, clk);
+
+		/*
+		 * Retrieve and compare the array index of the pending
+		 * timer. If it matches set the expiry to the new value so a
+		 * subsequent call will exit in the expires check above.
+		 */
+		if (idx == timer_get_idx(timer)) {
+			if (!(options & MOD_TIMER_REDUCE))
+				timer->expires = expires;
+			else if (time_after(timer->expires, expires))
+				timer->expires = expires;
+			ret = 1;
+			goto out_unlock;
+		}
+	} else {
+		base = lock_timer_base(timer, &flags);
+		forward_timer_base(base);
+	}
+
+	ret = detach_if_pending(timer, base, false);
+	if (!ret && (options & MOD_TIMER_PENDING_ONLY))
+		goto out_unlock;
+
+	new_base = get_target_base(base, timer->flags);
+
+	if (base != new_base) {
+		/*
+		 * We are trying to schedule the timer on the new base.
+		 * However we can't change timer's base while it is running,
+		 * otherwise del_timer_sync() can't detect that the timer's
+		 * handler yet has not finished. This also guarantees that the
+		 * timer is serialized wrt itself.
+		 */
+		if (likely(base->running_timer != timer)) {
+			/* See the comment in lock_timer_base() */
+			timer->flags |= TIMER_MIGRATING;
+
+			raw_spin_unlock(&base->lock);
+			base = new_base;
+			raw_spin_lock(&base->lock);
+			WRITE_ONCE(timer->flags,
+				   (timer->flags & ~TIMER_BASEMASK) | base->cpu);
+			forward_timer_base(base);
+		}
+	}
+
+	debug_timer_activate(timer);
+
+	timer->expires = expires;
+	/*
+	 * If 'idx' was calculated above and the base time did not advance
+	 * between calculating 'idx' and possibly switching the base, only
+	 * enqueue_timer() and trigger_dyntick_cpu() is required. Otherwise
+	 * we need to (re)calculate the wheel index via
+	 * internal_add_timer().
+	 */
+	if (idx != UINT_MAX && clk == base->clk) {
+		enqueue_timer(base, timer, idx);
+		trigger_dyntick_cpu(base, timer);
+	} else {
+		internal_add_timer(base, timer);
+	}
+
+out_unlock:
+	raw_spin_unlock_irqrestore(&base->lock, flags);
+
+	return ret;
+}
+
+//根据过期时间jiffies计算把当前timer_list放到哪个桶中
+static int calc_wheel_index(unsigned long expires, unsigned long clk)
+{
+	unsigned long delta = expires - clk;
+	unsigned int idx;
+
+    //根据过期时间和每一级的时间范围 来确定放到哪个级别上
+	if (delta < LVL_START(1)) {
+		idx = calc_index(expires, 0);
+	} else if (delta < LVL_START(2)) {
+		idx = calc_index(expires, 1);
+	} else if (delta < LVL_START(3)) {
+		idx = calc_index(expires, 2);
+	} else if (delta < LVL_START(4)) {
+		idx = calc_index(expires, 3);
+	} else if (delta < LVL_START(5)) {
+		idx = calc_index(expires, 4);
+	} else if (delta < LVL_START(6)) {
+		idx = calc_index(expires, 5);
+	} else if (delta < LVL_START(7)) {
+		idx = calc_index(expires, 6);
+	} else if (LVL_DEPTH > 8 && delta < LVL_START(8)) {
+		idx = calc_index(expires, 7);
+	} else if ((long) delta < 0) {
+		idx = clk & LVL_MASK;
+	} else {
+		/*
+		 * Force expire obscene large timeouts to expire at the
+		 * capacity limit of the wheel.
+		 */
+		if (expires >= WHEEL_TIMEOUT_CUTOFF)
+			expires = WHEEL_TIMEOUT_MAX;
+
+		idx = calc_index(expires, LVL_DEPTH - 1);
+	}
+	return idx;
+}
+
+
+/*
+ * Helper function to calculate the array index for a given expiry
+ * time.
+ */
+//放到当前级别的哪个桶中的下一个桶 因为每个桶也是一个时间范围 事件只能在时间到了以后才能被触发
+static inline unsigned calc_index(unsigned expires, unsigned lvl)
+{
+	expires = (expires + LVL_GRAN(lvl)) >> LVL_SHIFT(lvl);
+	return LVL_OFFS(lvl) + (expires & LVL_MASK);
+}
+```
+
+```c
+//kernel/time/timer.c
+
+/**
+start_kernel()
+	init_timers()
+**/
+
+
+void __init init_timers(void)
+{
+    init_timer_cpus();
+    //注册TIMER_SOFTIRQ事件
+    open_softirq(TIMER_SOFTIRQ, run_timer_softirq);
+}
+
+
+/*
+ * This function runs timers and the timer-tq in bottom half context.
+ */
+static __latent_entropy void run_timer_softirq(struct softirq_action *h)
+{
+    //获得本cpu下的两个timer_bases
+	struct timer_base *base = this_cpu_ptr(&timer_bases[BASE_STD]);
+
+    //处理timer
+	__run_timers(base);
+	if (IS_ENABLED(CONFIG_NO_HZ_COMMON))
+		__run_timers(this_cpu_ptr(&timer_bases[BASE_DEF]));
+}
+
+
+
+static inline void __run_timers(struct timer_base *base)
+{
+	struct hlist_head heads[LVL_DEPTH];
+	int levels;
+
+	if (!time_after_eq(jiffies, base->clk))
+		return;
+
+	timer_base_lock_expiry(base);
+	raw_spin_lock_irq(&base->lock);
+
+	/*
+	 * timer_base::must_forward_clk must be cleared before running
+	 * timers so that any timer functions that call mod_timer() will
+	 * not try to forward the base. Idle tracking / clock forwarding
+	 * logic is only used with BASE_STD timers.
+	 *
+	 * The must_forward_clk flag is cleared unconditionally also for
+	 * the deferrable base. The deferrable base is not affected by idle
+	 * tracking and never forwarded, so clearing the flag is a NOOP.
+	 *
+	 * The fact that the deferrable base is never forwarded can cause
+	 * large variations in granularity for deferrable timers, but they
+	 * can be deferred for long periods due to idle anyway.
+	 */
+	base->must_forward_clk = false;
+
+    //如果当前时间晚于或等于timer_base的clk值
+    //一直循环 直到clk到达当前jiffies 一个jiffy一个jiffy的过
+	while (time_after_eq(jiffies, base->clk)) {
+        //每过一个jiffy 收集一下过期的定时器
+		//收集所有已经到期的定时器
+		levels = collect_expired_timers(base, heads);
+		//增加一个jiffy
+         base->clk++;
+
+        //按级从高到低处理所有到期定时器
+		while (levels--)
+			expire_timers(base, heads + levels);
+	}
+	raw_spin_unlock_irq(&base->lock);
+	timer_base_unlock_expiry(base);
+}
+
+//时间轮不是定时器在滚动，而是到期的位置在不停的移动。定时器的位置在添加的一刹那，根据到期时间距离当前时间的间隔，以及到期时间对应相应级的6位固定好了，而且一旦固定下来就不会移动了。
+//每当Tick到来，都会更新timer_base的clk值，计算所指向桶的位置，然后通过pending_map判断桶里面是不是存在定时器，如果有的话那它们一定已经到期甚至是超时了。同时，只有在相应时刻（粒度对应的3位全为0时）才会检查下一级。
+static int __collect_expired_timers(struct timer_base *base,
+				    struct hlist_head *heads)
+{
+	unsigned long clk = base->clk;
+	struct hlist_head *vec;
+	int i, levels = 0;
+	unsigned int idx;
+
+	for (i = 0; i < LVL_DEPTH; i++) { //按级别从低到高循环
+		//找到对应clk值在指定级下面的桶下
+		idx = (clk & LVL_MASK) + i * LVL_SIZE;
+		//看对应的桶下面有没有定时器
+		if (__test_and_clear_bit(idx, base->pending_map)) { 
+			vec = base->vectors + idx; //获得对应桶链表
+			hlist_move_list(vec, heads++); //将桶内所有定时器链表切换到heads参数里
+			levels++;
+		}
+		/* Is it time to look at the next level? */
+		//如果还没到下一个级的检查周期则跳出循环
+		if (clk & LVL_CLK_MASK)
+			break;
+		//对clk移位切换下一级
+		/* Shift clock for the next level granularity */
+		clk >>= LVL_CLK_SHIFT;
+	}
+	return levels;
+}
+
+```
 
 
 

@@ -16,6 +16,53 @@ Linux内核是将计算机硬件资源通过系统调用接口分配调度给用
 
 
 
+## 计算机启动
+
+### BIOS加载
+
+按下开机键的那一刻，在主板上提前写死的固件程序 **BIOS** 会将硬盘中**启动区的 512 字节**的数据，原封不动复制到**内存中的 0x7c00** 这个位置，并跳转到那个位置进行执行。只要硬盘中的 0 盘 0 道 1 扇区的 512 个字节的最后两个字节分别是 **0x55** 和 **0xaa**，那么 BIOS 就会认为它是个启动区。
+
+> 所以对于我们理解操作系统而言，此时的 BIOS 仅仅就是个代码搬运工，把 512 字节的二进制数据从硬盘搬运到了内存中而已。**所以作为操作系统的开发人员，仅仅需要把操作系统最开始的那段代码，编译并存储在硬盘的 0 盘 0 道 1 扇区即可**。之后 BIOS 会帮我们把它放到内存里，并且跳过去执行。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\BIOS.webp" style="zoom: 67%;" />
+
+**bootsect.s**
+
+在Linux 0.11版本下，这个 bootsect.s 会被编译成二进制文件，存放在启动区的第一扇区。由 BIOS 搬运到内存的 0x7c00 这个位置，而 CPU 也会从这个位置开始，不断往后一条一条语句无脑地执行下去。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\bootsect.webp" style="zoom: 67%;" />
+
+```assembly
+# bootsect.s
+mov ax,0x07c0
+mov ds,ax
+#这段代码是用汇编语言写的，含义是把 0x07c0 这个值复制到 ax 寄存器里，再将 ax 寄存器里的值复制到 ds 寄存器里。那其实这一番折腾的结果就是，让 ds 这个寄存器里的值变成了 0x07c0。
+```
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\bootsect01.webp" style="zoom: 67%;" />
+
+ds 是一个 16 位的段寄存器，具体表示数据段寄存器，在内存寻址时充当段基址的作用。就是当我们之后用汇编语言写一个内存地址时，实际上仅仅是写了偏移地址，比如：
+
+```assembly
+mov ax, [0x0001]
+#相当于
+mov ax, [ds:0x0001]
+```
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\bootsect02.webp" style="zoom:67%;" />
+
+
+
+将内存地址 0x7c00 处开始往后的 512 字节的数据，原封不动复制到 0x90000 处。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\bootsect03.webp" style="zoom:80%;" />
+
+
+
+
+
+
+
 
 
 ## 内核启动
@@ -249,15 +296,118 @@ asmlinkage __visible void __init start_kernel(void)
 
 ## x86架构中的常用寄存器
 
-- `gs` 段寄存器
+在x86架构的汇编语言中，`E` 和 `R` 前缀分别标识了不同大小的寄存器，它们对应于不同的处理器模式和数据宽度。
 
-  `gs` 是 x86 架构中的一个段寄存器，通常用于存储特定于当前 CPU 的数据的基地址。
+```assembly
+# 16位
+mov ax xxx
+# 32位
+mov eax xxx
+# 64位
+mov rax xxx
+```
 
-  ```assembly
-  mov ax, gs:[x] /*常用于读取/写入当前CPU专属数据到内核.data段中*/
-  ```
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\bootsect01.webp" style="zoom: 67%;" />
 
-- `eflags` 寄存器 标志寄存器
+1. 通用寄存器：
+   - **AX (Accumulator)**：累加器寄存器，用于算术和逻辑运算。
+   - **BX (Base)**：基址寄存器，用于存储地址。
+   - **CX (Count)**：计数寄存器，用于循环计数。
+   - **DX (Data)**：数据寄存器，用于存储数据。
+2. 段寄存器：
+   - **CS (Code Segment)**：代码段寄存器，指向当前执行的代码段。
+   - **DS (Data Segment)**：数据段寄存器，指向当前使用的数据段。
+   - **SS (Stack Segment)**：堆栈段寄存器，指向当前使用的堆栈段。
+   - **ES (Extra Segment)**：附加段寄存器，用于指向额外的数据段。
+   - **TR (Task Register)**: 任务寄存器，用于指向TSS描述符
+3. 指针寄存器：
+   - **SP (Stack Pointer)**：堆栈指针寄存器，指向堆栈的顶部。
+   - **BP (Base Pointer)**：基址指针寄存器，用于存储基址。
+   - **SI (Source Index)**：源变址寄存器，用于存储源地址。
+   - **DI (Destination Index)**：目的变址寄存器，用于存储目的地址。
+4. 控制寄存器：
+   - **IP (Instruction Pointer)**：指令指针寄存器，指向当前执行的指令。
+   - **Flags (Status Flags)**：状态标志寄存器，用于存储条件码和其他状态信息。
+5. 描述符表寄存器：
+   - **GDTR (Global Descriptor Table Register)**：全局描述符表寄存器，指向全局描述符表。
+   - **IDTR (Interrupt Descriptor Table Register)**：中断描述符表寄存器，指向中断描述符表。
+6. 控制寄存器：
+   - **CR3 (Page Directory Base Register)**：页目录基址寄存器，用于指向页目录表。
+
+
+
+**ax**
+
+在许多指令中作为累加器使用。常用于算术运算，如加法、减法、乘法和除法等。
+
+**flags**
+
+标志寄存器
+
+**ds**
+
+`ds`寄存器 段寄存器 数据段寄存器
+
+<img src="C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20241205100432776.png" alt="image-20241205100432776" style="zoom:50%;" />
+
+> **描述符索引（Descriptor Index）**：
+>
+> - 位数：13位（位15到位3）
+> - 功能：这部分用于索引GDT或LDT中的段描述符。每个段描述符在GDT或LDT中都有一个唯一的索引值，描述符索引就是这个索引值。
+>
+> **TI（Table Indicator）**：
+>
+> - 位数：1位（位2）
+>
+> - 功能
+>
+>   ：指示段选择子指向的是GDT还是LDT。
+>
+>   - 0：指向GDT（全局描述符表）。
+>   - 1：指向LDT（局部描述符表）。
+>
+> **RPL（Requestor Privilege Level）**：
+>
+> - 位数：2位（位1和位0）
+>
+> - 功能
+>
+>   ：表示请求者的特权级别。在保护模式下，每个段都有一个特权级别（DPL），RPL用于检查访问权限。
+>
+>   - 00：特权级别0（最高特权）。
+>   - 01：特权级别1。
+>   - 10：特权级别2。
+>   - 11：特权级别3（最低特权）。
+
+**gs**
+
+`gs` 是 x86 架构中的一个段寄存器，通常用于存储特定于当前 CPU 的数据的基地址。
+
+```assembly
+mov ax, gs:[x] /*常用于读取/写入当前CPU专属数据到内核.data段中*/
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 系统调用
+
+
+
+
+
+
 
 
 
@@ -660,7 +810,7 @@ IPI中断通过写 ICR 来发送。当对 ICR 进行写入时，将产生 interr
 
 
 
-### 中断描述符表
+### 中断门描述符表
 
 IDT（Interrupt Descriptor Table，中断描述符表）中断描述符表将每个中断向量和对应的中断处理程序地址关联在一起，形成条目。
 
@@ -1041,6 +1191,29 @@ static inline void native_load_idt(const struct desc_ptr *dtr)
 #### 中断程序寻址过程
 
 <img src=".\images\IDT01.png" style="zoom:80%;" />
+
+**中断门描述符**
+
+IDT中断向量表中的每一项都是一个中断门描述符，保存着中断处理程序的**目标代码段选择子**和**目标代码段偏移量**
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\中断门描述符.png" style="zoom: 80%;" />
+
+**中断程序寻址过程**
+
+1. 先判断中断号是否在合理范围（不能超过中断门描述符表中表项个数），X86最大支持256个中断源。
+2. 检查描述符类型（中断门还是陷阱门）、描述符在不在内存中。如果不在内存中则会触发页面错误（Page Fault） 或 段不存在异常（Segment Not Present Exception）
+3. 检查中断门描述符中的段选择子所指向的段描述符。最后做权限检查，若CPL小于等于中断门的DPL，并且CPL大于等于中断门中的段选择子指向的段描述符的DPL，则通过检查。
+4. 如果CPL等于中断门段选择子指向的段描述符的DPL，视为同级别权限，不切换栈，否则会切换栈。如果涉及栈切换，还会从TSS中加载具体权限对应的SS,ESP等。如果需要切换到更高特权级别，CPU会将当前的EIP、EFLAGS、ESP等寄存器内容保存到TSS中，并更新堆栈指针为`ESP0`和`SS0`。
+5. 将中断门描述符中目标代码的段选择子放到CS寄存器，目标代码段偏移加载到EIP寄存器。
+6. 当中断服务处理程序结束时，CPU会从TSS中恢复之前的寄存器值，然后通过IRET指令返回到被中断的代码位置。
+
+
+
+
+
+
+
+
 
 **寄存器IDTR**
 
@@ -7636,6 +7809,225 @@ int main() {
 
 
 
+## 计算机组成原理
+
+### 硬盘
+
+> 硬盘中一般会有多个盘片组成，每个盘片包含两个面，每个盘面都对应地有一个读/写磁头。受到硬盘整体体积和生产成本的限制，盘片数量都受到限制，一般都在5片以内。盘片的编号自下向上从0开始，如最下边的盘片有0面和1面，再上一个盘片就编号为2面和3面。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\硬盘01.png" style="zoom: 80%;" />
+
+**扇区和磁道**
+
+> 下图显示的是一个盘面，盘面中一圈圈灰色同心圆为一条条磁道，从圆心向外画直线，可以将磁道划分为若干个弧段，每个磁道上一个弧段被称之为一个扇区（图践绿色部分）。扇区是磁盘的最小组成单元，通常是512字节。（由于不断提高磁盘的大小，部分厂商设定每个扇区的大小是4096字节）
+>
+
+![](D:\doc\my\studymd\LearningNotes\os\linux\images\硬盘02.png)
+
+
+
+**磁头和柱面**
+
+硬盘通常由重叠的一组盘片构成，每个盘面都被划分为数目相等的磁道，并从外缘的“0”开始编号，具有相同编号的磁道形成一个圆柱，称之为磁盘的柱面。
+
+![](D:\doc\my\studymd\LearningNotes\os\linux\images\硬盘03.png)
+
+**磁盘容量计算**
+
+存储容量 ＝ 磁头数 × 磁道(柱面)数 × 每道扇区数 × 每扇区字节数
+
+图3中磁盘是一个 3个圆盘6个磁头，7个柱面（每个盘片7个磁道） 的磁盘，图3中每条磁道有12个扇区，所以此磁盘的容量为：
+
+存储容量  6 * 7 * 12 * 512 = 258048
+
+>  每个磁道的扇区数一样是说的老的硬盘，外圈的密度小，内圈的密度大，每圈可存储的数据量是一样的。新的硬盘数据的密度都一致，这样磁道的周长越长，扇区就越多，存储的数据量就越大。
+
+**磁盘读取响应时间**
+
+1. 寻道时间：磁头从开始移动到数据所在磁道所需要的时间，寻道时间越短，I/O操作越快，目前磁盘的平均寻道时间一般在3－15ms，一般都在10ms左右。
+2. 旋转延迟：盘片旋转将请求数据所在扇区移至读写磁头下方所需要的时间，旋转延迟取决于磁盘转速。普通硬盘一般都是7200rpm，慢的5400rpm。
+3. 数据传输时间：完成传输所请求的数据所需要的时间。 小结一下：从上面的指标来看、其实最重要的、或者说、我们最关心的应该只有两个：寻道时间；旋转延迟。
+
+>  读写一次磁盘信息所需的时间可分解为：寻道时间、延迟时间、传输时间。为提高磁盘传输效率，软件应着重考虑减少寻道时间和延迟时间。
+
+**块/簇**
+
+磁盘块/簇（虚拟出来的）。 块是操作系统中最小的逻辑存储单位。操作系统与磁盘打交道的最小单位是磁盘块。 通俗的来讲，在Windows下如NTFS等文件系统中叫做簇；在Linux下如Ext4等文件系统中叫做块（block）。每个簇或者块可以包括2、4、8、16、32、64…2的n次方个扇区。
+
+**为什么存在磁盘块？**
+
+读取方便：由于扇区的数量比较小，数目众多在寻址时比较困难，所以操作系统就将相邻的扇区组合在一起，形成一个块，再对块进行整体的操作。
+
+分离对底层的依赖：操作系统忽略对底层物理存储结构的设计。通过虚拟出来磁盘块的概念，在系统中认为块是最小的单位。
+
+**page**
+
+操作系统经常与内存和硬盘这两种存储设备进行通信，类似于“块”的概念，都需要一种虚拟的基本单位。所以，与内存操作，是虚拟一个页的概念来作为最小单位。与硬盘打交道，就是以块为最小单位。
+
+**扇区、块/簇、page的关系**
+
+1. 扇区： 硬盘的最小读写单元
+2. 块/簇： 是操作系统针对硬盘读写的最小单元
+3. page： 是内存与操作系统之间操作的最小单元。
+
+
+
+### CPU的三种工作模式
+
+#### 实模式
+
+这里的“实”，英文里对应real。real有真实的意思，实际上X86的实模式也代表了两方面的“真实”：运行真实的指令，执行指令真实的功能；访问内存的地址是真实的，对应的就是**物理地址**，不是“虚”的（开启MMU后的虚拟地址）。
+
+实模式下，寄存器都是16位的，以CS为例，实际最大能寻址的范围是CS左移4位，总共20位地址，因此可以访问1MB空间的内存。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\实模式01.jpeg" style="zoom: 50%;" />
+
+**实模式下访问内存**
+
+**获取指令**
+
+对于指令地址，CPU会通过CS和IP寄存器的值组合而来，值为CS所存储的地址左移4位加IP的值：（CS << 4） + IP。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\实模式03.jpeg" style="zoom: 25%;" />
+
+**获取数据**
+
+对于数据地址，CPU会通过DS,ES,SS加上AX,BX,CX,DX,EX,DI,SI,BP,SP寄存器组合而来,DS一般用来存放数据段内容比如C语言全局变量；SS则是栈的基地址，SS搭配SP来使用，一般用来访问C语言临时变量和函数栈信息。地址计算规则和指令地址计算规则类似。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\实模式02.jpeg" style="zoom:25%;" />
+
+
+
+#### 保护模式
+
+保护模式下，所有通用寄存器位32位，也可以单独使用低16位，低16位又可以拆分成两个8位寄存器。
+
+
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\保护模式01.png" style="zoom:150%;" />
+
+**保护模式的特权级别**
+
+保护模式下对指令（如in,out,cli）和资源（如寄存器，I/O端口，内存地址）等进行了权限区分。
+
+权限分为4级，R0-R3，每种权限执行的指令数量不同，R0权限最高，可以执行所有指令，R1,R2,R3权限逐级递减。内存访问的权限通过后面要说的段描述符和特权级别配合实现，对于R0来说权限最大，可以访问所有资源。
+
+![](D:\doc\my\studymd\LearningNotes\os\linux\images\保护模式02.png)
+
+**保护模式段描述符**
+
+保护模式下的段寄存器还是16位的，但是常用寄存器已经扩展到了32位，为了扩展段寄存器，引入段选择子和段描述符。
+
+GDTR寄存器中存放GDT表的基地址，查询具体的段描述符时需要段选择子+GDTR基地址
+
+```c
+// arch/x86/include/asm/desc.h
+
+//GDT表
+struct gdt_page {
+    struct desc_struct gdt[GDT_ENTRIES];
+} __attribute__((aligned(PAGE_SIZE)));
+```
+
+![](D:\doc\my\studymd\LearningNotes\os\linux\images\保护模式03.png)
+
+**段描述符**
+
+```c
+//arch/x86/include/asm/desc_defs.h
+
+//段描述符
+/* 8 byte segment descriptor */
+struct desc_struct {
+        u16    limit0;
+        u16    base0;
+        u16    base1: 8, type: 4, s: 1, dpl: 2, p: 1;
+        u16    limit1: 4, avl: 1, l: 1, d: 1, g: 1, base2: 8;
+} __attribute__((packed));
+```
+
+![](D:\doc\my\studymd\LearningNotes\os\linux\images\保护模式04.png)
+
+| 关键字段 | 说明                                                         |
+| -------- | ------------------------------------------------------------ |
+| G        | 粒度位，用于解释段界限的含义。当 G 位是“ 0”时，段界限以字节为单位。此时，段的扩展范围是从 1 字节到 1 兆字节（ 1B～1MB），因为描述符中的界限值是 20 位的。相反，如果该位是“ 1”，那么，段界限是以 4KB 为单位的。这样，段的扩展范围是从 4KB到 4GB |
+| S        | 指定描述符的类型（ Descriptor Type）。当该位是“ 0”时，表示是一个系统段；为“ 1”时，表示是一个代码段或者数据段（堆栈段也是特殊的数据段）。 |
+| DPL      | 描述符的特权级（ Descriptor Privilege Level， DPL）。这两位用于指定段的特权级。共有 4 种处理器支持的特权级别，分别是 0、 1、 2、 3，其中 0 是最高特权级别， 3 是最低特权级别。 |
+| P        | 段存在位（ Segment Present）。 P 位用于指示描述符所对应的段是否存在。一般来说，描述符所指的段都在内存里，但在虚拟内存实现中，可能出现内存紧张时将相关空间转移到了外存中，此时P=0。处理器在尝试访问P=0的段时会产生异常。 |
+| TYPE     | 描述符的子类型。<br/><br/>对数据段来说，这4个bit为：X,E,W,A<br/><br/>对代码段来说，这4个bit为：X,C,R,A<br/><br/>X代表是否可以执行（ eXecutable）。<br/><br/>E代表扩展方向，E=0 向上（高地址）扩展，比如数据段；E=1向下（低地址）扩展，比如堆栈段。<br/><br/>W代表段是否可写， W=0表示不可写，W=1表示可写。<br/><br/>C代表特权等级是否是一致的（conforming）。C=0表示非一致代码段，这种代码段可以被相同特权级别的代码段所调用，或通过们调用；C=1表示一致代码段，允许低特权级别的程序执行这个代码段。<br/><br/>R代表是否可读，R=0表示不可读，R=1表示可读。<br/><br/>A表示已访问位，如果这个段最近被访问过，则处理器会将其改为1。<br/> |
+
+
+
+**段选择子**
+
+ CS,DS,ES,SS,FS,GS这些寄存器，里面的格式如下：
+
+![](D:\doc\my\studymd\LearningNotes\os\linux\images\保护模式05.png)
+
+**CPL、DPL和RPL**
+
+为了访问数据段中的操作数，就必须将该数据段的段选择符装载入数据段寄存器(DS，ES，FS 或 GS) 或者装载入堆栈段寄存器(SS)。(可以用如下指令装载段寄存器，MOV，POP，LDS，LES，LFS，LGS 和 LSS 指令)。
+
+处理器将段选择符装载入段寄存器之前，它要进行特权级检验(见图 )，比较当前 运行的进程或任务的特权级(CPL)，段选择符的 RPL，还有该段的段描述符的 DPL。如果 DPL 在数值上比 CPL 和 RPL 都大或者相等，处理器会将段选择符装载入段寄存器。否则，处理器会产生一个通用保护错误，并且不会装载段寄存器。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\CPU特权校验.png" style="zoom:67%;" />
+
+**CPL**
+
+在 CPU 中运行的是指令，其运行过程中的指令总会属于某个代码段，该代码段的特权级，也就是代码段描述符中的 DPL，便是当前 CPU 所处的特权级，这个特权级称为当前特权级，即 CPL(Current Privilege Level)。
+
+在同一时刻程序中可以有多个段选择子，也就是可以有多个RPL，**然而只有CS寄存器（也就是存放正在执行的代码的寄存器）中的RPL才等于CPL**也就是说当前你的正在运行的代码所在代码段的段描述符中的DPL等于CPL也等于CS.RPL
+
+**RPL**
+
+RPL是通过段选择子的第0和第1位表现出来的。***RPL 引入的目的是避免低特权级的程序访问高特权级的资源***。
+
+当一个特权级为3的程序通过系统调用将CPL升级为0，但是当前CS寄存器段的选择子RPL仍为3，所以在检查权限的时候，通过RPL可以获得程序真实的特权级。
+
+
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\段选择子.png" style="zoom:67%;" />
+
+**DPL**
+
+DPL是段或门的特权级别。它存储在段或门的段或门描述符的DPL字段中。当当前执行的代码段试图访问某个段或门时，将该段或门的DPL与该段或门选择器的CPL和RPL进行比较。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\段描述符.png" style="zoom:50%;" />
+
+
+
+**TSS**
+
+任务状态段TSS（Task-state segment）是一块104字节的**内存**，用于存储大部分寄存器的值。CPU中无进程和线程的概念（这是操作系统的概念），CPU中只有任务概念（任务对应操作系统的线程）。1个CPU核只有一个TR（Task Register）寄存器，存储了当前TSS。TSS的地址存储在TR寄存器中，GDT表中可以存放多个TSS描述符。
+
+TR寄存器也属于段寄存器，里面存放着TSS选择子，指向TSS描述符
+
+- **索引（Index）**：指向GDT或LDT中的TSS描述符条目的偏移。
+- **表指示符（TI bit）**：指定是使用GDT还是LDT（0表示GDT，1表示LDT）。
+- **请求特权级（RPL，2位）**：定义了访问该TSS所需的最低特权级别。
+
+```c
+//arch/x86/kvm/tss.h
+
+struct tss_segment_32 {
+	u32 prev_task_link;  // 指向上一个任务的TSS的选择子
+	u32 esp0;            // Ring 0时使用的堆栈指针
+	u32 ss0;             // Ring 0时使用的堆栈段选择子
+	u32 esp1;            // Ring 1时使用的堆栈指针（较少使用）
+	u32 ss1;             // Ring 1时使用的堆栈段选择子（较少使用）
+	u32 esp2;            // Ring 2时使用的堆栈指针（较少使用）
+	u32 ss2;             // Ring 2时使用的堆栈段选择子（较少使用）
+	u32 cr3;             // 页表基址寄存器（PDBR），用于分页机制
+	u32 eip;             // 下一条指令的地址
+	u32 eflags;          // 标志寄存器，包含CPU的状态标志
+	u32 eax, ecx, edx, ebx, esp, ebp, esi, edi;  // 通用寄存器
+	u32 es, cs, ss, ds, fs, gs;  // 段寄存器
+	u32 ldt_selector;    // 局部描述符表选择子
+	u16 t;               // 保留字段或特定用途字段
+	u16 io_map;          // I/O权限图偏移量
+};
+```
+
 
 
 
@@ -7808,3 +8200,14 @@ ulimit -n
 Linux中线程和进程？
 
 中断时的用户态内核态切换？ 中断堆栈？
+
+时钟中断如果是1000HZ 那么微秒 纳秒 又是怎么统计的
+
+```java
+public static void main(String[] args) {
+    for (int i = 0; i < 20 ; i++) {
+ 		//为什么差值总是100?
+        System.out.println(System.nanoTime() - System.nanoTime());
+    }
+}
+```

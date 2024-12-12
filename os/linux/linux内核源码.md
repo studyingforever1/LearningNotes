@@ -24,13 +24,13 @@ Linux内核是将计算机硬件资源通过系统调用接口分配调度给用
 
 > 所以对于我们理解操作系统而言，此时的 BIOS 仅仅就是个代码搬运工，把 512 字节的二进制数据从硬盘搬运到了内存中而已。**所以作为操作系统的开发人员，仅仅需要把操作系统最开始的那段代码，编译并存储在硬盘的 0 盘 0 道 1 扇区即可**。之后 BIOS 会帮我们把它放到内存里，并且跳过去执行。
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\BIOS.webp" style="zoom: 67%;" />
+<img src=".\images\BIOS.webp" style="zoom: 67%;" />
 
 **bootsect.s**
 
 在Linux 0.11版本下，这个 bootsect.s 会被编译成二进制文件，存放在启动区的第一扇区。由 BIOS 搬运到内存的 0x7c00 这个位置，而 CPU 也会从这个位置开始，不断往后一条一条语句无脑地执行下去。
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\bootsect.webp" style="zoom: 67%;" />
+<img src=".\images\bootsect.webp" style="zoom: 67%;" />
 
 ```assembly
 # bootsect.s
@@ -39,7 +39,7 @@ mov ds,ax
 #这段代码是用汇编语言写的，含义是把 0x07c0 这个值复制到 ax 寄存器里，再将 ax 寄存器里的值复制到 ds 寄存器里。那其实这一番折腾的结果就是，让 ds 这个寄存器里的值变成了 0x07c0。
 ```
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\bootsect01.webp" style="zoom: 67%;" />
+<img src=".\images\bootsect01.webp" style="zoom: 67%;" />
 
 ds 是一个 16 位的段寄存器，具体表示数据段寄存器，在内存寻址时充当段基址的作用。就是当我们之后用汇编语言写一个内存地址时，实际上仅仅是写了偏移地址，比如：
 
@@ -49,13 +49,25 @@ mov ax, [0x0001]
 mov ax, [ds:0x0001]
 ```
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\bootsect02.webp" style="zoom:67%;" />
+<img src=".\images\bootsect02.webp" style="zoom:67%;" />
 
 
 
 将内存地址 0x7c00 处开始往后的 512 字节的数据，原封不动复制到 0x90000 处。
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\bootsect03.webp" style="zoom:80%;" />
+<img src=".\images\bootsect03.webp" style="zoom:80%;" />
+
+操作系统的编译过程是通过 **Makefile** 和 **build.c** 配合完成的，最终会：
+
+***1.*** 把 bootsect.s 编译成 bootsect 放在硬盘的 1 扇区。
+
+***2.*** 把 setup.s 编译成 setup 放在硬盘的 2~5 扇区。
+
+***3.*** 把剩下的全部代码（head.s 作为开头）编译成 system 放在硬盘的随后 240 个扇区。
+
+<img src=".\images\内核编译.webp" style="zoom:67%;" />
+
+
 
 
 
@@ -307,7 +319,7 @@ mov eax xxx
 mov rax xxx
 ```
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\bootsect01.webp" style="zoom: 67%;" />
+<img src=".\images\bootsect01.webp" style="zoom: 67%;" />
 
 1. 通用寄存器：
    - **AX (Accumulator)**：累加器寄存器，用于算术和逻辑运算。
@@ -450,6 +462,28 @@ X86 体系结构的每个中断都被赋予一个唯一的编号或者向量（8
 - 陷阱(trap)，陷阱并不是错误，而是想要陷入内核来执行一些操作，中断处理完成后继续执行之前的下一条指令，即 **指令异常**
 - 故障(fault)，故障是程序遇到了问题需要修复，问题不一定是错误，如果问题能够修复，那么中断处理完成后会重新执行之前的指令，如果问题无法修复那就是错误，当前进程将会被杀死。即 **CPU异常**
 - 中止(abort)，系统遇到了很严重的错误，无法修改，一般系统会崩溃。即 **CPU异常**
+
+
+
+
+
+**给 CPU 一个中断号有三种方式**
+
+***1.*** **通过中断控制器给 CPU 的 INTR 引脚发送信号**，并且允许 CPU 从中断控制器的一个端口上读取中断号，比如按下键盘的一个按键，最终会给到 CPU 一个 0x21 中断号。
+
+***2.*** **CPU 执行某条指令发现了异常**，会自己触发并给自己一个中断号，比如执行到了无效指令，CPU 会给自己一个 0x06 的中断号。
+
+***3.*** **执行 INT n 指令**，会直接给 CPU 一个中断号 n，比如触发了 Linux 的系统调用，实际上就是执行了 INT 0x80 指令，那么 CPU 收到的就是一个 0x80 中断号。
+
+<img src=".\images\中断三种方式.webp" style="zoom:50%;" />
+
+
+
+
+
+
+
+
 
 ### 中断控制
 
@@ -973,6 +1007,14 @@ enum {
 
 
 
+**中断门描述符分类**
+
+- **Task Gate**：任务门描述符 任务门描述符 Linux 中几乎没有用到。
+- **Interrupt Gate**：中断门描述符
+- **Trap Gate**：陷阱门描述符 
+
+> 中断门描述符和陷阱门描述符的区别仅仅是**是否允许中断嵌套**，实现方式非常简单粗暴，就是 CPU 如果收到的中断号对应的是一个中断门描述符，就修改 FLAGS 寄存器 IF 标志位，修改后就屏蔽了中断，也就防止了中断的嵌套。而陷阱门没有改这个标志位，也就允许了中断的嵌套。意味着当正在进行系统调用处理时，可以被硬件中断打断。
+
 
 
 
@@ -1143,6 +1185,9 @@ static inline void native_write_idt_entry(gate_desc *idt, int entry, const gate_
 	memcpy(&idt[entry], gate, sizeof(*gate));
 }
 
+
+
+
 ```
 
 
@@ -1196,7 +1241,35 @@ static inline void native_load_idt(const struct desc_ptr *dtr)
 
 IDT中断向量表中的每一项都是一个中断门描述符，保存着中断处理程序的**目标代码段选择子**和**目标代码段偏移量**
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\中断门描述符.png" style="zoom: 80%;" />
+```c
+//arch/x86/include/asm/desc_defs.h
+
+
+struct idt_bits {
+	u16		ist	: 3,    // 中断栈表索引 (Interrupt Stack Table Index)
+			zero	: 5,    // 保留位，必须为0
+			type	: 5,    // 门类型 (Type)
+			dpl	: 2,    // 描述符特权级别 (Descriptor Privilege Level)
+			p	: 1;     // 存在位 (Present Bit)
+} __attribute__((packed));
+
+struct gate_struct {
+	u16		offset_low;       // 处理程序地址的低16位
+	u16		segment;          // 段选择子，通常是指向代码段的选择子
+	struct idt_bits	bits;            // 包含类型、DPL等信息的字段
+	u16		offset_middle;    // 处理程序地址的中间16位（32位模式）
+#ifdef CONFIG_X86_64
+	u32		offset_high;      // 处理程序地址的高32位（仅限64位模式）
+	u32		reserved;         // 保留字段，必须为0（仅限64位模式）
+#endif
+} __attribute__((packed));
+
+typedef struct gate_struct gate_desc;
+```
+
+
+
+<img src=".\images\中断门描述符.png" style="zoom: 80%;" />
 
 **中断程序寻址过程**
 
@@ -1207,7 +1280,7 @@ IDT中断向量表中的每一项都是一个中断门描述符，保存着中�
 5. 将中断门描述符中目标代码的段选择子放到CS寄存器，目标代码段偏移加载到EIP寄存器。
 6. 当中断服务处理程序结束时，CPU会从TSS中恢复之前的寄存器值，然后通过IRET指令返回到被中断的代码位置。
 
-
+<img src=".\images\中断寻址过程.webp" style="zoom: 67%;" />
 
 
 
@@ -7815,14 +7888,14 @@ int main() {
 
 > 硬盘中一般会有多个盘片组成，每个盘片包含两个面，每个盘面都对应地有一个读/写磁头。受到硬盘整体体积和生产成本的限制，盘片数量都受到限制，一般都在5片以内。盘片的编号自下向上从0开始，如最下边的盘片有0面和1面，再上一个盘片就编号为2面和3面。
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\硬盘01.png" style="zoom: 80%;" />
+<img src=".\images\硬盘01.png" style="zoom: 80%;" />
 
 **扇区和磁道**
 
 > 下图显示的是一个盘面，盘面中一圈圈灰色同心圆为一条条磁道，从圆心向外画直线，可以将磁道划分为若干个弧段，每个磁道上一个弧段被称之为一个扇区（图践绿色部分）。扇区是磁盘的最小组成单元，通常是512字节。（由于不断提高磁盘的大小，部分厂商设定每个扇区的大小是4096字节）
 >
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\硬盘02.png)
+![](.\images\硬盘02.png)
 
 
 
@@ -7830,7 +7903,7 @@ int main() {
 
 硬盘通常由重叠的一组盘片构成，每个盘面都被划分为数目相等的磁道，并从外缘的“0”开始编号，具有相同编号的磁道形成一个圆柱，称之为磁盘的柱面。
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\硬盘03.png)
+![](.\images\硬盘03.png)
 
 **磁盘容量计算**
 
@@ -7880,7 +7953,7 @@ int main() {
 
 实模式下，寄存器都是16位的，以CS为例，实际最大能寻址的范围是CS左移4位，总共20位地址，因此可以访问1MB空间的内存。
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\实模式01.jpeg" style="zoom: 50%;" />
+<img src=".\images\实模式01.jpeg" style="zoom: 50%;" />
 
 **实模式下访问内存**
 
@@ -7888,23 +7961,33 @@ int main() {
 
 对于指令地址，CPU会通过CS和IP寄存器的值组合而来，值为CS所存储的地址左移4位加IP的值：（CS << 4） + IP。
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\实模式03.jpeg" style="zoom: 25%;" />
+<img src=".\images\实模式03.jpeg" style="zoom: 25%;" />
 
 **获取数据**
 
 对于数据地址，CPU会通过DS,ES,SS加上AX,BX,CX,DX,EX,DI,SI,BP,SP寄存器组合而来,DS一般用来存放数据段内容比如C语言全局变量；SS则是栈的基地址，SS搭配SP来使用，一般用来访问C语言临时变量和函数栈信息。地址计算规则和指令地址计算规则类似。
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\实模式02.jpeg" style="zoom:25%;" />
+<img src=".\images\实模式02.jpeg" style="zoom:25%;" />
 
 
 
 #### 保护模式
 
+将 cr0 这个寄存器的位 0 置 1，模式就从实模式切换到保护模式了。
+
+![](.\images\cr0寄存器.webp)
+
+
+
+
+
+
+
 保护模式下，所有通用寄存器位32位，也可以单独使用低16位，低16位又可以拆分成两个8位寄存器。
 
 
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\保护模式01.png" style="zoom:150%;" />
+<img src=".\images\保护模式01.png" style="zoom:150%;" />
 
 **保护模式的特权级别**
 
@@ -7912,7 +7995,7 @@ int main() {
 
 权限分为4级，R0-R3，每种权限执行的指令数量不同，R0权限最高，可以执行所有指令，R1,R2,R3权限逐级递减。内存访问的权限通过后面要说的段描述符和特权级别配合实现，对于R0来说权限最大，可以访问所有资源。
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\保护模式02.png)
+![](.\images\保护模式02.png)
 
 **保护模式段描述符**
 
@@ -7929,7 +8012,7 @@ struct gdt_page {
 } __attribute__((aligned(PAGE_SIZE)));
 ```
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\保护模式03.png)
+![](.\images\保护模式03.png)
 
 **段描述符**
 
@@ -7946,7 +8029,7 @@ struct desc_struct {
 } __attribute__((packed));
 ```
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\保护模式04.png)
+![](.\images\保护模式04.png)
 
 | 关键字段 | 说明                                                         |
 | -------- | ------------------------------------------------------------ |
@@ -7962,7 +8045,7 @@ struct desc_struct {
 
  CS,DS,ES,SS,FS,GS这些寄存器，里面的格式如下：
 
-![](D:\doc\my\studymd\LearningNotes\os\linux\images\保护模式05.png)
+![](.\images\保护模式05.png)
 
 **CPL、DPL和RPL**
 
@@ -7970,7 +8053,7 @@ struct desc_struct {
 
 处理器将段选择符装载入段寄存器之前，它要进行特权级检验(见图 )，比较当前 运行的进程或任务的特权级(CPL)，段选择符的 RPL，还有该段的段描述符的 DPL。如果 DPL 在数值上比 CPL 和 RPL 都大或者相等，处理器会将段选择符装载入段寄存器。否则，处理器会产生一个通用保护错误，并且不会装载段寄存器。
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\CPU特权校验.png" style="zoom:67%;" />
+<img src=".\images\CPU特权校验.png" style="zoom:67%;" />
 
 **CPL**
 
@@ -7986,13 +8069,13 @@ RPL是通过段选择子的第0和第1位表现出来的。***RPL 引入的目�
 
 
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\段选择子.png" style="zoom:67%;" />
+<img src=".\images\段选择子.png" style="zoom:67%;" />
 
 **DPL**
 
 DPL是段或门的特权级别。它存储在段或门的段或门描述符的DPL字段中。当当前执行的代码段试图访问某个段或门时，将该段或门的DPL与该段或门选择器的CPL和RPL进行比较。
 
-<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\段描述符.png" style="zoom:50%;" />
+<img src=".\images\段描述符.png" style="zoom:50%;" />
 
 
 

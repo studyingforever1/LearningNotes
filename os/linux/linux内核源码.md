@@ -345,6 +345,7 @@ mov rax xxx
    - **IDTR (Interrupt Descriptor Table Register)**：中断描述符表寄存器，指向中断描述符表。
 6. 控制寄存器：
    - **CR3 (Page Directory Base Register)**：页目录基址寄存器，用于指向页目录表。
+   - CR0
 
 
 
@@ -7810,6 +7811,122 @@ smpboot: Booting Node 0 Processor 4 APIC 0x1
 
 ## 内存管理
 
+
+
+### 分段分页机制
+
+- **逻辑地址**：我们程序员写代码时给出的地址叫逻辑地址，其中包含段选择子和偏移地址两部分。
+- **线性地址**：通过分段机制，将逻辑地址转换后的地址，叫做线性地址。而这个线性地址是有个范围的，这个范围就叫做线性地址空间，32 位模式下，线性地址空间就是 4G。
+- **物理地址**：就是真正在内存中的地址，它也是有范围的，叫做物理地址空间。那这个范围的大小，就取决于你的内存有多大了。
+- **虚拟地址**：如果没有开启分页机制，那么线性地址就和物理地址是一一对应的，可以理解为相等。如果开启了分页机制，那么线性地址将被视为虚拟地址，这个虚拟地址将会通过分页机制的转换，最终转换成物理地址。 **虚拟地址就是线性地址，以后我们只称为线性地址。**
+
+<img src=".\images\分段分页机制.webp" style="zoom: 67%;" />
+
+#### 分段
+
+分段机制是CPU所自带的机制，无需开启。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\分段分页机制02.webp" style="zoom: 67%;" />
+
+
+
+#### 分页
+
+**CR0寄存器**
+
+操作系统通过设置CR0寄存器的标志位开启分页机制，MMU会将线性地址进行分页转换。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\分页CR0寄存器.webp" style="zoom:80%;" />
+
+**CR3寄存器**
+
+CR3寄存器中保存着页目录表的基地址和大小。
+
+**MMU**
+
+
+
+**页目录表**
+
+1 个页目录表最多包含 1024 个页目录项（也就是 1024 个页表）
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\页目录项or页表项.webp" style="zoom:67%;" />
+
+**页表**
+
+1 个页表最多包含 1024 个页表项（也就是 1024 个页） 1 页为 4KB（因为有 12 位偏移地址）
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\页目录项or页表项.webp" style="zoom:67%;" />
+
+
+
+
+
+#### 分段分页机制
+
+在32位系统中，通常使用两级页表（页目录和页表），在64位系统中，可以使用四或五级页表（PML4、PDPT、PD、PT）
+
+以下为32位系统
+
+<img src=".\images\分段分页机制01.webp" style="zoom: 67%;" />
+
+1. CPU通过段选择子在GDT中查找段描述符中的段基址。
+2. 利用段基址+逻辑地址(即偏移量) 计算出线性地址。
+3. 再根据是否开启分页机制，将32位线性地址划分为 `高 10 位：中间 10 位：后 12 位` 。
+4. 根据高10位在页目录表中查找页表目录项，根据中间10位在对应页表中查找页表项，根据页表项中的页起始地址+后12位计算出物理地址。
+
+<img src="D:\doc\my\studymd\LearningNotes\os\linux\images\分页寻址机制.webp" style="zoom:67%;" />
+
+### 页分配器
+
+#### section
+
+```c
+struct mem_section {
+    /*
+     * This is, logically, a pointer to an array of struct
+     * pages.  However, it is stored with some other magic.
+     * (see sparse.c::sparse_init_one_section())
+     *
+     * Additionally during early boot we encode node id of
+     * the location of the section here to guide allocation.
+     * (see sparse.c::memory_present())
+     *
+     * Making it a UL at least makes someone do a cast
+     * before using it wrong.
+     */
+    unsigned long section_mem_map;
+
+    struct mem_section_usage *usage;
+#ifdef CONFIG_PAGE_EXTENSION
+    /*
+     * If SPARSEMEM, pgdat doesn't have page_ext pointer. We use
+     * section. (see page_ext.h about this.)
+     */
+    struct page_ext *page_ext;
+    unsigned long pad;
+#endif
+    /*
+     * WARNING: mem_section must be a power-of-2 in size for the
+     * calculation and use of SECTION_ROOT_MASK to make sense.
+     */
+};
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### 内存模型
 
 ![img](.\images\内存模型.png)
@@ -7863,10 +7980,6 @@ int main() {
 
 
 <img src=".\images\进程与线程内存结构图.png" alt="image-20241031160316674" style="zoom: 50%;" />
-
-
-
-
 
 
 
@@ -8110,10 +8223,6 @@ struct tss_segment_32 {
 	u16 io_map;          // I/O权限图偏移量
 };
 ```
-
-
-
-
 
 
 

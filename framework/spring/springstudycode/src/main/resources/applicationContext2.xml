@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:zcq="http://www.springframework.org/schema/zcq"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="handler" class="com.example.demo.handler.MyNamespaceHandler">
+        <zcq:bean id="ffff"></zcq:bean>
+
+    </bean>
+</beans>

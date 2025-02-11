@@ -2,6 +2,20 @@
 
 
 
+## 整体概述
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## 分析BeanFactory和ApplicationContext的接口继承差异
 
 
@@ -5668,7 +5682,7 @@ public class ClipboardSetDemo {
 
 @RequestParam 只处理application/x-www-form-urlencoded
     
-@RequestBody 处理content-type为application/json的数据请求
+@RequestBody 只能处理content-type为application/json的数据请求
     
 当使用MultipartFile时 consumes自动设置为multipart/form-data 接收文件+其他参数
     

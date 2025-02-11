@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context  http://www.springframework.org/schema/context/spring-context.xsd
+        ">
+    <context:component-scan base-package="com.example.demo"/>
+
+<!--    通过静态factoryMethod创建对象 需要将class设置为静态工厂类 指定factoryMethod方法和参数-->
+    <bean name="user" class="com.example.demo.factorymethod.UserStaticFactoryMethod"
+          factory-method="getUserFactoryMethod">
+        <constructor-arg value="lisi"/>
+    </bean>
+
+    <!--    通过实例factoryMethod创建对象 需要将实例factory交给spring管理 指定factory-bean 指定factoryMethod方法和参数-->
+    <bean name="userFactoryMethod" class="com.example.demo.factorymethod.UserFactoryMethod"></bean>
+    <bean name="user2" factory-bean="userFactoryMethod" factory-method="getUserFactoryMethod">
+        <constructor-arg value="zhangsan"></constructor-arg>
+    </bean>
+
+
+</beans>

@@ -964,7 +964,9 @@ public class UserBeanDefinitionParser implements BeanDefinitionParser {
 protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
     // Tell the internal bean factory to use the context's class loader etc.
     beanFactory.setBeanClassLoader(getClassLoader());
+    //设置spel表达式解析器
     beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
+    //设置属性编辑器注册器
     beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
     // Configure the bean factory with context callbacks.
@@ -993,6 +995,7 @@ protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
        beanFactory.setTempClassLoader(new ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));
     }
 
+    //注册环境变量到beanfactroy中
     // Register default environment beans.
     if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
        beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
@@ -1030,7 +1033,7 @@ public class StandardBeanExpressionResolver implements BeanExpressionResolver {
 }
 ```
 
-**Spring EL表达式**
+#### Spring EL表达式
 
 > **字面量表达式**    
 >
@@ -1082,7 +1085,7 @@ public class StandardBeanExpressionResolver implements BeanExpressionResolver {
 >
 > 假设在 EL 上下文中定义了变量 `myVar`，可在表达式中使用 `#{myVar}` 。 
 
-### @Value中${}和#{}的区别
+#### @Value中${}和#{}的区别
 
 ```java
 @Component
@@ -1116,7 +1119,56 @@ public class ValueTest {
 
 
 
+### 自定义属性编辑器
 
+- 创建特定属性编辑器
+- 创建属性编辑器的注册器，指定特殊属性的编辑采用特定属性编辑器进行转换
+- 将属性编辑器的注册器注册到beanFactory中
+
+```java
+//创建特定属性编辑器
+public class MyPropertyEditor extends PropertyEditorSupport {
+
+    @Override
+    public void setAsText(String text) throws IllegalArgumentException {
+        //针对MyProperty类型的属性进行编辑
+        MyProperty myProperty = new MyProperty();
+        String[] split = text.split("_");
+        myProperty.setName(split[0]);
+        myProperty.setAge(split[1]);
+        setValue(myProperty);
+    }
+}
+```
+
+```java
+
+//创建属性编辑器的注册器，指定特殊属性的编辑采用特定属性编辑器
+public class MyPropertyEditorRegistrar implements PropertyEditorRegistrar {
+    @Override
+    public void registerCustomEditors(PropertyEditorRegistry registry) {
+        //在处理MyProperty类型的属性值时，使用MyPropertyEditor编辑器进行转换
+        registry.registerCustomEditor(MyProperty.class, new MyPropertyEditor());
+    }
+}
+```
+
+```java
+//将属性编辑器的注册器注册到beanFactory中
+public class MyApplicationContext extends ClassPathXmlApplicationContext {
+
+    public MyApplicationContext(String configLocations) {
+        super(configLocations);
+    }
+
+    @Override
+    protected void customizeBeanFactory(DefaultListableBeanFactory beanFactory) {
+        //注册MyPropertyEditorRegistrar到beanFactroy中
+        beanFactory.addPropertyEditorRegistrar(new MyPropertyEditorRegistrar());
+        super.customizeBeanFactory(beanFactory);
+    }
+}
+```
 
 
 

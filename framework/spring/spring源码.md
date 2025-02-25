@@ -956,6 +956,166 @@ public class UserBeanDefinitionParser implements BeanDefinitionParser {
 
 
 
+## prepareBeanFactory()
+
+```java
+//配置BeanFactory
+
+protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    // Tell the internal bean factory to use the context's class loader etc.
+    beanFactory.setBeanClassLoader(getClassLoader());
+    beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
+    beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
+
+    // Configure the bean factory with context callbacks.
+    beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
+    beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
+    beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
+    beanFactory.ignoreDependencyInterface(ResourceLoaderAware.class);
+    beanFactory.ignoreDependencyInterface(ApplicationEventPublisherAware.class);
+    beanFactory.ignoreDependencyInterface(MessageSourceAware.class);
+    beanFactory.ignoreDependencyInterface(ApplicationContextAware.class);
+
+    // BeanFactory interface not registered as resolvable type in a plain factory.
+    // MessageSource registered (and found for autowiring) as a bean.
+    beanFactory.registerResolvableDependency(BeanFactory.class, beanFactory);
+    beanFactory.registerResolvableDependency(ResourceLoader.class, this);
+    beanFactory.registerResolvableDependency(ApplicationEventPublisher.class, this);
+    beanFactory.registerResolvableDependency(ApplicationContext.class, this);
+
+    // Register early post-processor for detecting inner beans as ApplicationListeners.
+    beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
+
+    // Detect a LoadTimeWeaver and prepare for weaving, if found.
+    if (beanFactory.containsBean(LOAD_TIME_WEAVER_BEAN_NAME)) {
+       beanFactory.addBeanPostProcessor(new LoadTimeWeaverAwareProcessor(beanFactory));
+       // Set a temporary ClassLoader for type matching.
+       beanFactory.setTempClassLoader(new ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));
+    }
+
+    // Register default environment beans.
+    if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
+       beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
+    }
+    if (!beanFactory.containsLocalBean(SYSTEM_PROPERTIES_BEAN_NAME)) {
+       beanFactory.registerSingleton(SYSTEM_PROPERTIES_BEAN_NAME, getEnvironment().getSystemProperties());
+    }
+    if (!beanFactory.containsLocalBean(SYSTEM_ENVIRONMENT_BEAN_NAME)) {
+       beanFactory.registerSingleton(SYSTEM_ENVIRONMENT_BEAN_NAME, getEnvironment().getSystemEnvironment());
+    }
+}
+```
+
+
+
+### StandardBeanExpressionResolver
+
+```java
+//Spring EL表达式解析器
+
+public class StandardBeanExpressionResolver implements BeanExpressionResolver {
+	/** Default expression prefix: "#{". */
+	public static final String DEFAULT_EXPRESSION_PREFIX = "#{";
+
+	/** Default expression suffix: "}". */
+	public static final String DEFAULT_EXPRESSION_SUFFIX = "}";
+    
+    
+    public StandardBeanExpressionResolver(@Nullable ClassLoader beanClassLoader) {
+        //核心解析器SpelExpressionParser
+		this.expressionParser = new SpelExpressionParser(new SpelParserConfiguration(null, beanClassLoader));
+	}
+
+
+}
+```
+
+**Spring EL表达式**
+
+> **字面量表达式**    
+>
+> - **整数**：`#{100}`    
+> - **小数**：`#{3.14}`   
+> - **字符串**：`#{'Hello, Spring EL'}`
+> - **布尔值**：`#{true}` 
+>
+> **属性访问表达式**   
+>
+> - **对象属性访问**：`#{user.name}`    
+> - **嵌套属性访问**：如果 `User` 类中有一个 `Address` 类型的属性 `address`，且 `Address` 类有 `city` 属性，则 `#{user.address.city}` 
+>
+> **方法调用表达式** 
+>
+> 假设 `user` 对象有一个 `getFullName()` 方法。    
+>
+> - **无参方法调用**：`#{user.getFullName()}`    
+> - **有参方法调用**：如果有 `sayHello(String message)` 方法，则 `#{user.sayHello('Hi')}` 
+>
+> **数组、List、Map 访问表达式**    
+>
+> - **数组访问**：`#{myArray[0]}`，假设 `myArray` 是一个数组。    
+> - **List 访问**：`#{myList[2]}`，假设 `myList` 是一个 `List`。    
+> - **Map 访问**：`#{myMap['key']}`，假设 `myMap` 是一个 `Map`。
+>
+> **关系表达式**    
+>
+> - **比较**：`#{user.age > 18}`    
+>
+> - **相等判断**：`#{user.name == 'John'}` 
+>
+> **逻辑表达式**    
+>
+> - **与**：`#{user.age > 18 && user.isActive}`   
+> - **或**：`#{user.age > 18 || user.isSpecial}` 
+>
+> **三元运算符表达式** 
+>
+> `#{user.age > 18? 'Adult' : 'Minor'}` 
+>
+> **定义变量**
+>
+> 如 `<bean id="user" class="com.example.User">    <property name="name" value="#{T(java.lang.System).getProperty('user.name')}"/> </bean>` 
+>
+> 这里通过 `T(java.lang.System).getProperty('user.name')` 获取系统属性 `user.name` 作为变量。 
+>
+> **使用变量** 
+>
+> 假设在 EL 上下文中定义了变量 `myVar`，可在表达式中使用 `#{myVar}` 。 
+
+### @Value中${}和#{}的区别
+
+```java
+@Component
+public class ValueTest {
+    
+    //以#{}的是Spring EL表达式
+    
+    @Value("#{systemProperties['os.name']}")
+    private String name;
+    
+    @Value("#{T(java.lang.Math).random() * 100.0}")
+    private double randomNumber;
+    
+    @Value("#{new java.lang.String('Hello World').toUpperCase()}")
+    private String message;
+    
+    @Value("#{new java.util.Date()}")
+    private String date;
+    
+    @Value("#{new com.zcq.demo.test.myXml.User('1','zcq','zcq@163.com','123456')}")
+    private User user;
+    
+    //以${}的是属性占位符，会被PropertyPlaceholderHelper解析替换成Environment中的属性
+    //而且以.yml和.properties的配置文件工作原理就是所有配置属性被加载到Environment 然后再被${}替换成配置属性
+    
+    @Value("${user.name}")
+    private String userName;
+    
+}
+```
+
+
+
 
 
 

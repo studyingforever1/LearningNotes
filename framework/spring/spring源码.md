@@ -4,6 +4,951 @@
 
 ## 整体概述
 
+![image-20250213102918979](.\images\image-20250213102918979.png)
+
+**核心方法**
+
+**AbstractApplicationContext**中的refresh方法
+
+- 初始化ApplicationContext
+- 创建并且初始化DefaultListableBeanFactory，加载BeanDefinitions
+- 配置DefaultListableBeanFactory
+- 扩展方法postProcessBeanFactory()
+- 调用所有的BeanFactoryPostProcessor
+- 将所有的BeanPostProcessor注册到DefaultListableBeanFactory
+- initMessageSource() 多语言初始化
+- 注册事件多播器 ApplicationEventMulticaster
+- 扩展方法onRefresh()
+- 注册监听器 ApplicationListener
+- 实例化并且初始化所有的单例Bean
+- 完成刷新 finishRefresh()
+
+```java
+@Override
+public void refresh() throws BeansException, IllegalStateException {
+    synchronized (this.startupShutdownMonitor) {
+       // Prepare this context for refreshing.
+       prepareRefresh();
+
+       // Tell the subclass to refresh the internal bean factory.
+       ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+
+       // Prepare the bean factory for use in this context.
+       prepareBeanFactory(beanFactory);
+
+       try {
+          // Allows post-processing of the bean factory in context subclasses.
+          postProcessBeanFactory(beanFactory);
+
+          // Invoke factory processors registered as beans in the context.
+          invokeBeanFactoryPostProcessors(beanFactory);
+
+          // Register bean processors that intercept bean creation.
+          registerBeanPostProcessors(beanFactory);
+
+          // Initialize message source for this context.
+          initMessageSource();
+
+          // Initialize event multicaster for this context.
+          initApplicationEventMulticaster();
+
+          // Initialize other special beans in specific context subclasses.
+          onRefresh();
+
+          // Check for listener beans and register them.
+          registerListeners();
+
+          // Instantiate all remaining (non-lazy-init) singletons.
+          finishBeanFactoryInitialization(beanFactory);
+
+          // Last step: publish corresponding event.
+          finishRefresh();
+       }
+
+       catch (BeansException ex) {
+          if (logger.isWarnEnabled()) {
+             logger.warn("Exception encountered during context initialization - " +
+                   "cancelling refresh attempt: " + ex);
+          }
+
+          // Destroy already created singletons to avoid dangling resources.
+          destroyBeans();
+
+          // Reset 'active' flag.
+          cancelRefresh(ex);
+
+          // Propagate exception to caller.
+          throw ex;
+       }
+
+       finally {
+          // Reset common introspection caches in Spring's core, since we
+          // might not ever need metadata for singleton beans anymore...
+          resetCommonCaches();
+       }
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+### 常见重要接口、BeanFactory和FactoryBean的区别
+
+![image-20250213103145924](.\images\image-20250213103145924.png)
+
+BeanFactory是用于管理整个spring中的bean的容器，而FactoryBean则是用于使得某个bean跳过spring繁杂的创建流程，将实例化bean和初始化bean的权利交到自己手上，是一种快速创建bean的方法。
+
+```java
+
+//当需要Test的bean对象时，就会使用MyFactoryBean的getObject快速获得
+@Component("myFactoryBean")
+public class MyFactoryBean implements FactoryBean<Test> {
+    
+    //等同于getBean(myFactoryBean);
+    @Resource(name = "myFactoryBean")
+    private Test test;
+    
+    //等同于getBean(&myFactoryBean);
+    @Resource(name = "&myFactoryBean")
+    private MyFactoryBean myFactoryBean;
+    
+    
+    @Override
+    public Test getObject() throws Exception {
+        return new Test();
+    }
+
+    @Override
+    public Class<?> getObjectType() {
+        return Test.class;
+    }
+}
+```
+
+
+
+### ApplicationContext和BeanFactory的接口继承差异
+
+以核心类**AbstractApplicationContext**为例，ApplicationContext更像是一个包含着BeanFactory的外部包装，具有加载资源、事件发布和管理BeanFactory的能力，为BeanFactory提供支持。
+
+<img src=".\images\image-20250213105127872.png" alt="image-20250213105127872" style="zoom: 33%;" />
+
+- 继承了ResourceLoader和ResourcePatternResolver，拥有了资源加载和资源路径解析的能力
+- 继承了ApplicationEventPublisher，具有应用事件推送的能力
+- 继承了MessageSource，具有国际化参数的能力
+- 继承了BeanFactory，在ApplicationContext中具有了控制和管理BeanFactory的能力
+
+
+
+以核心类**DefaultListableBeanFactory**为例，其主要作用只有两个，管理Bean和BeanDefinition
+
+<img src=".\images\image-20250213105246688.png" alt="image-20250213105246688" style="zoom: 50%;" />
+
+- 继承了SingletonBeanRegistry，具有增删改查单例Bean的能力
+- 继承了BeanDefinitionRegistry，具有增上改查BeanDefinition的能力
+
+## ApplicationContext创建
+
+以常见的new某种类型的ApplicationContext启动
+
+```java
+ClassPathXmlApplicationContext ac = new ClassPathXmlApplicationContext("tx.xml");
+
+//支持Ant风格的路径
+ClassPathXmlApplicationContext ac = new ClassPathXmlApplicationContext("/*.xml");
+```
+
+### ClassPathXmlApplicationContext
+
+```java
+public class ClassPathXmlApplicationContext extends AbstractXmlApplicationContext {
+    
+    	public ClassPathXmlApplicationContext(
+			String[] configLocations, boolean refresh, @Nullable ApplicationContext parent)
+			throws BeansException {
+
+		super(parent);
+		setConfigLocations(configLocations);
+		if (refresh) {
+			refresh();
+		}
+	}
+    
+}
+```
+
+
+
+
+
+### AbstractApplicationContext
+
+```java
+public abstract class AbstractApplicationContext extends DefaultResourceLoader
+       implements ConfigurableApplicationContext {
+    
+    //资源路径解析器
+    private ResourcePatternResolver resourcePatternResolver;
+
+    //默认构造方法
+    public AbstractApplicationContext() {
+		this.resourcePatternResolver = getResourcePatternResolver();
+	}
+    
+    
+    protected ResourcePatternResolver getResourcePatternResolver() {
+		return new PathMatchingResourcePatternResolver(this);
+	}
+    
+    
+    //获取环境
+    @Override
+	public ConfigurableEnvironment getEnvironment() {
+		if (this.environment == null) {
+			this.environment = createEnvironment();
+		}
+		return this.environment;
+	}
+    
+    protected ConfigurableEnvironment createEnvironment() {
+		return new StandardEnvironment();
+	}
+
+}
+```
+
+
+
+### PathMatchingResourcePatternResolver
+
+```java
+public class PathMatchingResourcePatternResolver implements ResourcePatternResolver {
+    
+    //资源加载器 这里使用的是ApplicationContext作为资源加载器
+	private final ResourceLoader resourceLoader;
+
+    //ant风格的路径匹配器
+	private PathMatcher pathMatcher = new AntPathMatcher();
+
+
+}
+```
+
+> Ant风格
+>
+> <img src=".\images\image-20250213111616906.png" alt="image-20250213111616906" style="zoom: 50%;" />
+
+
+
+### StandardEnvironment
+
+```java
+public class StandardEnvironment extends AbstractEnvironment {
+    
+    /** System environment property source name: {@value}. */
+	public static final String SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME = "systemEnvironment";
+
+	/** JVM system properties property source name: {@value}. */
+	public static final String SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME = "systemProperties";
+    
+
+    //将System.getProperties()和System.getenv()装载到StandardEnvironment中
+    @Override
+	protected void customizePropertySources(MutablePropertySources propertySources) {
+		propertySources.addLast(
+				new PropertiesPropertySource(SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME, getSystemProperties()));
+		propertySources.addLast(
+				new SystemEnvironmentPropertySource(SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME, getSystemEnvironment()));
+	}
+
+
+}
+```
+
+
+
+**解析传入的xml路径**
+
+```java
+//AbstractRefreshableConfigApplicationContext
+protected String resolvePath(String path) {
+    return getEnvironment().resolveRequiredPlaceholders(path);
+}
+```
+
+```java
+//AbstractEnvironment
+
+@Override
+public String resolveRequiredPlaceholders(String text) throws IllegalArgumentException {
+    return this.propertyResolver.resolveRequiredPlaceholders(text);
+}
+```
+
+```java
+//AbstractPropertyResolver
+@Override
+public String resolveRequiredPlaceholders(String text) throws IllegalArgumentException {
+	if (this.strictHelper == null) {
+        //创建占位符解析器
+		this.strictHelper = createPlaceholderHelper(false);
+	}
+	return doResolvePlaceholders(text, this.strictHelper);
+}
+
+private String doResolvePlaceholders(String text, PropertyPlaceholderHelper helper) {
+	return helper.replacePlaceholders(text, this::getPropertyAsRawString);
+}
+```
+
+### PropertyPlaceholderHelper 
+
+```java
+//${}占位符属性替换解析器 工具类类型
+public class PropertyPlaceholderHelper {
+    
+	public String replacePlaceholders(String value, PlaceholderResolver placeholderResolver) {
+		Assert.notNull(value, "'value' must not be null");
+		return parseStringValue(value, placeholderResolver, null);
+	}
+    
+
+    //解析并且替换${}占位符的内容
+    protected String parseStringValue(
+			String value, PlaceholderResolver placeholderResolver, @Nullable Set<String> visitedPlaceholders) {
+
+        //找到$的下标
+		int startIndex = value.indexOf(this.placeholderPrefix);
+		if (startIndex == -1) {
+			return value;
+		}
+
+		StringBuilder result = new StringBuilder(value);
+		while (startIndex != -1) {
+            //找到}的下标
+			int endIndex = findPlaceholderEndIndex(result, startIndex);
+			if (endIndex != -1) {
+                //获取${}占位符中间的内容
+				String placeholder = result.substring(startIndex + this.placeholderPrefix.length(), endIndex);
+				String originalPlaceholder = placeholder;
+				if (visitedPlaceholders == null) {
+					visitedPlaceholders = new HashSet<>(4);
+				}
+				if (!visitedPlaceholders.add(originalPlaceholder)) {
+					throw new IllegalArgumentException(
+							"Circular placeholder reference '" + originalPlaceholder + "' in property definitions");
+				}
+                 //递归一下 避免占位符嵌套
+				// Recursive invocation, parsing placeholders contained in the placeholder key.
+				placeholder = parseStringValue(placeholder, placeholderResolver, visitedPlaceholders);
+                
+                  //通过systemEnvironment和systemProperties中的key去匹配占位符中间的内容 替换成value
+				// Now obtain the value for the fully resolved key...
+				String propVal = placeholderResolver.resolvePlaceholder(placeholder);
+				if (propVal == null && this.valueSeparator != null) {
+					int separatorIndex = placeholder.indexOf(this.valueSeparator);
+					if (separatorIndex != -1) {
+						String actualPlaceholder = placeholder.substring(0, separatorIndex);
+						String defaultValue = placeholder.substring(separatorIndex + this.valueSeparator.length());
+						propVal = placeholderResolver.resolvePlaceholder(actualPlaceholder);
+						if (propVal == null) {
+							propVal = defaultValue;
+						}
+					}
+				}
+				if (propVal != null) {
+					// Recursive invocation, parsing placeholders contained in the
+					// previously resolved placeholder value.
+					propVal = parseStringValue(propVal, placeholderResolver, visitedPlaceholders);
+					result.replace(startIndex, endIndex + this.placeholderSuffix.length(), propVal);
+					if (logger.isTraceEnabled()) {
+						logger.trace("Resolved placeholder '" + placeholder + "'");
+					}
+					startIndex = result.indexOf(this.placeholderPrefix, startIndex + propVal.length());
+				}
+				else if (this.ignoreUnresolvablePlaceholders) {
+					// Proceed with unprocessed value.
+					startIndex = result.indexOf(this.placeholderPrefix, endIndex + this.placeholderSuffix.length());
+				}
+				else {
+					throw new IllegalArgumentException("Could not resolve placeholder '" +
+							placeholder + "'" + " in value \"" + value + "\"");
+				}
+				visitedPlaceholders.remove(originalPlaceholder);
+			}
+			else {
+				startIndex = -1;
+			}
+		}
+		return result.toString();
+	}
+
+}
+```
+
+<img src=".\images\image-20250213113417680.png" alt="image-20250213113417680" style="zoom:50%;" />
+
+### PropertySourcesPropertyResolver
+
+```java
+
+public class PropertySourcesPropertyResolver extends AbstractPropertyResolver {
+
+	@Override
+	@Nullable
+	protected String getPropertyAsRawString(String key) {
+		return getProperty(key, String.class, false);
+	}
+
+	@Nullable
+	protected <T> T getProperty(String key, Class<T> targetValueType, boolean resolveNestedPlaceholders) {
+        //this.propertySources就是包含了systemEnvironment和systemProperties的列表集合
+		if (this.propertySources != null) {
+			for (PropertySource<?> propertySource : this.propertySources) {
+				if (logger.isTraceEnabled()) {
+					logger.trace("Searching for key '" + key + "' in PropertySource '" +
+							propertySource.getName() + "'");
+				}
+                //通过systemEnvironment和systemProperties的key查找value
+				Object value = propertySource.getProperty(key);
+				if (value != null) {
+					if (resolveNestedPlaceholders && value instanceof String) {
+						value = resolveNestedPlaceholders((String) value);
+					}
+					logKeyFound(key, propertySource, value);
+					return convertValueIfNecessary(value, targetValueType);
+				}
+			}
+		}
+		if (logger.isTraceEnabled()) {
+			logger.trace("Could not find key '" + key + "' in any property source");
+		}
+		return null;
+	}
+}
+```
+
+
+
+
+
+## prepareRefresh()
+
+```java
+//AbstractApplicationContext
+
+protected void prepareRefresh() {
+    
+    //从关闭状态切换成开启状态
+    // Switch to active.
+    this.startupDate = System.currentTimeMillis();
+    this.closed.set(false);
+    this.active.set(true);
+
+    if (logger.isDebugEnabled()) {
+       if (logger.isTraceEnabled()) {
+          logger.trace("Refreshing " + this);
+       }
+       else {
+          logger.debug("Refreshing " + getDisplayName());
+       }
+    }
+
+    //扩展点 可以设置必须验证的属性 
+    // Initialize any placeholder property sources in the context environment.
+    initPropertySources();
+
+    //校验环境
+    // Validate that all properties marked as required are resolvable:
+    // see ConfigurablePropertyResolver#setRequiredProperties
+    getEnvironment().validateRequiredProperties();
+
+    //存储预先监听器 在spring都是空的 等mvc才有对象
+    // Store pre-refresh ApplicationListeners...
+    if (this.earlyApplicationListeners == null) {
+       this.earlyApplicationListeners = new LinkedHashSet<>(this.applicationListeners);
+    }
+    else {
+       // Reset local application listeners to pre-refresh state.
+       this.applicationListeners.clear();
+       this.applicationListeners.addAll(this.earlyApplicationListeners);
+    }
+
+    // Allow for the collection of early ApplicationEvents,
+    // to be published once the multicaster is available...
+    this.earlyApplicationEvents = new LinkedHashSet<>();
+}
+```
+
+
+
+## 创建BeanFactory并加载BeanDefinition
+
+```java
+//AbstractApplicationContext
+
+protected ConfigurableListableBeanFactory obtainFreshBeanFactory() {
+    refreshBeanFactory();
+    return getBeanFactory();
+}
+```
+
+
+
+```java
+//AbstractRefreshableApplicationContext
+
+@Override
+protected final void refreshBeanFactory() throws BeansException {
+    if (hasBeanFactory()) {
+       destroyBeans();
+       closeBeanFactory();
+    }
+    try {
+       //创建DefaultListableBeanFactory
+       DefaultListableBeanFactory beanFactory = createBeanFactory();
+       //设置beanFactory的Id org.springframework.context.support.ClassPathXmlApplicationContext@e6ea0c6
+       beanFactory.setSerializationId(getId());
+       //个性化DefaultListableBeanFactory
+       customizeBeanFactory(beanFactory);
+       //加载BeanDefinitions
+       loadBeanDefinitions(beanFactory);
+       this.beanFactory = beanFactory;
+    }
+    catch (IOException ex) {
+       throw new ApplicationContextException("I/O error parsing bean definition source for " + getDisplayName(), ex);
+    }
+}
+```
+
+### 创建BeanFactory
+
+```java
+//AbstractRefreshableApplicationContext
+protected DefaultListableBeanFactory createBeanFactory() {
+    return new DefaultListableBeanFactory(getInternalParentBeanFactory());
+}
+```
+
+```java
+//AbstractRefreshableApplicationContext
+//扩展点 可以修改下面两个属性的值
+protected void customizeBeanFactory(DefaultListableBeanFactory beanFactory) {
+    //设置是否允许 默认允许
+    if (this.allowBeanDefinitionOverriding != null) {
+       beanFactory.setAllowBeanDefinitionOverriding(this.allowBeanDefinitionOverriding);
+    }
+    //设置是否允许循环依赖 默认允许 不允许的情况下在发现循环依赖就报错
+    if (this.allowCircularReferences != null) {
+       beanFactory.setAllowCircularReferences(this.allowCircularReferences);
+    }
+}
+```
+
+### 加载BeanDefinitions
+
+#### 以xml方式加载beanDefinitions
+
+```java
+//AbstractXmlApplicationContext
+
+@Override
+protected void loadBeanDefinitions(DefaultListableBeanFactory beanFactory) throws BeansException, IOException {
+    // Create a new XmlBeanDefinitionReader for the given BeanFactory.
+    XmlBeanDefinitionReader beanDefinitionReader = new XmlBeanDefinitionReader(beanFactory);
+
+    // Configure the bean definition reader with this context's
+    // resource loading environment.
+    beanDefinitionReader.setEnvironment(this.getEnvironment());
+    beanDefinitionReader.setResourceLoader(this);
+    //这里设置了针对xsd和dtd两种xml格式的解析器
+    beanDefinitionReader.setEntityResolver(new ResourceEntityResolver(this));
+
+    // Allow a subclass to provide custom initialization of the reader,
+    // then proceed with actually loading the bean definitions.
+    initBeanDefinitionReader(beanDefinitionReader);
+    loadBeanDefinitions(beanDefinitionReader);
+}
+```
+
+##### ResourceEntityResolver
+
+```java
+//针对xsd和dtd两种xml格式的解析器
+public class ResourceEntityResolver extends DelegatingEntityResolver {
+
+    public ResourceEntityResolver(ResourceLoader resourceLoader) {
+        //核心在于其父类
+		super(resourceLoader.getClassLoader());
+		this.resourceLoader = resourceLoader;
+	}
+}
+
+
+public class DelegatingEntityResolver implements EntityResolver {
+
+	/** Suffix for DTD files. */
+	public static final String DTD_SUFFIX = ".dtd";
+
+	/** Suffix for schema definition files. */
+	public static final String XSD_SUFFIX = ".xsd";
+
+	//dtd格式的解析器
+	private final EntityResolver dtdResolver;
+	//xsd格式的解析器
+	private final EntityResolver schemaResolver;
+
+    public DelegatingEntityResolver(@Nullable ClassLoader classLoader) {
+		this.dtdResolver = new BeansDtdResolver();
+		this.schemaResolver = new PluggableSchemaResolver(classLoader);
+	}
+}
+
+
+
+```
+
+###### xsd格式
+
+META-INF/spring.schemas文件中存储了对应spring-beans.xsd格式文件的本地映射路径，在网络不畅通时可以使用本地xsd格式文件解析bean标签
+
+<img src=".\images\image-20250225111422617.png" alt="image-20250225111422617" style="zoom:50%;" />
+
+<img src=".\images\image-20250225111650181.png" alt="image-20250225111650181" style="zoom: 33%;" />
+
+<img src="D:\doc\my\studymd\LearningNotes\framework\spring\images\image-20250225112032475.png" alt="image-20250225112032475" style="zoom:33%;" />
+
+```java
+//xsd格式的解析器 读取META-INF/spring.schemas中的xsd文件作为xsd格式的bean标签规则
+public class PluggableSchemaResolver implements EntityResolver {
+
+	/**
+	 * The location of the file that defines schema mappings.
+	 * Can be present in multiple JAR files.
+	 */
+	public static final String DEFAULT_SCHEMA_MAPPINGS_LOCATION = "META-INF/spring.schemas";
+}
+```
+
+
+
+###### dtd格式
+
+<img src="D:\doc\my\studymd\LearningNotes\framework\spring\images\image-20250225112055062.png" alt="image-20250225112055062" style="zoom:33%;" />
+
+```java
+//dtd格式的解析器 读取当前目录下的spring-beans.dtd文件作为dtd格式的bean标签规则
+public class BeansDtdResolver implements EntityResolver {
+
+	private static final String DTD_EXTENSION = ".dtd";
+
+	private static final String DTD_NAME = "spring-beans";
+}
+```
+
+
+
+##### doLoadBeanDefinitions
+
+```java
+//XmlBeanDefinitionReader
+
+protected int doLoadBeanDefinitions(InputSource inputSource, Resource resource)
+       throws BeanDefinitionStoreException {
+
+    try {
+        //解析xml文件成为对象Document
+       Document doc = doLoadDocument(inputSource, resource);
+        //注册BeanDefinitions
+       int count = registerBeanDefinitions(doc, resource);
+       if (logger.isDebugEnabled()) {
+          logger.debug("Loaded " + count + " bean definitions from " + resource);
+       }
+       return count;
+    }
+    catch (BeanDefinitionStoreException ex) {
+       throw ex;
+    }
+    catch (SAXParseException ex) {
+       throw new XmlBeanDefinitionStoreException(resource.getDescription(),
+             "Line " + ex.getLineNumber() + " in XML document from " + resource + " is invalid", ex);
+    }
+    catch (SAXException ex) {
+       throw new XmlBeanDefinitionStoreException(resource.getDescription(),
+             "XML document from " + resource + " is invalid", ex);
+    }
+    catch (ParserConfigurationException ex) {
+       throw new BeanDefinitionStoreException(resource.getDescription(),
+             "Parser configuration exception parsing XML from " + resource, ex);
+    }
+    catch (IOException ex) {
+       throw new BeanDefinitionStoreException(resource.getDescription(),
+             "IOException parsing XML document from " + resource, ex);
+    }
+    catch (Throwable ex) {
+       throw new BeanDefinitionStoreException(resource.getDescription(),
+             "Unexpected exception parsing XML document from " + resource, ex);
+    }
+}
+
+//注册BeanDefinitions
+public int registerBeanDefinitions(Document doc, Resource resource) throws BeanDefinitionStoreException {
+	BeanDefinitionDocumentReader documentReader = createBeanDefinitionDocumentReader();
+	int countBefore = getRegistry().getBeanDefinitionCount();
+     //createReaderContext中创建了对应默认namespace的处理器
+	documentReader.registerBeanDefinitions(doc, createReaderContext(resource));
+	return getRegistry().getBeanDefinitionCount() - countBefore;
+}
+
+```
+
+##### doRegisterBeanDefinitions
+
+```java
+//DefaultBeanDefinitionDocumentReader
+
+protected void doRegisterBeanDefinitions(Element root) {
+    // Any nested <beans> elements will cause recursion in this method. In
+    // order to propagate and preserve <beans> default-* attributes correctly,
+    // keep track of the current (parent) delegate, which may be null. Create
+    // the new (child) delegate with a reference to the parent for fallback purposes,
+    // then ultimately reset this.delegate back to its original (parent) reference.
+    // this behavior emulates a stack of delegates without actually necessitating one.
+    BeanDefinitionParserDelegate parent = this.delegate;
+    this.delegate = createDelegate(getReaderContext(), root, parent);
+
+    if (this.delegate.isDefaultNamespace(root)) {
+       String profileSpec = root.getAttribute(PROFILE_ATTRIBUTE);
+       if (StringUtils.hasText(profileSpec)) {
+          String[] specifiedProfiles = StringUtils.tokenizeToStringArray(
+                profileSpec, BeanDefinitionParserDelegate.MULTI_VALUE_ATTRIBUTE_DELIMITERS);
+          // We cannot use Profiles.of(...) since profile expressions are not supported
+          // in XML config. See SPR-12458 for details.
+          if (!getReaderContext().getEnvironment().acceptsProfiles(specifiedProfiles)) {
+             if (logger.isDebugEnabled()) {
+                logger.debug("Skipped XML bean definition file due to specified profiles [" + profileSpec +
+                      "] not matching: " + getReaderContext().getResource());
+             }
+             return;
+          }
+       }
+    }
+
+    preProcessXml(root);
+    //解析bean标签 注册beanDefinitions
+    parseBeanDefinitions(root, this.delegate);
+    postProcessXml(root);
+
+    this.delegate = parent;
+}
+
+
+
+
+	protected void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate delegate) {
+        //如果当前标签属于默认命名空间http://www.springframework.org/schema/beans
+		if (delegate.isDefaultNamespace(root)) {
+			NodeList nl = root.getChildNodes();
+			for (int i = 0; i < nl.getLength(); i++) {
+				Node node = nl.item(i);
+				if (node instanceof Element) {
+					Element ele = (Element) node;
+					if (delegate.isDefaultNamespace(ele)) {
+                        //按照默认命名空间解析元素
+						parseDefaultElement(ele, delegate);
+					}
+					else {
+                        //按照自定义命名空间解析元素
+						delegate.parseCustomElement(ele);
+					}
+				}
+			}
+		}
+		else {
+			delegate.parseCustomElement(root);
+		}
+	}
+
+
+
+	//解析默认元素
+	private void parseDefaultElement(Element ele, BeanDefinitionParserDelegate delegate) {
+        //标签是<import>
+		if (delegate.nodeNameEquals(ele, IMPORT_ELEMENT)) {
+			importBeanDefinitionResource(ele);
+		}
+        //标签是<alias>
+		else if (delegate.nodeNameEquals(ele, ALIAS_ELEMENT)) {
+			processAliasRegistration(ele);
+		}
+        //标签是<bean>
+		else if (delegate.nodeNameEquals(ele, BEAN_ELEMENT)) {
+			processBeanDefinition(ele, delegate);
+		}
+        //标签是<beans>
+		else if (delegate.nodeNameEquals(ele, NESTED_BEANS_ELEMENT)) {
+			// recurse
+			doRegisterBeanDefinitions(ele);
+		}
+	}
+
+	protected void processBeanDefinition(Element ele, BeanDefinitionParserDelegate delegate) {
+        //解析设置BeanDefinitionHolder
+		BeanDefinitionHolder bdHolder = delegate.parseBeanDefinitionElement(ele);
+		if (bdHolder != null) {
+			bdHolder = delegate.decorateBeanDefinitionIfRequired(ele, bdHolder);
+			try {
+                 //注册BeanDefinition
+				// Register the final decorated instance.
+				BeanDefinitionReaderUtils.registerBeanDefinition(bdHolder, getReaderContext().getRegistry());
+			}
+			catch (BeanDefinitionStoreException ex) {
+				getReaderContext().error("Failed to register bean definition with name '" +
+						bdHolder.getBeanName() + "'", ele, ex);
+			}
+			// Send registration event.
+			getReaderContext().fireComponentRegistered(new BeanComponentDefinition(bdHolder));
+		}
+	}
+```
+
+##### parseCustomElement
+
+```java
+@Nullable
+public BeanDefinition parseCustomElement(Element ele, @Nullable BeanDefinition containingBd) {
+    //获取元素标签的命名空间
+    String namespaceUri = getNamespaceURI(ele);
+    if (namespaceUri == null) {
+       return null;
+    }
+    //根据命名空间寻找加载创建对应的Handler
+    NamespaceHandler handler = this.readerContext.getNamespaceHandlerResolver().resolve(namespaceUri);
+    if (handler == null) {
+       error("Unable to locate Spring NamespaceHandler for XML schema namespace [" + namespaceUri + "]", ele);
+       return null;
+    }
+    //解析
+    return handler.parse(ele, new ParserContext(this.readerContext, this, containingBd));
+}
+
+
+@Override
+@Nullable
+public BeanDefinition parse(Element element, ParserContext parserContext) {
+    //根据元素标签名称查找对应的Parser
+	BeanDefinitionParser parser = findParserForElement(element, parserContext);
+    //使用Parser解析
+	return (parser != null ? parser.parse(element, parserContext) : null);
+}
+```
+
+
+
+
+
+#### 以注解方式加载beanDefinitions
+
+@todo
+
+
+
+### 自定义标签解析
+
+标签解析的流程
+
+- 初始化ResourceEntityResolver，初始化dtd和xsd的解析器，读取META-INF/spring.schemas中的所有xsd路径
+- 利用xsd规则文件解析xml文件，封装成Document对象
+- 加载META-INF/spring.handlers下的所有handler路径
+- 匹配自定义的命名空间，实例化对应命名空间的handler，调用init方法创建Parser
+- 根据对应元素标签匹配Parser，利用Parser解析标签的属性
+
+> - 一个命名空间对应一个xsd文件的网络路径
+> - 在spring.schemas中，一个xsd文件的网路路径对应一个本地路径
+> - 在spring.handlers中，一个命名空间对应一个Handler
+
+
+
+#### 自定义xsd格式文件并指定本地路径
+
+**自定义xsd格式文件**
+
+```xsd
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+       targetNamespace="http://www.mashibing.com/schema/user"
+       xmlns:tns="http://www.mashibing.com/schema/user"
+       elementFormDefault="qualified">
+    <element name="user">
+       <complexType>
+          <attribute name ="id" type = "string"/>
+          <attribute name ="userName" type = "string"/>
+          <attribute name ="email" type = "string"/>
+          <attribute name ="password" type="string"/>
+       </complexType>
+    </element>
+</schema>
+```
+
+**创建META-INF/spring.schemas**
+
+```schemas
+http\://www.mashibing.com/schema/user.xsd=META-INF/user.xsd
+```
+
+
+
+#### 指定处理器和元素解析器
+
+**创建META-INF/spring.handlers**
+
+```handlers
+http\://www.mashibing.com/schema/user=com.zcq.demo.test.myXml.UserNamespaceHandler
+```
+
+```java
+//http://www.mashibing.com/schema/user命名空间对应的处理器
+public class UserNamespaceHandler extends NamespaceHandlerSupport {
+    @Override
+    public void init() {
+        //user标签对应的解析器
+        registerBeanDefinitionParser("user", new UserBeanDefinitionParser());
+    }
+}
+```
+
+```java
+
+//user标签对应的解析器
+public class UserBeanDefinitionParser implements BeanDefinitionParser {
+
+    @Override
+    public BeanDefinition parse(Element element, ParserContext parserContext) {
+        String id = element.getAttribute("id");
+        String name = element.getAttribute("userName");
+        String email = element.getAttribute("email");
+        String password = element.getAttribute("password");
+
+        AbstractBeanDefinition beanDefinition = BeanDefinitionBuilder.genericBeanDefinition(User.class)
+                .addPropertyValue("id", id)
+                .addPropertyValue("name", name)
+                .addPropertyValue("email", email)
+                .addPropertyValue("password", password)
+                .getBeanDefinition();
+
+        //注册一个名为user的beanDefinition
+        parserContext.getRegistry().registerBeanDefinition("user", beanDefinition);
+
+        return null;
+    }
+}
+```
 
 
 
@@ -16,21 +961,10 @@
 
 
 
-## 分析BeanFactory和ApplicationContext的接口继承差异
 
 
 
 
-
-## StandardEnvironment
-
-
-
-
-
-## PropertyPlaceholderHelper
-
-${}占位符属性替换解析器 工具类类型
 
 ## PropertySourcesPlaceholderConfigurer
 
@@ -42,9 +976,7 @@ ${}占位符属性替换解析器 工具类类型
 
 这个标签的解析结果 用于在BFPP环节处理beanDefinition中的${}占位符替换工作
 
-## PathMatchingResourcePatternResolver
-
-### AntPathMatcher
+### 
 
 
 

@@ -1213,9 +1213,63 @@ public class MyApplicationContext extends ClassPathXmlApplicationContext {
 
 ### 自定义Aware
 
+仿照ApplicationContextAwareProcessor，可以在bean实例化以后对自定义的Aware属性进行注入工作
 
+```java
+class ApplicationContextAwareProcessor implements BeanPostProcessor {
+    
+	@Override
+	@Nullable
+	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		if (!(bean instanceof EnvironmentAware || bean instanceof EmbeddedValueResolverAware ||
+				bean instanceof ResourceLoaderAware || bean instanceof ApplicationEventPublisherAware ||
+				bean instanceof MessageSourceAware || bean instanceof ApplicationContextAware)){
+			return bean;
+		}
 
+		AccessControlContext acc = null;
 
+		if (System.getSecurityManager() != null) {
+			acc = this.applicationContext.getBeanFactory().getAccessControlContext();
+		}
+
+		if (acc != null) {
+			AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+				invokeAwareInterfaces(bean);
+				return null;
+			}, acc);
+		}
+		else {
+			invokeAwareInterfaces(bean);
+		}
+
+		return bean;
+	}
+}
+```
+
+**自定义Aware**
+
+```java
+public interface MyAware extends Aware {
+    void setMyAware(Object object);
+}
+```
+
+**自定义BeanPostProcesssor**
+
+```java
+public class MyAwareBeanPostProcessor implements BeanPostProcessor {
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        //如果bean实现了对应的Aware接口 那么就可以对属性进行设置
+        if (bean instanceof MyAware){
+            ((MyAware) bean).setMyAware(new Object());
+        }
+        return bean;
+    }
+}
+```
 
 
 

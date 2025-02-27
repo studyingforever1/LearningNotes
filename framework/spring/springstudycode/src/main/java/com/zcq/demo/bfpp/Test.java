@@ -1,20 +1,18 @@
-package com.zcq.demo;
+package com.zcq.demo.bfpp;
 
-import com.zcq.demo.bfpp.Test;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.util.Enumeration;
 
-@SpringBootApplication
-public class DemoApplication {
+public class Test {
+    public static void main(String[] args) throws IOException {
+//        ClassPathXmlApplicationContext ac = new MyApplicationContext("applicationContext.xml");
 
-    //    @Lookup
-    public static void main(String[] args) throws Exception{
-//        SpringApplication.run(DemoApplication.class, args);
-        Enumeration<URL> resources = Test.class.getClassLoader().getResources("com");
+        Enumeration<URL> resources = Test.class.getClassLoader().getResources("a.yml");
+
         while (resources.hasMoreElements()) {
             URL url = resources.nextElement();
             //转换成File对象
@@ -64,7 +62,5 @@ public class DemoApplication {
             System.out.println(absoluteFile);
         }
 
-
     }
-
 }

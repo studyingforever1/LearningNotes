@@ -4,7 +4,7 @@
         xmlns="http://www.springframework.org/schema/beans"
         xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-    <bean id="myProperties" class="com.zcq.demo.test.per.MyProperties">
+    <bean id="myProperties" class="com.zcq.demo.per.MyProperties">
         <property name="myProperty" value="张三_18"/>
     </bean>
 

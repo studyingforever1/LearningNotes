@@ -719,3 +719,119 @@ public static void main(String[] args) {
 - 如果字符串中有任何字符超出了 Latin-1 编码范围，则使用 2 字节的编码。即coder = UTF16 = 1
 
 <img src=".\images\String02.png" alt="image-20241009145547146" style="zoom:50%;" />
+
+
+
+## 类加载器加载文件原理
+
+类加载器加载文件采用**双亲委派原理**，逐级向上委派给父类加载器加载文件，每个类加载器都负责不同的加载范围
+
+```java
+package java.lang;
+
+public abstract class ClassLoader {
+    
+    public Enumeration<URL> getResources(String name) throws IOException {
+        @SuppressWarnings("unchecked")
+        Enumeration<URL>[] tmp = (Enumeration<URL>[]) new Enumeration<?>[2];
+        //委派给父类进行加载资源
+        if (parent != null) {
+            tmp[0] = parent.getResources(name);
+        } else {
+            //使用启动类加载器加载
+            tmp[0] = getBootstrapResources(name);
+        }
+        //根据自己的负责范围加载资源
+        tmp[1] = findResources(name);
+
+        return new CompoundEnumeration<>(tmp);
+    }
+}
+```
+
+类加载器加载**类和资源**的负责范围如下
+
+- 启动类加载器（Bootstrap ClassLoader）
+
+  **启动类加载器**负责**加载 Java 的核心类库**，通常是 JDK 安装目录下的 `jre/lib` 目录，启动类加载器一般不会直接被 Java 代码获取到，因为在 Java 代码中调用 `getClassLoader()` 对于核心类库的类会返回 `null`
+
+```java
+	//负责范围是jdk下的核心类和资源的加载
+	//因为获取不到启动类加载器 所以会产生null异常
+		Enumeration<URL> resources3 = Test.class.getClassLoader().getParent().getParent().getResources("a.yml");
+        while (resources3.hasMoreElements()) {
+            URL url = resources3.nextElement();
+            File file = new File(url.getFile());
+            File absoluteFile = file.getAbsoluteFile();
+            System.out.println(absoluteFile);
+        }
+```
+
+- 扩展类加载器（Extension ClassLoader）
+
+  扩展类加载器负责加载 **JDK 扩展目录**下的类和资源，通常是 `jre/lib/ext` 目录。如果 `Test` 类是由扩展类加载器加载的，那么 `getResources("")` 查找的根路径就是 `jre/lib/ext` 目录及其子目录。
+
+```java
+//查找路径就是 jdk扩展目录jre/lib/ext 下去找相对于当前目录下的a.yml文件
+//先委托给父类启动类加载器找a.yml 再自己找
+Enumeration<URL> resources5 = Test.class.getClassLoader().getParent().getResources("a.yml");
+while (resources5.hasMoreElements()) {
+    URL url = resources5.nextElement();
+    //转换成File对象
+    File file = new File(url.getFile());
+    File absoluteFile = file.getAbsoluteFile();
+    System.out.println(absoluteFile);
+}
+```
+
+- 应用程序类加载器（Application ClassLoader）
+
+  应用程序类加载器负责**加载用户类路径（`classpath`）上的类和资源**。
+
+  classpath 包括**当前项目的类和资源路径** + **依赖Jar包的类和资源路径**
+
+在不同的开发环境下，根路径有所不同：
+
+- 开发环境下(IDE)：当前项目的类和资源路径 （`target/classes`）+ 依赖Jar包的类和资源路径 （`D:\softwares\LocalRepository\kkk.jar/`）
+
+  这里因为在开发环境中，并没有实际将依赖Jar包和当前项目文件打包，类加载器还能找到对应的依赖是因为IDEA在启动项目时在命令行加上了参数
+
+  ```shell
+  java -Dfile.encoding=UTF-8 -classpath D:\softwares\LocalRepository\kkk.jar;D:\softwares\LocalRepository\fff.jar;
+  ```
+
+- 打成Jar包下：当前项目的类和资源路径 (`xxx.jar/BOOT-INF/classes/`) + 依赖Jar包的类和资源路径 （`xxx.jar/BOOT-INF/lib/kkkk.jar/`）
+
+```java
+//查找路径就是所有的classpath路径下 找相对于每一条classpath下的a.yml文件
+//先去委托给父类扩展类加载器再找a.yml + 先委托给启动类加载器去找 + 再自己找
+Enumeration<URL> resources = Test.class.getClassLoader().getResources("com");
+while (resources.hasMoreElements()) {
+    URL url = resources.nextElement();
+    //转换成File对象
+    File file = new File(url.getFile());
+    File absoluteFile = file.getAbsoluteFile();
+    System.out.println(absoluteFile);
+}
+
+
+//结果如下 ：
+//在扩展类加载器找到的
+D:\doc\my\studymd\LearningNotes\file:\C:\Users\Administrator\.jdks\corretto-1.8.0_412\jre\lib\ext\jfxrt.jar!\com
+//在应用类加载器找到的
+//当前项目的类和资源路径下的com文件
+D:\doc\my\studymd\LearningNotes\framework\spring\springstudycode\target\classes\com
+//假设当前依赖两个jar包，那么每个jar包的路径都可以看作一个独立的查找路径，在每个jar包下查找对应的文件
+//依赖Jar包的类和资源路径的com文件
+D:\doc\my\studymd\LearningNotes\file:\D:\softwares\LocalRepository\com\fasterxml\jackson\core\jackson-databind\2.11.0\jackson-databind-2.11.0.jar!\com
+//依赖Jar包的类和资源路径的com文件
+D:\doc\my\studymd\LearningNotes\file:\D:\softwares\LocalRepository\com\fasterxml\jackson\core\jackson-annotations\2.11.0\jackson-annotations-2.11.0.jar!\com
+```
+
+当前项目的类和资源路径 （`target/classes`）的目录结构 ： **顶级类包** + **开发时resources目录下的所有文件**
+
+<img src=".\images\image-20250227140553290.png" alt="image-20250227140553290" style="zoom:50%;" />
+
+依赖Jar包的类和资源路径 （`D:\softwares\LocalRepository\kkk.jar/`）的目录结构 ：和上面基本一致  **顶级类包** + **所有文件资源文件**
+
+<img src=".\images\image-20250227140835971.png" alt="image-20250227140835971" style="zoom:50%;" />

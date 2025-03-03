@@ -835,3 +835,36 @@ D:\doc\my\studymd\LearningNotes\file:\D:\softwares\LocalRepository\com\fasterxml
 依赖Jar包的类和资源路径 （`D:\softwares\LocalRepository\kkk.jar/`）的目录结构 ：和上面基本一致  **顶级类包** + **所有文件资源文件**
 
 <img src=".\images\image-20250227140835971.png" alt="image-20250227140835971" style="zoom:50%;" />
+
+## Properties
+
+在JDK中，Properties支持读取yml和properties文件，能直接将属性转换成key-value形式
+
+```java
+public class PropertiesTest {
+    public static void main(String[] args) throws Exception {
+
+        URL resource = PropertiesTest.class.getClassLoader().getResource("myconfig2.properties");
+        URL resource1 = PropertiesTest.class.getClassLoader().getResource("myconfig3.yml");
+
+        Properties properties = new Properties();
+        properties.load(resource.openStream());
+        System.out.println(properties);
+
+        String property = properties.getProperty("myconfig2.name");
+
+        Properties properties2 = new Properties();
+        properties2.load(resource1.openStream());
+        System.out.println(properties2);
+    }
+}
+```
+
+
+
+
+
+
+
+
+

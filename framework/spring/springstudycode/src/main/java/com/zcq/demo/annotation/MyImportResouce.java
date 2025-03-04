@@ -4,7 +4,7 @@ import org.springframework.context.annotation.ImportResource;
 import org.springframework.stereotype.Component;
 
 @Component
-@ImportResource(value = {"classpath:myconfig3.yml"})
+//@ImportResource(value = {"classpath:myconfig3.yml"})
 public class MyImportResouce {
 
 }

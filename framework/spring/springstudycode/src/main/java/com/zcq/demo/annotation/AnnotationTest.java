@@ -10,9 +10,9 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 public class AnnotationTest {
     public static void main(String[] args) {
-        ClassPathXmlApplicationContext ac = new ClassPathXmlApplicationContext("annotation.xml");
-        AnnotationConfigApplicationContext ac1 = new AnnotationConfigApplicationContext("com.zcq.demo");
+//        ClassPathXmlApplicationContext ac = new ClassPathXmlApplicationContext("annotation.xml");
 
+        AnnotationConfigApplicationContext ac1 = new AnnotationConfigApplicationContext("com.zcq.demo.annotation");
 
 
 //        testResourceLoader(ac);

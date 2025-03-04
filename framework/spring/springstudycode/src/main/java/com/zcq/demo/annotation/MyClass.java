@@ -3,8 +3,8 @@ package com.zcq.demo.annotation;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-@Component
-@Order
+//@Component
+//@Order
 public class MyClass {
     private String name;
     private Integer age;

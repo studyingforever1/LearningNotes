@@ -8,7 +8,7 @@ import java.io.File;
 import java.net.URL;
 import java.util.Enumeration;
 
-@SpringBootApplication
+//@SpringBootApplication
 public class DemoApplication {
 
     //    @Lookup

@@ -2,10 +2,12 @@ package com.zcq.demo.test;
 
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 
+@DependsOn("myFactoryBean")
 @Component("myFactoryBean")
 public class MyFactoryBean implements FactoryBean<Test> {
 

@@ -862,7 +862,9 @@ public class PropertiesTest {
 
 
 
+## MessageDigest
 
+`MessageDigest` 是 Java 中一个用于实现消息摘要算法的类，它位于 `java.security` 包下。消息摘要算法是一种将任意长度的数据转换为固定长度哈希值的算法，这些哈希值通常用于数据完整性验证、密码存储等场景。
 
 
 

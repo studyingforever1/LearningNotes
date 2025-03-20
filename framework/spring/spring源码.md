@@ -4,7 +4,7 @@
 
 ## 整体概述
 
-![image-20250213102918979](.\images\image-20250213102918979.png)
+![image-20250213102918979](./images/image-20250213102918979.png)
 
 **核心方法**
 
@@ -100,7 +100,7 @@ public void refresh() throws BeansException, IllegalStateException {
 
 ### 常见重要接口、BeanFactory和FactoryBean的区别
 
-![image-20250213103145924](.\images\image-20250213103145924.png)
+![image-20250213103145924](./images/image-20250213103145924.png)
 
 BeanFactory是用于管理整个spring中的bean的容器，而FactoryBean则是用于使得某个bean跳过spring繁杂的创建流程，将实例化bean和初始化bean的权利交到自己手上，是一种快速创建bean的方法。
 
@@ -137,7 +137,7 @@ public class MyFactoryBean implements FactoryBean<Test> {
 
 以核心类**AbstractApplicationContext**为例，ApplicationContext更像是一个包含着BeanFactory的外部包装，具有加载资源、事件发布和管理BeanFactory的能力，为BeanFactory提供支持。
 
-<img src=".\images\image-20250213105127872.png" alt="image-20250213105127872" style="zoom: 33%;" />
+<img src="./images/image-20250213105127872.png" alt="image-20250213105127872" style="zoom: 33%;" />
 
 - 继承了ResourceLoader和ResourcePatternResolver，拥有了资源加载和资源路径解析的能力
 - 继承了ApplicationEventPublisher，具有应用事件推送的能力
@@ -148,7 +148,7 @@ public class MyFactoryBean implements FactoryBean<Test> {
 
 以核心类**DefaultListableBeanFactory**为例，其主要作用只有两个，管理Bean和BeanDefinition
 
-<img src=".\images\image-20250213105246688.png" alt="image-20250213105246688" style="zoom: 50%;" />
+<img src="./images/image-20250213105246688.png" alt="image-20250213105246688" style="zoom: 50%;" />
 
 - 继承了SingletonBeanRegistry，具有增删改查单例Bean的能力
 - 继承了BeanDefinitionRegistry，具有增上改查BeanDefinition的能力
@@ -279,7 +279,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 
 > Ant风格
 >
-> <img src=".\images\image-20250213111616906.png" alt="image-20250213111616906" style="zoom: 50%;" />
+> <img src="./images/image-20250213111616906.png" alt="image-20250213111616906" style="zoom: 50%;" />
 
 
 
@@ -429,7 +429,7 @@ public class PropertyPlaceholderHelper {
 }
 ```
 
-<img src=".\images\image-20250213113417680.png" alt="image-20250213113417680" style="zoom:50%;" />
+<img src="./images/image-20250213113417680.png" alt="image-20250213113417680" style="zoom:50%;" />
 
 ### PropertySourcesPropertyResolver
 
@@ -655,11 +655,11 @@ public class DelegatingEntityResolver implements EntityResolver {
 
 META-INF/spring.schemas文件中存储了对应spring-beans.xsd格式文件的本地映射路径，在网络不畅通时可以使用本地xsd格式文件解析bean标签
 
-<img src=".\images\image-20250225111422617.png" alt="image-20250225111422617" style="zoom:50%;" />
+<img src="./images/image-20250225111422617.png" alt="image-20250225111422617" style="zoom:50%;" />
 
-<img src=".\images\image-20250225111650181.png" alt="image-20250225111650181" style="zoom: 33%;" />
+<img src="./images/image-20250225111650181.png" alt="image-20250225111650181" style="zoom: 33%;" />
 
-<img src=".\images\image-20250225112032475.png" alt="image-20250225112032475" style="zoom:33%;" />
+<img src="./images/image-20250225112032475.png" alt="image-20250225112032475" style="zoom:33%;" />
 
 ```java
 //xsd格式的解析器 读取META-INF/spring.schemas中的xsd文件作为xsd格式的bean标签规则
@@ -677,7 +677,7 @@ public class PluggableSchemaResolver implements EntityResolver {
 
 ###### dtd格式
 
-<img src=".\images\image-20250225112055062.png" alt="image-20250225112055062" style="zoom:33%;" />
+<img src="./images/image-20250225112055062.png" alt="image-20250225112055062" style="zoom:33%;" />
 
 ```java
 //dtd格式的解析器 读取当前目录下的spring-beans.dtd文件作为dtd格式的bean标签规则
@@ -3090,7 +3090,7 @@ public interface ImportBeanDefinitionRegistrar {
 
 ## BeanDefinition
 
-<img src=".\images\image-20250320145721617.png" alt="image-20250320145721617" style="zoom: 33%;" />
+<img src="./images/image-20250320145721617.png" alt="image-20250320145721617" style="zoom: 33%;" />
 
 - 由xml方式进行导入的bean都是`GenericBeanDefinition`类型
 - 被`@ComponentScan`扫描到容器的类都是`ScannedGenericBeanDefinition`类型，`ScannedGenericBeanDefinition`也隶属于`GenericBeanDefinition`
@@ -3440,11 +3440,11 @@ D:\doc\my\studymd\LearningNotes\file:\D:\softwares\LocalRepository\com\fasterxml
 
 当前项目的类和资源路径 （`target/classes`）的目录结构 ： **顶级类包** + **开发时resources目录下的所有文件**
 
-<img src=".\images\image-20250227140553290.png" alt="image-20250227140553290" style="zoom:50%;" />
+<img src="./images/image-20250227140553290.png" alt="image-20250227140553290" style="zoom:50%;" />
 
 依赖Jar包的类和资源路径 （`D:\softwares\LocalRepository\kkk.jar/`）的目录结构 ：和上面基本一致  **顶级类包** + **所有文件资源文件**
 
-<img src=".\images\image-20250227140835971.png" alt="image-20250227140835971" style="zoom:50%;" />
+<img src="./images/image-20250227140835971.png" alt="image-20250227140835971" style="zoom:50%;" />
 
 #### PathMatchingResourcePatternResolver的工作原理
 
@@ -3628,7 +3628,7 @@ public static void registerBeanPostProcessors(
 
 ### BeanPostProcessor继承关系
 
-![image-20250304201532795](.\images\image-20250304201532795.png)
+![image-20250304201532795](./images/image-20250304201532795.png)
 
 @todo
 
@@ -3677,7 +3677,7 @@ protected void initMessageSource() {
 
 ## initApplicationEventMulticaster()
 
-<img src=".\images\image-20250304204121825.png" alt="image-20250304204121825" style="zoom:50%;" />
+<img src="./images/image-20250304204121825.png" alt="image-20250304204121825" style="zoom:50%;" />
 
 ```java
 public static final String APPLICATION_EVENT_MULTICASTER_BEAN_NAME = "applicationEventMulticaster";
@@ -4237,7 +4237,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 
 - 以上步骤完成后，会存在两个beanName在不同的集合下存放不同的bean
 
-  <img src=".\images\image-20250307152352847.png" alt="image-20250307152352847" style="zoom:50%;" />
+  <img src="./images/image-20250307152352847.png" alt="image-20250307152352847" style="zoom:50%;" />
 
 ```java
 public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport implements ConfigurableBeanFactory {
@@ -5503,7 +5503,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 ###### AutowiredAnnotationBeanPostProcessor
 
-<img src=".\images\image-20250317145651315.png" alt="image-20250317145651315" style="zoom: 33%;" />
+<img src="./images/image-20250317145651315.png" alt="image-20250317145651315" style="zoom: 33%;" />
 
 - `@Lookup`注解的处理
 - 查找缓存中此类已经解析的`@Lookup`信息，如果没有则解析
@@ -6493,7 +6493,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 ## @Lookup和MethodReplacer
 
-<img src=".\images\image-20250319152055989.png" alt="image-20250319152055989" style="zoom:50%;" />
+<img src="./images/image-20250319152055989.png" alt="image-20250319152055989" style="zoom:50%;" />
 
 **原理流程**
 
@@ -6599,7 +6599,7 @@ public class ReplaceOverride extends MethodOverride {
 
 ## 创建Bean的几种方式
 
-![image-20231211090141402](.\images\image-20231211090141402.png)
+![image-20231211090141402](./images/image-20231211090141402.png)
 
 ### 通过FactoryBean创建对象
 
@@ -6944,7 +6944,7 @@ private Object doGetObjectFromFactoryBean(final FactoryBean<?> factory, final St
 
 ### 通过InstantiationAwareBeanPostProcessor生成对象
 
-![image-20231211105324341](.\images\image-20231211105324341.png)
+![image-20231211105324341](./images/image-20231211105324341.png)
 
 **接口**
 
@@ -7652,7 +7652,7 @@ protected BeanWrapper obtainFromSupplier(Supplier<?> instanceSupplier, String be
 
 ## 实例化策略
 
-<img src=".\images\image-20250319150517457.png" alt="image-20250319150517457" style="zoom: 33%;" />
+<img src="./images/image-20250319150517457.png" alt="image-20250319150517457" style="zoom: 33%;" />
 
 ### SimpleInstantiationStrategy
 
@@ -7905,7 +7905,7 @@ private static class CglibSubclassCreator {
 
 ##### 代理的命名生成策略
 
-<img src=".\images\image-20250319153900779.png" alt="image-20250319153900779" style="zoom:33%;" />
+<img src="./images/image-20250319153900779.png" alt="image-20250319153900779" style="zoom:33%;" />
 
 ###### DefaultNamingPolicy
 
@@ -8094,27 +8094,27 @@ private static class ReplaceOverrideMethodInterceptor extends CglibIdentitySuppo
 
 ### @EnableAspectJAutoProxy
 
-![image-20240110095544889](.\images\image-20240110095544889.png)
+![image-20240110095544889](./images/image-20240110095544889.png)
 
 不论是xml方式还是注解方式 都需要注册一个AspectAutoProxyCreator 而xml注册的是
 
-![image-20240110095705893](.\images\image-20240110095705893.png)
+![image-20240110095705893](./images/image-20240110095705893.png)
 
 xml是在解析<aop>标签的时候进行注册的 
 
 而在注解情况下 想要@Aspect等注解生效 就需要使用@EnableAspectJAutoProxy 注册
 
-![image-20240110095817749](.\images\image-20240110095817749.png)
+![image-20240110095817749](./images/image-20240110095817749.png)
 
 也就是说 不论使用任何方式 都需要先创建AspectAutoProxyCreator 
 
-![image-20240110100526692](.\images\image-20240110100526692.png)
+![image-20240110100526692](./images/image-20240110100526692.png)
 
 - 如果是纯xml文件来进行aop的代理工作 那么就采用config标签 内部会注册AspectJAwareAdvisorAutoProxyCreator 这个类来处理 
 
 - 如果是xml+注解搭配的形式 那么就采用 config标签+aspectj-autoproxy标签 内部会注册 AspectJAwareAdvisorAutoProxyCreator 这个类和AnnotationAwareAspectJAutoProxyCreator这两个类 但是beanDefinitionMap的key都是org.springframework.aop.config.internalAutoProxyCreator 这个name 所以第二个会替换第一个 只剩下AnnotationAwareAspectJAutoProxyCreator
 
-  ![image-20240110101210570](.\images\image-20240110101210570.png)
+  ![image-20240110101210570](./images/image-20240110101210570.png)
 
 - 如果是平时就用注解来进行aop 那么就使用@EnableAspectJAutoProxy来导入注册AnnotationAwareAspectJAutoProxyCreator处理
 
@@ -8137,7 +8137,7 @@ xml是在解析<aop>标签的时候进行注册的
 > 一个较大的工程往往被划分成许多子工程，我们把这些子工程称作**活动**(activity)。在整个工程中，有些子工程(活动)必须在其它有关子工程完成之后才能开始，也就是说，一个子工程的开始是以它的所有前序子工程的结束为先决条件的，但有些子工程没有先决条件，可以安排在任何时间开始。为了形象地反映出整个工程中各个子工程(活动)之间的先后关系，可用一个有向图来表示，图中的顶点代表活动(子工程)，图中的有向边代表活动的先后关系，即有向边的起点的活动是终点活动的前序活动，只有当起点活动完成之后，其终点活动才能进行。通常，我们把这种顶点表示活动、边表示活动间先后关系的有向图称做**顶点活动网**(Activity On Vertex network)，简称**AOV**网。
 >
 
-![image-20240117174717970](.\images\image-20240117174717970.png)
+![image-20240117174717970](./images/image-20240117174717970.png)
 
 
 
@@ -9189,7 +9189,7 @@ public void generateClass(ClassVisitor v) throws Exception {
 
 贴一张Factory接口的图片
 
-<img src=".\images\image-20240131094507649.png" alt="image-20240131094507649" style="zoom: 80%;" />
+<img src="./images/image-20240131094507649.png" alt="image-20240131094507649" style="zoom: 80%;" />
 
 ```java
 /*
@@ -9893,9 +9893,9 @@ protected void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate d
 
 找到了aop的标签 接下来要去找对应的aop标签的解析类
 
-![image-20240119090132037](.\images\image-20240119090132037.png)
+![image-20240119090132037](./images/image-20240119090132037.png)
 
-![image-20240119090154559](.\images\image-20240119090154559.png)
+![image-20240119090154559](./images/image-20240119090154559.png)
 
 ```java
 	@Nullable
@@ -10498,9 +10498,9 @@ public class TestAnnotationAop {
 
 前置：到这里的时候 已经完成 对@ComponentScan的处理，即@Component的扫描工作，也就是说现在logUtil已经加入到了beanFactory中，还没有进行@Aspect的处理
 
-![image-20240119153747485](.\images\image-20240119153747485.png)
+![image-20240119153747485](./images/image-20240119153747485.png)
 
-![image-20240119153333007](.\images\image-20240119153333007.png)
+![image-20240119153333007](./images/image-20240119153333007.png)
 
 开始@Import的解析
 
@@ -10638,7 +10638,7 @@ class AspectJAutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 
 创建advisor对象的工作，实际上是在AnnotationAwareAspectJAutoProxyCreator里面完成，而AnnotationAwareAspectJAutoProxyCreator继承了BeanPostProcessor
 
-![image-20240119142311855](.\images\image-20240119142311855.png)
+![image-20240119142311855](./images/image-20240119142311855.png)
 
 实际处理的地方在doGetBean()->createBean()->resolveBeforeInstantiation()
 
@@ -10811,7 +10811,7 @@ public List<Advisor> findAdvisorBeans() {
 
 实际的包含关系我在创建advisor的beanDefinition的时候有提到，涉及到很多构造参数的实例化，这里上个图来解释接下来会实例化哪些对象，以AspectJPointcutAdvisor#0来举例，那么我们在实例化AspectJPointcutAdvisor的时候，需要构造参数AspectJAroundAdvice，构建AspectJAroundAdvice的时候，又需要构造参数MethodLocatingFactoryBean、SimpleBeanFactoryAwareAspectInstanceFactory、AspectJExpressionPointcut这三个参数，调用层级会非常深，实例化的顺序也是如此，接下来我就挑一些重点，整个实例化过程就不再赘述了，详情请见ioc过程。
 
-![image-20240119170300972](.\images\image-20240119170300972.png)
+![image-20240119170300972](./images/image-20240119170300972.png)
 
 这里有几个对象需要进行说明，在创建advisor的beanDefinition的时候，分为BeanDefinition类型的参数和RuntimeBeanReference类型，其中MethodLocatingFactoryBean、SimpleBeanFactoryAwareAspectInstanceFactory为BeanDefinition，而AspectJExpressionPointcut为RuntimeBeanReference，RuntimeBeanReference指向的是一个在运行时的bean对象，一般有beanDefinition存放在beanFactory的beanDefinitionMap中，而这里指的BeanDefinition一般没有在Map中，生成的也就是innerBean打头的bean，不会存放在beanFactory的一级缓存中。
 

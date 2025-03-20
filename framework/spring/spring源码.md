@@ -3090,17 +3090,177 @@ public interface ImportBeanDefinitionRegistrar {
 
 ## BeanDefinition
 
-@todo
+<img src=".\images\image-20250320145721617.png" alt="image-20250320145721617" style="zoom: 33%;" />
 
-```
-GenericBeanDefinition ScannedGenericBeanDefinition AnnotatedGenericBeanDefinition
-```
+- 由xml方式进行导入的bean都是`GenericBeanDefinition`类型
+- 被`@ComponentScan`扫描到容器的类都是`ScannedGenericBeanDefinition`类型，`ScannedGenericBeanDefinition`也隶属于`GenericBeanDefinition`
+- 被`@Import`导入的类都是`AnnotatedGenericBeanDefinition`类型，`AnnotatedGenericBeanDefinition`也隶属于`GenericBeanDefinition`
+- 最终在进行创建bean的过程中，所有的`GenericBeanDefinition`类型都会进行父子beanDefinition合并，从而变成`RootBeanDefinition`
 
 ## BeanNameGenerator
 
-@todo
+```java
+public interface BeanNameGenerator {
 
-AnnotationBeanNameGenerator
+    /**
+     * Generate a bean name for the given bean definition.
+     * @param definition the bean definition to generate a name for
+     * @param registry the bean definition registry that the given definition
+     * is supposed to be registered with
+     * @return the generated bean name
+     */
+    String generateBeanName(BeanDefinition definition, BeanDefinitionRegistry registry);
+
+}
+```
+
+### DefaultBeanNameGenerator
+
+```java
+//默认的命名生成器，一般用在xml导入bean时
+public class DefaultBeanNameGenerator implements BeanNameGenerator {
+
+    public static final DefaultBeanNameGenerator INSTANCE = new DefaultBeanNameGenerator();
+
+    @Override
+    public String generateBeanName(BeanDefinition definition, BeanDefinitionRegistry registry) {
+       return BeanDefinitionReaderUtils.generateBeanName(definition, registry);
+    }
+    
+    public static String generateBeanName(
+			BeanDefinition definition, BeanDefinitionRegistry registry, boolean isInnerBean)
+			throws BeanDefinitionStoreException {
+
+		String generatedBeanName = definition.getBeanClassName();
+        //没有指定的名字
+		if (generatedBeanName == null) {
+             //若 BeanDefinition 有父 Bean 名称，则将父 Bean 名称加上 "$child" 作为初始名称。
+			if (definition.getParentName() != null) {
+				generatedBeanName = definition.getParentName() + "$child";
+			}
+            //若 BeanDefinition 有工厂 Bean 名称，则将工厂 Bean 名称加上 "$created" 作为初始名称
+			else if (definition.getFactoryBeanName() != null) {
+				generatedBeanName = definition.getFactoryBeanName() + "$created";
+			}
+		}
+		if (!StringUtils.hasText(generatedBeanName)) {
+			throw new BeanDefinitionStoreException("Unnamed bean definition specifies neither " +
+					"'class' nor 'parent' nor 'factory-bean' - can't generate bean name");
+		}
+
+		if (isInnerBean) {
+             //如果是容器内部的bean 加上#和一个hashcode
+			// Inner bean: generate identity hashcode suffix.
+			return generatedBeanName + GENERATED_BEAN_NAME_SEPARATOR + ObjectUtils.getIdentityHexString(definition);
+		}
+		
+        //唯一化处理beanName 在名字后面再加一个编号 parentName$child#0
+		// Top-level bean: use plain class name with unique suffix if necessary.
+		return uniqueBeanName(generatedBeanName, registry);
+	}
+    
+    
+    public static String uniqueBeanName(String beanName, BeanDefinitionRegistry registry) {
+		String id = beanName;
+		int counter = -1;
+        
+		//在名字后面再加一个编号
+		// Increase counter until the id is unique.
+		String prefix = beanName + GENERATED_BEAN_NAME_SEPARATOR;
+		while (counter == -1 || registry.containsBeanDefinition(id)) {
+			counter++;
+			id = prefix + counter;
+		}
+		return id;
+	}
+
+
+}
+```
+
+### AnnotationBeanNameGenerator
+
+```java
+//注解常用的命名生成器，用于导入的bean的beanName生成
+public class AnnotationBeanNameGenerator implements BeanNameGenerator {
+    
+    public static final AnnotationBeanNameGenerator INSTANCE = new AnnotationBeanNameGenerator();
+
+	private static final String COMPONENT_ANNOTATION_CLASSNAME = "org.springframework.stereotype.Component";
+
+	private final Map<String, Set<String>> metaAnnotationTypesCache = new ConcurrentHashMap<>();
+    
+	@Override
+	public String generateBeanName(BeanDefinition definition, BeanDefinitionRegistry registry) {
+        //如果是扫描进来的bean或者@Import导入的类
+		if (definition instanceof AnnotatedBeanDefinition) {
+            //看看@Component @ManagedBean @Named上面有没有写beanName的值
+			String beanName = determineBeanNameFromAnnotation((AnnotatedBeanDefinition) definition);
+             //如果有 那么使用注解上的beanName
+			if (StringUtils.hasText(beanName)) {
+				// Explicit bean name found.
+				return beanName;
+			}
+		}
+        //没有的话就使用当前类名小写首字母的形式 myComponet
+		// Fallback: generate a unique default bean name.
+		return buildDefaultBeanName(definition, registry);
+	}
+    
+    @Nullable
+	protected String determineBeanNameFromAnnotation(AnnotatedBeanDefinition annotatedDef) {
+		AnnotationMetadata amd = annotatedDef.getMetadata();
+		Set<String> types = amd.getAnnotationTypes();
+		String beanName = null;
+         //遍历类上所有注解
+		for (String type : types) {
+			AnnotationAttributes attributes = AnnotationConfigUtils.attributesFor(amd, type);
+			if (attributes != null) {
+				Set<String> metaTypes = this.metaAnnotationTypesCache.computeIfAbsent(type, key -> {
+					Set<String> result = amd.getMetaAnnotationTypes(key);
+					return (result.isEmpty() ? Collections.emptySet() : result);
+				});
+                 //如果是@Componet @ManagedBean @Named注解 并且有指定名字
+				if (isStereotypeWithNameValue(type, metaTypes, attributes)) {
+					Object value = attributes.get("value");
+					if (value instanceof String) {
+						String strVal = (String) value;
+						if (StringUtils.hasLength(strVal)) {
+							if (beanName != null && !strVal.equals(beanName)) {
+								throw new IllegalStateException("Stereotype annotations suggest inconsistent " +
+										"component names: '" + beanName + "' versus '" + strVal + "'");
+							}
+                              //设置名字
+							beanName = strVal;
+						}
+					}
+				}
+			}
+		}
+		return beanName;
+	}
+    
+    protected boolean isStereotypeWithNameValue(String annotationType,
+			Set<String> metaAnnotationTypes, @Nullable Map<String, Object> attributes) {
+		
+        //是否@Componet @ManagedBean @Named
+		boolean isStereotype = annotationType.equals(COMPONENT_ANNOTATION_CLASSNAME) ||
+				metaAnnotationTypes.contains(COMPONENT_ANNOTATION_CLASSNAME) ||
+				annotationType.equals("javax.annotation.ManagedBean") ||
+				annotationType.equals("javax.inject.Named");
+
+		return (isStereotype && attributes != null && attributes.containsKey("value"));
+	}
+    
+    //生成默认的首字母小写的beanName
+    protected String buildDefaultBeanName(BeanDefinition definition) {
+		String beanClassName = definition.getBeanClassName();
+		Assert.state(beanClassName != null, "No bean class name set");
+		String shortClassName = ClassUtils.getShortName(beanClassName);
+		return Introspector.decapitalize(shortClassName);
+	}
+}
+```
 
 
 
@@ -4736,6 +4896,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// Prepare method overrides.
 		try {
+            //对MethodOverride的做检查 仅仅只是检查而已
 			mbdToUse.prepareMethodOverrides();
 		}
 		catch (BeanDefinitionValidationException ex) {
@@ -4756,6 +4917,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
+             //创建bean
 			Object beanInstance = doCreateBean(beanName, mbdToUse, args);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Finished creating instance of bean '" + beanName + "'");
@@ -4782,298 +4944,43 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 ```java
 public void prepareMethodOverrides() throws BeanDefinitionValidationException {
     // Check that lookup methods exist and determine their overloaded status.
+    //如果有MethodOverride 那么进行检查
     if (hasMethodOverrides()) {
        getMethodOverrides().getOverrides().forEach(this::prepareMethodOverride);
     }
 }
 ```
 
-
-
-
-
-
-
-
-
-###### lookup和replace
-
-如果你有一个抽象类，那么也可以把它加进入spring容器中 但是spring并不会为它创建实例bean对象 因为抽象类不能实例化 只是会生成一个BeanDefinition
+###### resolveBeforeInstantiation
 
 ```java
-public abstract class Fruit {
-    public Fruit getFruit(){
-        System.out.println("获得水果");
-        return this;
+//如果有InstantiationAwareBeanPostProcessor 
+//使用InstantiationAwareBeanPostProcessor可以快速创建对象，跳过后续创建对象的环节
+@Nullable
+protected Object resolveBeforeInstantiation(String beanName, RootBeanDefinition mbd) {
+    Object bean = null;
+    if (!Boolean.FALSE.equals(mbd.beforeInstantiationResolved)) {
+       // Make sure bean class is actually resolved at this point.
+       //如果有实现了InstantiationAwareBeanPostProcessor
+       if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
+          Class<?> targetType = determineTargetType(beanName, mbd);
+          if (targetType != null) {
+             //调用InstantiationAwareBeanPostProcessor
+             bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
+             //如果创建了对象
+             if (bean != null) {
+                //调用BeanPostProcessor的后置处理
+                bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
+             }
+          }
+       }
+       mbd.beforeInstantiationResolved = (bean != null);
     }
+    return bean;
 }
 ```
 
-```xml
-<bean id="fruit" class="com.example.demo.lookup.Fruit" abstract="true" ></bean>
-```
 
-如上所示 必须要标注为abstract="true"为抽象 因为spring会基于这个状态过滤 否则就会抛出不能创建抽象类的异常
-
-```java
-// Trigger initialization of all non-lazy singleton beans...
-		for (String beanName : beanNames) {
-			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
-			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
-				if (isFactoryBean(beanName)) {
-					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
-					if (bean instanceof FactoryBean) {
-						final FactoryBean<?> factory = (FactoryBean<?>) bean;
-						boolean isEagerInit;
-						if (System.getSecurityManager() != null && factory instanceof SmartFactoryBean) {
-							isEagerInit = AccessController.doPrivileged((PrivilegedAction<Boolean>)
-											((SmartFactoryBean<?>) factory)::isEagerInit,
-									getAccessControlContext());
-						}
-						else {
-							isEagerInit = (factory instanceof SmartFactoryBean &&
-									((SmartFactoryBean<?>) factory).isEagerInit());
-						}
-						if (isEagerInit) {
-							getBean(beanName);
-						}
-					}
-				}
-				else {
-					getBean(beanName);
-				}
-			}
-		}
-```
-
-```java
-Exception in thread "main" org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'fruit' defined in class path resource [applicationContext.xml]: Instantiation of bean failed; nested exception is org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.example.demo.lookup.Fruit]: Is it an abstract class?; 
-```
-
-但是有lookup-method和replaced-method两种情况除外 可以不用标注abstract="true" 因为在处理这两种情况时 会在实例化时产生Cglib的代理对象 
-
-```java
-@Override
-	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
-		// Don't override the class with CGLIB if no overrides.
-        //如果没有要进行方法覆盖 即 lookup-method和replaced-method的情况
-		if (!bd.hasMethodOverrides()) {
-			Constructor<?> constructorToUse;
-			synchronized (bd.constructorArgumentLock) {
-				constructorToUse = (Constructor<?>) bd.resolvedConstructorOrFactoryMethod;
-				if (constructorToUse == null) {
-					final Class<?> clazz = bd.getBeanClass();
-					if (clazz.isInterface()) {
-						throw new BeanInstantiationException(clazz, "Specified class is an interface");
-					}
-					try {
-						if (System.getSecurityManager() != null) {
-							constructorToUse = AccessController.doPrivileged(
-									(PrivilegedExceptionAction<Constructor<?>>) clazz::getDeclaredConstructor);
-						}
-						else {
-							constructorToUse = clazz.getDeclaredConstructor();
-						}
-						bd.resolvedConstructorOrFactoryMethod = constructorToUse;
-					}
-					catch (Throwable ex) {
-						throw new BeanInstantiationException(clazz, "No default constructor found", ex);
-					}
-				}
-			}
-            //直接通过反射构造函数创建一个新对象返回
-			return BeanUtils.instantiateClass(constructorToUse);
-		}
-		else {
-            //有lookup-method和replaced-method的情况 就需要代理处理
-			// Must generate CGLIB subclass.
-			return instantiateWithMethodInjection(bd, beanName, owner);
-		}
-	}
-		
-		//代理处理的实例化方法
-		public Object instantiate(@Nullable Constructor<?> ctor, Object... args) {
-            //这里就已经产生了当前类的子类
-			Class<?> subclass = createEnhancedSubclass(this.beanDefinition);
-			Object instance;
-			if (ctor == null) {
-                //一般是进到这里
-				instance = BeanUtils.instantiateClass(subclass);
-			}
-			else {
-				try {
-					Constructor<?> enhancedSubclassConstructor = subclass.getConstructor(ctor.getParameterTypes());
-					instance = enhancedSubclassConstructor.newInstance(args);
-				}
-				catch (Exception ex) {
-					throw new BeanInstantiationException(this.beanDefinition.getBeanClass(),
-							"Failed to invoke constructor for CGLIB enhanced subclass [" + subclass.getName() + "]", ex);
-				}
-			}
-			// SPR-10785: set callbacks directly on the instance instead of in the
-			// enhanced class (via the Enhancer) in order to avoid memory leaks.
-            //最后对回调做设置 返回生成的子类代理
-			Factory factory = (Factory) instance;
-			factory.setCallbacks(new Callback[] {NoOp.INSTANCE,
-					new LookupOverrideMethodInterceptor(this.beanDefinition, this.owner),
-					new ReplaceOverrideMethodInterceptor(this.beanDefinition, this.owner)});
-			return instance;
-		}
-```
-
-常规的@Autowired依赖注入的方式 因为整个对象是单例只创建一次 所以内部的多例对象属性也只会被赋值一次 后续走的是一级缓存 所以每次获取的多例对象是同一个。
-
-###### lookup-method
-
-lookup更多用于单例对象引用多例对象时 每次调用方法都可以生成一个新的spring管理的对象
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<beans xmlns:context="http://www.springframework.org/schema/context"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns="http://www.springframework.org/schema/beans"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-        http://www.springframework.org/schema/context  http://www.springframework.org/schema/context/spring-context.xsd
-        ">
-    <context:component-scan base-package="com.example.demo"/>
-    <bean id="fruit" class="com.example.demo.lookup.Fruit">
-        <!--这里就代表以名称为apple的bean对象替换getFruit的返回值-->
-        <lookup-method name="getFruit" bean="apple"></lookup-method>
-    </bean>
-    <bean id="apple" class="com.example.demo.lookup.Apple" scope="prototype"></bean>
-</beans>
-```
-
-```java
-public abstract class Fruit {
-    //@Lookup(value = "apple") 也可以采用这样的注解方式 
-    //标注该方法返回beanName为apple的多例对象
-    public Object getFruit(){
-        return null;
-    }
-}
-
-public class Apple {
-   
-}
-
-public class SpringTestDemo {
-    public static void main(String[] args) {
-        System.getProperties().setProperty("zcq", "applicationContext");
-        //读取刚才的applicationContext.xml的配置文件
-        MyApplicationContext applicationContext = new MyApplicationContext("${zcq}.xml");
-        //虽然是抽象类 这里获取到的是单例的代理对象
-        Fruit bean = (Fruit) applicationContext.getBean("fruit");
-        //这里的getFruit就会通过spring创建不同的apple对象返回
-        Fruit fruit = bean.getFruit();
-        Fruit fruit2 = bean.getFruit();
-        System.out.println(fruit);//com.example.demo.lookup.Apple@30af7377
-        System.out.println(fruit2);//com.example.demo.lookup.Apple@67a056f1
-    }
-}
-```
-
-原理讲解 由于代理过程还不熟悉 所以更细致的源码todo 这里是调用了Fruit fruit = bean.getFruit();以后debug进来的方法
-
-```java
-		//可以看到并没有进入我们父类Fruit的getFruit()方法 而是进入了代理对象的拦截
-		@Override
-		public Object intercept(Object obj, Method method, Object[] args, MethodProxy mp) throws Throwable {
-			// Cast is safe, as CallbackFilter filters are used selectively.
-			LookupOverride lo = (LookupOverride) getBeanDefinition().getMethodOverrides().getOverride(method);
-			Assert.state(lo != null, "LookupOverride not found");
-			Object[] argsToUse = (args.length > 0 ? args : null);  // if no-arg, don't insist on args at all
-			//这里做两种判断
-             //如果有beanName 那么就按照beanName去spring取
-            //<lookup-method name="getFruit" bean="apple"></lookup-method> 就是这里指定的bean
-             if (StringUtils.hasText(lo.getBeanName())) {
-                 //看到getBean就很熟悉了 单例从缓存取 多例立刻创建
-				return (argsToUse != null ? this.owner.getBean(lo.getBeanName(), argsToUse) :
-						this.owner.getBean(lo.getBeanName()));
-			}
-            //如果没有指定beanName 那么就按照父类Fruit的getFruit()方法的返回值类型去spring中取
-			else {
-				return (argsToUse != null ? this.owner.getBean(method.getReturnType(), argsToUse) :
-						this.owner.getBean(method.getReturnType()));
-			}
-		}
-	}
-```
-
-###### replace-method
-
-replace-method用于指定替换某个方法 
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<beans xmlns:context="http://www.springframework.org/schema/context"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns="http://www.springframework.org/schema/beans"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-        http://www.springframework.org/schema/context  http://www.springframework.org/schema/context/spring-context.xsd
-        ">
-    <context:component-scan base-package="com.example.demo"/>
-
-    <bean id="fruit" class="com.example.demo.lookup.Fruit">
-        <!--这里的意思是 利用apple这个bean作为替换者 替换getFruit方法--> 
-        <!--replaced-method我没有找到注解的实现方法 目前只有xml 不过肯定也可以通过修改BeanDefinition来完成-->
-        <replaced-method name="getFruit" replacer="apple"/>
-    </bean>
-    <bean id="apple" class="com.example.demo.lookup.Apple" scope="prototype"></bean>
-</beans>
-```
-
-```java
-public abstract class Fruit {
-    public Fruit getFruit(){
-        return null;
-    }
-}
-public class Apple implements MethodReplacer {
-
-    @Resource
-    ApplicationContext applicationContext;
-
-    @Override
-    public Object reimplement(Object obj, Method method, Object[] args) throws Throwable {
-        System.out.println("替换");
-        return applicationContext.getBean("apple");
-    }
-}
-
-public class SpringTestDemo {
-    public static void main(String[] args) {
-        System.getProperties().setProperty("zcq", "applicationContext");
-        MyApplicationContext applicationContext = new MyApplicationContext("${zcq}.xml");
-        Fruit bean = (Fruit) applicationContext.getBean("fruit");
-        //当getFruit的时候实际上也是进入了代理对象 调用被替换的方法
-        Fruit fruit = bean.getFruit();
-        Fruit fruit2 = bean.getFruit();
-        System.out.println(fruit);
-        System.out.println(fruit2);
-        //替换
-        //替换
-        //com.example.demo.lookup.Apple@6df7988f
-        //com.example.demo.lookup.Apple@27b22f74
-    }
-}
-```
-
-可以看到replace-method也可以实现单例对于多例对象的引用 只不过要借助bean容器进行重新创建，**replace-method更多的被用于替换方法，lookup-method更多被用于替换返回对象**。
-
-```java
-		//当getFruit的时候实际上也是进入了代理对象 调用被替换的方法
-		@Override
-		public Object intercept(Object obj, Method method, Object[] args, MethodProxy mp) throws Throwable {
-			ReplaceOverride ro = (ReplaceOverride) getBeanDefinition().getMethodOverrides().getOverride(method);
-			Assert.state(ro != null, "ReplaceOverride not found");
-			// TODO could cache if a singleton for minor performance optimization
-			//这里通过容器找到我们指定的那个bean 也就是前面提到的替换者
-             MethodReplacer mr = this.owner.getBean(ro.getMethodReplacerBeanName(), MethodReplacer.class);
-			//然后调用实现的替换方法 也就完成了对getFruit的拦截替换
-             return mr.reimplement(obj, method, args);
-		}
-```
 
 
 
@@ -5270,6 +5177,301 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 }
 ```
 
+###### obtainFromSupplier
+
+```java
+//使用beanDefintion中设置的继承了Supplier的类
+protected BeanWrapper obtainFromSupplier(Supplier<?> instanceSupplier, String beanName) {
+    Object instance;
+
+    String outerBean = this.currentlyCreatedBean.get();
+    this.currentlyCreatedBean.set(beanName);
+    try {
+        //直接调用Supplier的get方法获取bean实例
+       instance = instanceSupplier.get();
+    }
+    finally {
+       if (outerBean != null) {
+          this.currentlyCreatedBean.set(outerBean);
+       }
+       else {
+          this.currentlyCreatedBean.remove();
+       }
+    }
+
+    if (instance == null) {
+       instance = new NullBean();
+    }
+    //包装返回bean
+    BeanWrapper bw = new BeanWrapperImpl(instance);
+    initBeanWrapper(bw);
+    return bw;
+}
+```
+
+###### instantiateUsingFactoryMethod
+
+```java
+public BeanWrapper instantiateUsingFactoryMethod(
+       String beanName, RootBeanDefinition mbd, @Nullable Object[] explicitArgs) {
+
+    BeanWrapperImpl bw = new BeanWrapperImpl();
+    this.beanFactory.initBeanWrapper(bw);
+
+    Object factoryBean;
+    Class<?> factoryClass;
+    boolean isStatic;
+	
+    //如果factorybeanName不为空 那么是实例工厂
+    String factoryBeanName = mbd.getFactoryBeanName();
+    if (factoryBeanName != null) {
+       if (factoryBeanName.equals(beanName)) {
+          throw new BeanDefinitionStoreException(mbd.getResourceDescription(), beanName,
+                "factory-bean reference points back to the same bean definition");
+       }
+       //从容器中获取实例工厂
+       factoryBean = this.beanFactory.getBean(factoryBeanName);
+       if (mbd.isSingleton() && this.beanFactory.containsSingleton(beanName)) {
+          throw new ImplicitlyAppearedSingletonException();
+       }
+       factoryClass = factoryBean.getClass();
+       isStatic = false;
+    }
+    //否则就是静态工厂
+    else {
+       // It's a static factory method on the bean class.
+       if (!mbd.hasBeanClass()) {
+          throw new BeanDefinitionStoreException(mbd.getResourceDescription(), beanName,
+                "bean definition declares neither a bean class nor a factory-bean reference");
+       }
+       factoryBean = null;
+       //通过beanClass获得静态工厂的信息
+       factoryClass = mbd.getBeanClass();
+       isStatic = true;
+    }
+
+    //由于工厂方法可能存在重载 所以需要根据bean的构造方法参数 选择最匹配的工厂方法
+    Method factoryMethodToUse = null;
+    ArgumentsHolder argsHolderToUse = null;
+    Object[] argsToUse = null;
+
+    if (explicitArgs != null) {
+       argsToUse = explicitArgs;
+    }
+    else {
+       Object[] argsToResolve = null;
+       synchronized (mbd.constructorArgumentLock) {
+          factoryMethodToUse = (Method) mbd.resolvedConstructorOrFactoryMethod;
+          if (factoryMethodToUse != null && mbd.constructorArgumentsResolved) {
+             // Found a cached factory method...
+             argsToUse = mbd.resolvedConstructorArguments;
+             if (argsToUse == null) {
+                argsToResolve = mbd.preparedConstructorArguments;
+             }
+          }
+       }
+       if (argsToResolve != null) {
+          argsToUse = resolvePreparedArguments(beanName, mbd, bw, factoryMethodToUse, argsToResolve, true);
+       }
+    }
+
+    if (factoryMethodToUse == null || argsToUse == null) {
+       // Need to determine the factory method...
+       // Try all methods with this name to see if they match the given arguments.
+       factoryClass = ClassUtils.getUserClass(factoryClass);
+
+       List<Method> candidates = null;
+       if (mbd.isFactoryMethodUnique) {
+          if (factoryMethodToUse == null) {
+             factoryMethodToUse = mbd.getResolvedFactoryMethod();
+          }
+          if (factoryMethodToUse != null) {
+             candidates = Collections.singletonList(factoryMethodToUse);
+          }
+       }
+       //筛选出所有工厂方法
+       if (candidates == null) {
+          candidates = new ArrayList<>();
+          Method[] rawCandidates = getCandidateMethods(factoryClass, mbd);
+          for (Method candidate : rawCandidates) {
+             if (Modifier.isStatic(candidate.getModifiers()) == isStatic && mbd.isFactoryMethod(candidate)) {
+                candidates.add(candidate);
+             }
+          }
+       }
+	  //如果只有一个方法且没有参数 那就直接实例化
+       if (candidates.size() == 1 && explicitArgs == null && !mbd.hasConstructorArgumentValues()) {
+          Method uniqueCandidate = candidates.get(0);
+          if (uniqueCandidate.getParameterCount() == 0) {
+             mbd.factoryMethodToIntrospect = uniqueCandidate;
+             synchronized (mbd.constructorArgumentLock) {
+                mbd.resolvedConstructorOrFactoryMethod = uniqueCandidate;
+                mbd.constructorArgumentsResolved = true;
+                mbd.resolvedConstructorArguments = EMPTY_ARGS;
+             }
+             bw.setBeanInstance(instantiate(beanName, mbd, factoryBean, uniqueCandidate, EMPTY_ARGS));
+             return bw;
+          }
+       }
+	   //参数个数做排序
+       if (candidates.size() > 1) {  // explicitly skip immutable singletonList
+          candidates.sort(AutowireUtils.EXECUTABLE_COMPARATOR);
+       }
+
+       ConstructorArgumentValues resolvedValues = null;
+       boolean autowiring = (mbd.getResolvedAutowireMode() == AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
+       int minTypeDiffWeight = Integer.MAX_VALUE;
+       Set<Method> ambiguousFactoryMethods = null;
+
+       //解析构造参数个数
+       int minNrOfArgs;
+       if (explicitArgs != null) {
+          minNrOfArgs = explicitArgs.length;
+       }
+       else {
+          // We don't have arguments passed in programmatically, so we need to resolve the
+          // arguments specified in the constructor arguments held in the bean definition.
+          if (mbd.hasConstructorArgumentValues()) {
+             ConstructorArgumentValues cargs = mbd.getConstructorArgumentValues();
+             resolvedValues = new ConstructorArgumentValues();
+             minNrOfArgs = resolveConstructorArguments(beanName, mbd, bw, cargs, resolvedValues);
+          }
+          else {
+             minNrOfArgs = 0;
+          }
+       }
+
+       LinkedList<UnsatisfiedDependencyException> causes = null;
+
+        //遍历工厂方法 选择最匹配的方法
+       for (Method candidate : candidates) {
+          int parameterCount = candidate.getParameterCount();
+
+          if (parameterCount >= minNrOfArgs) {
+             ArgumentsHolder argsHolder;
+
+             Class<?>[] paramTypes = candidate.getParameterTypes();
+             if (explicitArgs != null) {
+                // Explicit arguments given -> arguments length must match exactly.
+                if (paramTypes.length != explicitArgs.length) {
+                   continue;
+                }
+                argsHolder = new ArgumentsHolder(explicitArgs);
+             }
+             else {
+                // Resolved constructor arguments: type conversion and/or autowiring necessary.
+                try {
+                   String[] paramNames = null;
+                   ParameterNameDiscoverer pnd = this.beanFactory.getParameterNameDiscoverer();
+                   if (pnd != null) {
+                      paramNames = pnd.getParameterNames(candidate);
+                   }
+                   argsHolder = createArgumentArray(beanName, mbd, resolvedValues, bw,
+                         paramTypes, paramNames, candidate, autowiring, candidates.size() == 1);
+                }
+                catch (UnsatisfiedDependencyException ex) {
+                   if (logger.isTraceEnabled()) {
+                      logger.trace("Ignoring factory method [" + candidate + "] of bean '" + beanName + "': " + ex);
+                   }
+                   // Swallow and try next overloaded factory method.
+                   if (causes == null) {
+                      causes = new LinkedList<>();
+                   }
+                   causes.add(ex);
+                   continue;
+                }
+             }
+
+             int typeDiffWeight = (mbd.isLenientConstructorResolution() ?
+                   argsHolder.getTypeDifferenceWeight(paramTypes) : argsHolder.getAssignabilityWeight(paramTypes));
+             // Choose this factory method if it represents the closest match.
+             if (typeDiffWeight < minTypeDiffWeight) {
+                factoryMethodToUse = candidate;
+                argsHolderToUse = argsHolder;
+                argsToUse = argsHolder.arguments;
+                minTypeDiffWeight = typeDiffWeight;
+                ambiguousFactoryMethods = null;
+             }
+             // Find out about ambiguity: In case of the same type difference weight
+             // for methods with the same number of parameters, collect such candidates
+             // and eventually raise an ambiguity exception.
+             // However, only perform that check in non-lenient constructor resolution mode,
+             // and explicitly ignore overridden methods (with the same parameter signature).
+             else if (factoryMethodToUse != null && typeDiffWeight == minTypeDiffWeight &&
+                   !mbd.isLenientConstructorResolution() &&
+                   paramTypes.length == factoryMethodToUse.getParameterCount() &&
+                   !Arrays.equals(paramTypes, factoryMethodToUse.getParameterTypes())) {
+                if (ambiguousFactoryMethods == null) {
+                   ambiguousFactoryMethods = new LinkedHashSet<>();
+                   ambiguousFactoryMethods.add(factoryMethodToUse);
+                }
+                ambiguousFactoryMethods.add(candidate);
+             }
+          }
+       }
+
+       if (factoryMethodToUse == null || argsToUse == null) {
+          if (causes != null) {
+             UnsatisfiedDependencyException ex = causes.removeLast();
+             for (Exception cause : causes) {
+                this.beanFactory.onSuppressedException(cause);
+             }
+             throw ex;
+          }
+          List<String> argTypes = new ArrayList<>(minNrOfArgs);
+          if (explicitArgs != null) {
+             for (Object arg : explicitArgs) {
+                argTypes.add(arg != null ? arg.getClass().getSimpleName() : "null");
+             }
+          }
+          else if (resolvedValues != null) {
+             Set<ValueHolder> valueHolders = new LinkedHashSet<>(resolvedValues.getArgumentCount());
+             valueHolders.addAll(resolvedValues.getIndexedArgumentValues().values());
+             valueHolders.addAll(resolvedValues.getGenericArgumentValues());
+             for (ValueHolder value : valueHolders) {
+                String argType = (value.getType() != null ? ClassUtils.getShortName(value.getType()) :
+                      (value.getValue() != null ? value.getValue().getClass().getSimpleName() : "null"));
+                argTypes.add(argType);
+             }
+          }
+          String argDesc = StringUtils.collectionToCommaDelimitedString(argTypes);
+          throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+                "No matching factory method found: " +
+                (mbd.getFactoryBeanName() != null ?
+                   "factory bean '" + mbd.getFactoryBeanName() + "'; " : "") +
+                "factory method '" + mbd.getFactoryMethodName() + "(" + argDesc + ")'. " +
+                "Check that a method with the specified name " +
+                (minNrOfArgs > 0 ? "and arguments " : "") +
+                "exists and that it is " +
+                (isStatic ? "static" : "non-static") + ".");
+       }
+       else if (void.class == factoryMethodToUse.getReturnType()) {
+          throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+                "Invalid factory method '" + mbd.getFactoryMethodName() +
+                "': needs to have a non-void return type!");
+       }
+       else if (ambiguousFactoryMethods != null) {
+          throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+                "Ambiguous factory method matches found in bean '" + beanName + "' " +
+                "(hint: specify index/type/name arguments for simple parameters to avoid type ambiguities): " +
+                ambiguousFactoryMethods);
+       }
+
+       if (explicitArgs == null && argsHolderToUse != null) {
+          mbd.factoryMethodToIntrospect = factoryMethodToUse;
+          argsHolderToUse.storeCache(mbd, factoryMethodToUse);
+       }
+    }
+	//调用选中的工厂方法和构造参数实例化
+    bw.setBeanInstance(instantiate(beanName, mbd, factoryBean, factoryMethodToUse, argsToUse));
+    return bw;
+}
+```
+
+
+
+
+
 ###### determineConstructorsFromBeanPostProcessors
 
 ```java
@@ -5303,8 +5505,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 <img src="D:\doc\my\studymd\LearningNotes\framework\spring\images\image-20250317145651315.png" alt="image-20250317145651315" style="zoom: 33%;" />
 
-- @Lookup注解的处理
-- @Autowired标注的构造方法筛选
+- `@Lookup`注解的处理
+- 查找缓存中此类已经解析的`@Lookup`信息，如果没有则解析
+- 遍历所有方法，获取方法上的`@Lookup`注解，封装成`LookupOverride`加入`beanDefinition`的`MethodOverrides`中
+- 将解析过的`@Lookup`信息加入缓存
+- 
+- `@Autowired`标注的构造方法筛选
 - 通过`candidateConstructorsCache`缓存获取已经解析好的`@Autowired`注解标注的构造方法，如果能获取到，直接返回，获取不到走下面的流程
 - 获取当前类的全部构造方法，循环遍历所有的构造方法
 - 获取当前构造方法上的`@Autowired`注解，如果没有，检查这个类是否是CGlib代理类，获取原生类的构造方法和对应的注解
@@ -5325,17 +5531,23 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		
         //处理@Lookup注解
 		// Let's check for lookup methods here...
+        //查看缓存中当前beanName是否已经解析过
 		if (!this.lookupMethodsChecked.contains(beanName)) {
+             //检查当前类中是否包含@Lookup注解
 			if (AnnotationUtils.isCandidateClass(beanClass, Lookup.class)) {
 				try {
 					Class<?> targetClass = beanClass;
 					do {
+                          //遍历所有方法 获取方法上的@Lookup注解信息
 						ReflectionUtils.doWithLocalMethods(targetClass, method -> {
 							Lookup lookup = method.getAnnotation(Lookup.class);
+                               //如果有@Lookup注解
 							if (lookup != null) {
 								Assert.state(this.beanFactory != null, "No BeanFactory available");
+                                   //将@Lookup封装成LookupOverride
 								LookupOverride override = new LookupOverride(method, lookup.value());
 								try {
+                                       //将LookupOverride放到beanDefinition的MethodOverrides中
 									RootBeanDefinition mbd = (RootBeanDefinition)
 											this.beanFactory.getMergedBeanDefinition(beanName);
 									mbd.getMethodOverrides().addOverride(override);
@@ -5355,6 +5567,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 					throw new BeanCreationException(beanName, "Lookup method resolution failed", ex);
 				}
 			}
+             //设置缓存
 			this.lookupMethodsChecked.add(beanName);
 		}
 		
@@ -6157,6 +6370,84 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 }
 ```
 
+
+
+###### instantiateBean
+
+```java
+
+//默认构造方法的实例化
+protected BeanWrapper instantiateBean(final String beanName, final RootBeanDefinition mbd) {
+    try {
+       Object beanInstance;
+       final BeanFactory parent = this;
+       if (System.getSecurityManager() != null) {
+          beanInstance = AccessController.doPrivileged((PrivilegedAction<Object>) () ->
+                getInstantiationStrategy().instantiate(mbd, beanName, parent),
+                getAccessControlContext());
+       }
+       else {
+          beanInstance = getInstantiationStrategy().instantiate(mbd, beanName, parent);
+       }
+       BeanWrapper bw = new BeanWrapperImpl(beanInstance);
+       initBeanWrapper(bw);
+       return bw;
+    }
+    catch (Throwable ex) {
+       throw new BeanCreationException(
+             mbd.getResourceDescription(), beanName, "Instantiation of bean failed", ex);
+    }
+}
+```
+
+```java
+public class SimpleInstantiationStrategy implements InstantiationStrategy {
+    
+    
+    @Override
+	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
+         //如果没有MethodOverrides 那么使用默认构造方法进行实例化
+		// Don't override the class with CGLIB if no overrides.
+		if (!bd.hasMethodOverrides()) {
+			Constructor<?> constructorToUse;
+			synchronized (bd.constructorArgumentLock) {
+				constructorToUse = (Constructor<?>) bd.resolvedConstructorOrFactoryMethod;
+				if (constructorToUse == null) {
+					final Class<?> clazz = bd.getBeanClass();
+					if (clazz.isInterface()) {
+						throw new BeanInstantiationException(clazz, "Specified class is an interface");
+					}
+					try {
+						if (System.getSecurityManager() != null) {
+							constructorToUse = AccessController.doPrivileged(
+									(PrivilegedExceptionAction<Constructor<?>>) clazz::getDeclaredConstructor);
+						}
+						else {
+                               //获取默认构造方法
+							constructorToUse = clazz.getDeclaredConstructor();
+						}
+						bd.resolvedConstructorOrFactoryMethod = constructorToUse;
+					}
+					catch (Throwable ex) {
+						throw new BeanInstantiationException(clazz, "No default constructor found", ex);
+					}
+				}
+			}
+             //使用默认构造方法进行实例化
+			return BeanUtils.instantiateClass(constructorToUse);
+		}
+		else {
+             //如果有MethodOverride 那么必须进行CGLIB代理生成实例
+			// Must generate CGLIB subclass.
+			return instantiateWithMethodInjection(bd, beanName, owner);
+		}
+	}
+
+}
+```
+
+
+
 ##### applyMergedBeanDefinitionPostProcessors()
 
 
@@ -6200,9 +6491,109 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 
 
+## @Lookup和MethodReplacer
+
+<img src=".\images\image-20250319152055989.png" alt="image-20250319152055989" style="zoom:50%;" />
+
+**原理流程**
+
+- 在进行实例化时，即`createBeanInstance`会调用`determineConstructorsFromBeanPostProcessors`方法
+- 其中实现了`SmartInstantiationAwareBeanPostProcessor`的类`AutowiredAnnotationBeanPostProcessor`对`@Lookup`标注的方法进行了处理，将`@Lookup`信息`LookupOverride`放入`beanDefinition`的`MethodOverrides`属性中
+- 当进行实例化时，`CglibSubclassingInstantiationStrategy`实例化策略会根据是否含有`MethodOverrides`来决定是否生成代理对象
+- 对于包含`LookupOverride`或者`ReplaceOverride`的`beanDefinition`，会生成一个CGlib的代理实例，此实例包含了`LookupOverrideMethodInterceptor`和`ReplaceOverrideMethodInterceptor`的拦截器
+- 当调用一个代理实例的任意方法时，会先通过`MethodOverrideCallbackFilter`来判断当前方法是否需要被拦截，对应`LookupOverride`的方法会调用`LookupOverrideMethodInterceptor`进行拦截，对应`ReplaceOverride`的方法会调用`ReplaceOverrideMethodInterceptor`进行拦截
+- `LookupOverrideMethodInterceptor`拦截器根据`@Lookup`的注解信息用beanName获取bean或者根据返回类型获取bean，并返回结果
+- `ReplaceOverrideMethodInterceptor`拦截器找到对应实现了`MethodReplacer`的bean，调用`reimplement`返回结果
+
+### @Lookup
+
+`@Lookup`注解用于替换指定方法的返回值为容器中的指定bean
+
+更多用于单例对象引用多例对象时，每次调用方法都可以生成一个新的spring管理的对象
+
+```java
+//常规情况下 抽象类并不能被加入容器中，但是由于@Lookup注解，容器中就可以存在当前beanName -> 代理对象
+@Component
+public abstract class MyLookup {
+
+    //返回beanName为myLookupObject的bean实例对象
+    @Lookup("myLookupObject")
+    public abstract MyLookupObject getMyLookupObject();
+}
+
+@Component
+public class MyLookupObject {
+}
+
+```
+
+#### LookupOverride
+
+```JAVA
+public class LookupOverride extends MethodOverride {
+    //要替换返回的bean的name
+    @Nullable
+	private final String beanName;
+	//@Lookup标注的方法
+	@Nullable
+	private Method method;
+    
+    public LookupOverride(String methodName, @Nullable String beanName) {
+		super(methodName);
+		this.beanName = beanName;
+	}
+}
+```
 
 
 
+
+
+### MethodReplacer
+
+MethodReplacer用于指定替换某个方法 
+
+```java
+@Component
+public class MyMethodReplacer implements MethodReplacer {
+    @Override
+    public Object reimplement(Object obj, Method method, Object[] args) throws Throwable {
+        System.out.println("替换增强");
+        return new Object();
+    }
+}
+
+@Component
+class MyBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        //找到要被替换的bean
+        GenericBeanDefinition beanDefinition = (GenericBeanDefinition) beanFactory.getBeanDefinition("myMethod");
+        //设置要替换的方法和对应的MethodReplacer
+        MethodOverride methodOverride = new ReplaceOverride("myMethod", "myMethodReplacer");
+        //加入MethodOverrides
+        beanDefinition.getMethodOverrides().addOverride(methodOverride);
+    }
+}
+```
+
+#### ReplaceOverride
+
+```java
+public class ReplaceOverride extends MethodOverride {
+
+    //对应的MethodReplacer的beanName
+    private final String methodReplacerBeanName;
+
+    private List<String> typeIdentifiers = new LinkedList<>();
+    
+    public ReplaceOverride(String methodName, String methodReplacerBeanName) {
+		super(methodName);
+		Assert.notNull(methodName, "Method replacer bean name must not be null");
+		this.methodReplacerBeanName = methodReplacerBeanName;
+	}
+}
+```
 
 
 
@@ -6696,55 +7087,36 @@ public class MyInstantiationAwareBeanPostProcessor implements InstantiationAware
 
     @Override
     public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
-        System.out.println("执行实例化前置方法");
-        if (beanName.equals("xxxBean")){
-            return new Object();
+        if (beanClass.equals(MyCommponet.class)){
+            return new MyComponet("zcq");
         }
         return null;
     }
+}
 
-    @Override
-    public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
-        System.out.println("执行实例化后置方法");
-        return InstantiationAwareBeanPostProcessor.super.postProcessAfterInstantiation(bean, beanName);
+@Component
+public class MyComponet {
+
+    private String value;
+
+    public String getValue() {
+        return value;
     }
 
-    @Override
-    public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
-        System.out.println("执行处理属性方法");
-        return InstantiationAwareBeanPostProcessor.super.postProcessProperties(pvs, bean, beanName);
+    public void setValue(String value) {
+        this.value = value;
     }
 
-    @Override
-    public PropertyValues postProcessPropertyValues(PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeansException {
-        System.out.println("执行处理属性方法2");
-        return InstantiationAwareBeanPostProcessor.super.postProcessPropertyValues(pvs, pds, bean, beanName);
+    public MyComponet() {
     }
 
-    @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        System.out.println("执行初始化前方法");
-        return InstantiationAwareBeanPostProcessor.super.postProcessBeforeInitialization(bean, beanName);
+    public MyComponet(String value) {
+        this.value = value;
     }
-
-    @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        System.out.println("执行初始化后方法");
-        return InstantiationAwareBeanPostProcessor.super.postProcessAfterInitialization(bean, beanName);
-    }
-    
-    
+}
 ```
 
-```java
-11:17:47.127 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'testController'
-执行实例化前置方法
-执行初始化后方法
-11:17:50.614 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'testService'
-执行实例化前置方法
-执行初始化后方法
-//如果控制台出现了其他bean 所有方法都执行了 请不要慌张 因为BeanPostProcessor是为全体bean服务的 所有bean都会进行调用 而不单单是你提前创建的bean单独调用
-```
+
 
 ### 通过FactoryMethod生成对象
 
@@ -7153,6 +7525,19 @@ public BeanWrapper instantiateUsingFactoryMethod(
 ### 通过supplier创建对象
 
 ```java
+@FunctionalInterface
+public interface Supplier<T> {
+
+    /**
+     * Gets a result.
+     *
+     * @return a result
+     */
+    T get();
+}
+```
+
+```java
 //例子
 //实现BeanFactoryPostProcessor来进行修改beanDefinition
 @Component
@@ -7267,15 +7652,417 @@ protected BeanWrapper obtainFromSupplier(Supplier<?> instanceSupplier, String be
 
 ## 实例化策略
 
+<img src=".\images\image-20250319150517457.png" alt="image-20250319150517457" style="zoom: 33%;" />
+
 ### SimpleInstantiationStrategy
 
+简单实例化策略负责三部分
 
+1. 使用默认构造方法进行实例化，如果有`MethodOverrides`那么调用子类`CglibSubclassingInstantiationStrategy`进行代理实例化
+2. 使用指定构造方法进行实例化，如果有`MethodOverrides`那么调用子类`CglibSubclassingInstantiationStrategy`进行代理实例化
+3. 使用`FactoryMethod`进行实例化
+
+```java
+public class SimpleInstantiationStrategy implements InstantiationStrategy {
+
+    private static final ThreadLocal<Method> currentlyInvokedFactoryMethod = new ThreadLocal<>();
+    
+    
+    //使用默认构造方法进行实例化，如果有MethodOverrides那么调用子类CglibSubclassingInstantiationStrategy进行代理实例化
+	@Override
+	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
+         //如果没有MethodOverrides 
+		// Don't override the class with CGLIB if no overrides.
+		if (!bd.hasMethodOverrides()) {
+			Constructor<?> constructorToUse;
+			synchronized (bd.constructorArgumentLock) {
+				constructorToUse = (Constructor<?>) bd.resolvedConstructorOrFactoryMethod;
+				if (constructorToUse == null) {
+					final Class<?> clazz = bd.getBeanClass();
+					if (clazz.isInterface()) {
+						throw new BeanInstantiationException(clazz, "Specified class is an interface");
+					}
+					try {
+						if (System.getSecurityManager() != null) {
+							constructorToUse = AccessController.doPrivileged(
+									(PrivilegedExceptionAction<Constructor<?>>) clazz::getDeclaredConstructor);
+						}
+						else {
+                               //获取默认的构造方法
+							constructorToUse = clazz.getDeclaredConstructor();
+						}
+						bd.resolvedConstructorOrFactoryMethod = constructorToUse;
+					}
+					catch (Throwable ex) {
+						throw new BeanInstantiationException(clazz, "No default constructor found", ex);
+					}
+				}
+			}
+             //使用默认构造方法进行实例化
+			return BeanUtils.instantiateClass(constructorToUse);
+		}
+		else {
+			// Must generate CGLIB subclass.
+			return instantiateWithMethodInjection(bd, beanName, owner);
+		}
+	}
+    
+    //使用指定构造方法进行实例化，如果有MethodOverrides那么调用子类CglibSubclassingInstantiationStrategy进行代理实例化
+    @Override
+	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
+			final Constructor<?> ctor, Object... args) {
+		//如果没有MethodOverrides 
+		if (!bd.hasMethodOverrides()) {
+			if (System.getSecurityManager() != null) {
+				// use own privileged to change accessibility (when security is on)
+				AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+					ReflectionUtils.makeAccessible(ctor);
+					return null;
+				});
+			}
+             //那么使用指定的构造方法进行实例化
+			return BeanUtils.instantiateClass(ctor, args);
+		}
+		else {
+             //调用子类CglibSubclassingInstantiationStrategy进行代理实例化
+			return instantiateWithMethodInjection(bd, beanName, owner, ctor, args);
+		}
+	}
+    
+    //使用FactoryMethod进行实例化
+    @Override
+	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
+			@Nullable Object factoryBean, final Method factoryMethod, Object... args) {
+
+		try {
+			if (System.getSecurityManager() != null) {
+				AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+					ReflectionUtils.makeAccessible(factoryMethod);
+					return null;
+				});
+			}
+			else {
+				ReflectionUtils.makeAccessible(factoryMethod);
+			}
+
+			Method priorInvokedFactoryMethod = currentlyInvokedFactoryMethod.get();
+			try {
+				currentlyInvokedFactoryMethod.set(factoryMethod);
+				Object result = factoryMethod.invoke(factoryBean, args);
+				if (result == null) {
+					result = new NullBean();
+				}
+				return result;
+			}
+			finally {
+				if (priorInvokedFactoryMethod != null) {
+					currentlyInvokedFactoryMethod.set(priorInvokedFactoryMethod);
+				}
+				else {
+					currentlyInvokedFactoryMethod.remove();
+				}
+			}
+		}
+		catch (IllegalArgumentException ex) {
+			throw new BeanInstantiationException(factoryMethod,
+					"Illegal arguments to factory method '" + factoryMethod.getName() + "'; " +
+					"args: " + StringUtils.arrayToCommaDelimitedString(args), ex);
+		}
+		catch (IllegalAccessException ex) {
+			throw new BeanInstantiationException(factoryMethod,
+					"Cannot access factory method '" + factoryMethod.getName() + "'; is it public?", ex);
+		}
+		catch (InvocationTargetException ex) {
+			String msg = "Factory method '" + factoryMethod.getName() + "' threw exception";
+			if (bd.getFactoryBeanName() != null && owner instanceof ConfigurableBeanFactory &&
+					((ConfigurableBeanFactory) owner).isCurrentlyInCreation(bd.getFactoryBeanName())) {
+				msg = "Circular reference involving containing bean '" + bd.getFactoryBeanName() + "' - consider " +
+						"declaring the factory method as static for independence from its containing instance. " + msg;
+			}
+			throw new BeanInstantiationException(factoryMethod, msg, ex.getTargetException());
+		}
+	}
+
+    //提供给子类CglibSubclassingInstantiationStrategy实现的代理实例化接口
+    protected Object instantiateWithMethodInjection(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
+		throw new UnsupportedOperationException("Method Injection not supported in SimpleInstantiationStrategy");
+	}
+    
+    //提供给子类CglibSubclassingInstantiationStrategy实现的代理实例化接口
+    protected Object instantiateWithMethodInjection(RootBeanDefinition bd, @Nullable String beanName,
+			BeanFactory owner, @Nullable Constructor<?> ctor, Object... args) {
+
+		throw new UnsupportedOperationException("Method Injection not supported in SimpleInstantiationStrategy");
+	}
+
+
+}
+```
 
 ### CglibSubclassingInstantiationStrategy
 
+`CglibSubclassingInstantiationStrategy`是`SimpleInstantiationStrategy`的子类，负责代理对象的实例化工作
 
+```java
+public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationStrategy {
+    
+	private static final int PASSTHROUGH = 0;
+	private static final int LOOKUP_OVERRIDE = 1;
+    private static final int METHOD_REPLACER = 2;
+    
+    //继承CGLIB代理实例化的方法
+    @Override
+	protected Object instantiateWithMethodInjection(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
+		return instantiateWithMethodInjection(bd, beanName, owner, null);
+	}
+    
+	//继承CGLIB代理实例化的方法
+	@Override
+	protected Object instantiateWithMethodInjection(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
+			@Nullable Constructor<?> ctor, Object... args) {
 
+		// Must generate CGLIB subclass...
+		return new CglibSubclassCreator(bd, owner).instantiate(ctor, args);
+	}
 
+}
+```
+
+#### CglibSubclassCreator
+
+`CglibSubclassCreator`作为`CglibSubclassingInstantiationStrategy`的内部类，负责CGlib代理实例化工作
+
+```java
+private static class CglibSubclassCreator {
+    
+     	//拦截器类型数组 
+		private static final Class<?>[] CALLBACK_TYPES = new Class<?>[]
+				{NoOp.class, LookupOverrideMethodInterceptor.class, ReplaceOverrideMethodInterceptor.class};
+    
+		//当前要代理的beanDefinition
+		private final RootBeanDefinition beanDefinition;
+		//当前容器
+		private final BeanFactory owner;
+
+		CglibSubclassCreator(RootBeanDefinition beanDefinition, BeanFactory owner) {
+			this.beanDefinition = beanDefinition;
+			this.owner = owner;
+		}
+    
+    	//创建代理并实例化
+    	public Object instantiate(@Nullable Constructor<?> ctor, Object... args) {
+             //利用CGlib创建当前beanDefinition的代理类
+			Class<?> subclass = createEnhancedSubclass(this.beanDefinition);
+			Object instance;
+             //如果没有指定的构造器
+			if (ctor == null) {
+                 //使用默认构造器创建代理类对象
+				instance = BeanUtils.instantiateClass(subclass);
+			}
+			else {
+				try {
+                      //获取代理类中指定的构造器 使用指定的构造器创建代理类
+					Constructor<?> enhancedSubclassConstructor = subclass.getConstructor(ctor.getParameterTypes());
+					instance = enhancedSubclassConstructor.newInstance(args);
+				}
+				catch (Exception ex) {
+					throw new BeanInstantiationException(this.beanDefinition.getBeanClass(),
+							"Failed to invoke constructor for CGLIB enhanced subclass [" + subclass.getName() + "]", ex);
+				}
+			}
+
+			// SPR-10785: set callbacks directly on the instance instead of in the
+			// enhanced class (via the Enhancer) in order to avoid memory leaks.
+			Factory factory = (Factory) instance;
+             //设置拦截器实例对象到代理实例中
+			factory.setCallbacks(new Callback[] {NoOp.INSTANCE,
+					new LookupOverrideMethodInterceptor(this.beanDefinition, this.owner),
+					new ReplaceOverrideMethodInterceptor(this.beanDefinition, this.owner)});
+             //返回创建好的代理类实例
+			return instance;
+		}
+	
+		//使用CGLIB生成指定beanDefinition的代理类
+		private Class<?> createEnhancedSubclass(RootBeanDefinition beanDefinition) {
+			Enhancer enhancer = new Enhancer();
+             //设置继承的类
+			enhancer.setSuperclass(beanDefinition.getBeanClass());
+             //设置命名策略BySpringCGLIB
+			enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
+			if (this.owner instanceof ConfigurableBeanFactory) {
+				ClassLoader cl = ((ConfigurableBeanFactory) this.owner).getBeanClassLoader();
+				enhancer.setStrategy(new ClassLoaderAwareGeneratorStrategy(cl));
+			}
+             //设置主拦截器 决定使用哪个拦截器 自定义逻辑来指定调用的callback下标
+			enhancer.setCallbackFilter(new MethodOverrideCallbackFilter(beanDefinition));
+             //设置拦截器类型数组
+			enhancer.setCallbackTypes(CALLBACK_TYPES);
+			return enhancer.createClass();
+		}
+    
+}
+```
+
+##### 代理的命名生成策略
+
+<img src=".\images\image-20250319153900779.png" alt="image-20250319153900779" style="zoom:33%;" />
+
+###### DefaultNamingPolicy
+
+```java
+public class DefaultNamingPolicy implements NamingPolicy {
+    public static final DefaultNamingPolicy INSTANCE = new DefaultNamingPolicy();
+    private static final boolean STRESS_HASH_CODE = Boolean.getBoolean("org.springframework.cglib.test.stressHashCodes");
+
+    public DefaultNamingPolicy() {
+    }
+
+    public String getClassName(String prefix, String source, Object key, Predicate names) {
+        if (prefix == null) {
+            prefix = "org.springframework.cglib.empty.Object";
+        } else if (prefix.startsWith("java")) {
+            //如果是java开头的类 前面加个$
+            prefix = "$" + prefix;
+        }
+		//生成com.zcq.demo.getbean.lookup.MyMethod$$EnhancerBySpringCGLIB$$616fc504的全类名
+        //实际类名是MyMethod$$EnhancerBySpringCGLIB$$616fc504
+        String base = prefix + "$$" + source.substring(source.lastIndexOf(46) + 1) + this.getTag() + "$$" + Integer.toHexString(STRESS_HASH_CODE ? 0 : key.hashCode());
+        String attempt = base;
+
+        for(int index = 2; names.evaluate(attempt); attempt = base + "_" + index++) {
+        }
+
+        return attempt;
+    }
+
+    protected String getTag() {
+        return "ByCGLIB";
+    }
+
+    public int hashCode() {
+        return this.getTag().hashCode();
+    }
+
+    public boolean equals(Object o) {
+        return o instanceof DefaultNamingPolicy && ((DefaultNamingPolicy)o).getTag().equals(this.getTag());
+    }
+}
+```
+
+###### SpringNamingPolicy
+
+```java
+public class SpringNamingPolicy extends DefaultNamingPolicy {
+
+    public static final SpringNamingPolicy INSTANCE = new SpringNamingPolicy();
+
+    //生成com.zcq.demo.getbean.lookup.MyMethod$$EnhancerBySpringCGLIB$$616fc504的全类名
+    //相当于在com.zcq.demo.getbean.lookup包下创建了一个名为MyMethod$$EnhancerBySpringCGLIB$$616fc504的类 继承了MyMethod
+    @Override
+    protected String getTag() {
+       return "BySpringCGLIB";
+    }
+
+}
+```
+
+#### MethodOverrideCallbackFilter
+
+```java
+private static class MethodOverrideCallbackFilter extends CglibIdentitySupport implements CallbackFilter {
+
+    private static final Log logger = LogFactory.getLog(MethodOverrideCallbackFilter.class);
+
+    public MethodOverrideCallbackFilter(RootBeanDefinition beanDefinition) {
+       super(beanDefinition);
+    }
+
+    //主拦截器 通过判断当前方法是否需要被覆盖来选择不同的拦截器
+    @Override
+    public int accept(Method method) {
+       //获取当前方法的MethodOverride信息
+       MethodOverride methodOverride = getBeanDefinition().getMethodOverrides().getOverride(method);
+       if (logger.isTraceEnabled()) {
+          logger.trace("MethodOverride for " + method + ": " + methodOverride);
+       }
+       //当前方法不需要被覆盖 跳过拦截
+       if (methodOverride == null) {
+          return PASSTHROUGH;
+       }
+       //当前方法需要被LookupOverrideMethodInterceptor拦截 调用LookupOverrideMethodInterceptor
+       else if (methodOverride instanceof LookupOverride) {
+          return LOOKUP_OVERRIDE;
+       }
+       //当前方法需要被ReplaceOverrideMethodInterceptor拦截 调用ReplaceOverrideMethodInterceptor
+       else if (methodOverride instanceof ReplaceOverride) {
+          return METHOD_REPLACER;
+       }
+       throw new UnsupportedOperationException("Unexpected MethodOverride subclass: " +
+             methodOverride.getClass().getName());
+    }
+}
+```
+
+#### LookupOverrideMethodInterceptor
+
+```java
+private static class LookupOverrideMethodInterceptor extends CglibIdentitySupport implements MethodInterceptor {
+
+    private final BeanFactory owner;
+
+    public LookupOverrideMethodInterceptor(RootBeanDefinition beanDefinition, BeanFactory owner) {
+       super(beanDefinition);
+       this.owner = owner;
+    }
+	//拦截@Lookup标注的方法
+    @Override
+    public Object intercept(Object obj, Method method, Object[] args, MethodProxy mp) throws Throwable {
+       // Cast is safe, as CallbackFilter filters are used selectively.
+       //获取LookupOverride的信息
+       LookupOverride lo = (LookupOverride) getBeanDefinition().getMethodOverrides().getOverride(method);
+       Assert.state(lo != null, "LookupOverride not found");
+       Object[] argsToUse = (args.length > 0 ? args : null);  // if no-arg, don't insist on args at all
+       //判断@Lookup注解上是否设置了beanName
+       if (StringUtils.hasText(lo.getBeanName())) {
+          //设置了beanName 获取指定beanName的bean 返回
+          return (argsToUse != null ? this.owner.getBean(lo.getBeanName(), argsToUse) :
+                this.owner.getBean(lo.getBeanName()));
+       }
+       else {
+          //没有beanName 根据返回值获取bean 返回
+          return (argsToUse != null ? this.owner.getBean(method.getReturnType(), argsToUse) :
+                this.owner.getBean(method.getReturnType()));
+       }
+    }
+}
+```
+
+#### ReplaceOverrideMethodInterceptor
+
+```java
+private static class ReplaceOverrideMethodInterceptor extends CglibIdentitySupport implements MethodInterceptor {
+
+    private final BeanFactory owner;
+
+    public ReplaceOverrideMethodInterceptor(RootBeanDefinition beanDefinition, BeanFactory owner) {
+       super(beanDefinition);
+       this.owner = owner;
+    }
+
+    //拦截被MethodReplacer覆盖的方法
+    @Override
+    public Object intercept(Object obj, Method method, Object[] args, MethodProxy mp) throws Throwable {
+       //获取ReplaceOverride信息
+       ReplaceOverride ro = (ReplaceOverride) getBeanDefinition().getMethodOverrides().getOverride(method);
+       Assert.state(ro != null, "ReplaceOverride not found");
+       // TODO could cache if a singleton for minor performance optimization
+       //获取对应的MethodReplacer对象
+       MethodReplacer mr = this.owner.getBean(ro.getMethodReplacerBeanName(), MethodReplacer.class);
+       //调用reimplement方法替换当前方法
+       return mr.reimplement(obj, method, args);
+    }
+}
+```
 
 
 
@@ -7287,7 +8074,15 @@ protected BeanWrapper obtainFromSupplier(Supplier<?> instanceSupplier, String be
 
 
 
+## @Autowired各种作用
 
+构造方法
+
+@Bean方法？
+
+属性？
+
+@value和@Resource
 
 ## 梳理各个类的接口继承关系
 

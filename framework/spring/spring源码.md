@@ -5503,7 +5503,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 ###### AutowiredAnnotationBeanPostProcessor
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\spring\images\image-20250317145651315.png" alt="image-20250317145651315" style="zoom: 33%;" />
+<img src=".\images\image-20250317145651315.png" alt="image-20250317145651315" style="zoom: 33%;" />
 
 - `@Lookup`注解的处理
 - 查找缓存中此类已经解析的`@Lookup`信息，如果没有则解析

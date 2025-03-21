@@ -2904,7 +2904,9 @@ class ConfigurationClassBeanDefinitionReader {
 		ConfigurationClassBeanDefinition beanDef = new ConfigurationClassBeanDefinition(configClass, metadata);
 		beanDef.setSource(this.sourceExtractor.extractSource(metadata, configClass.getResource()));
 
+        //查看@Bean的方法是静态的
 		if (metadata.isStatic()) {
+             //设置静态工厂类和静态工厂方法
 			// static @Bean method
 			if (configClass.getMetadata() instanceof StandardAnnotationMetadata) {
 				beanDef.setBeanClass(((StandardAnnotationMetadata) configClass.getMetadata()).getIntrospectedClass());
@@ -2915,6 +2917,7 @@ class ConfigurationClassBeanDefinitionReader {
 			beanDef.setUniqueFactoryMethodName(methodName);
 		}
 		else {
+             //设置实例工厂类和实例工厂方法
 			// instance @Bean method
 			beanDef.setFactoryBeanName(configClass.getBeanName());
 			beanDef.setUniqueFactoryMethodName(methodName);
@@ -5007,6 +5010,7 @@ protected Object doCreateBean(final String beanName, final RootBeanDefinition mb
        mbd.resolvedTargetType = beanType;
     }
 
+    //调用实现了MergedBeanDefinitionPostProcessor的postProcessMergedBeanDefinition方法更改beanDefinition
     // Allow post-processors to modify the merged bean definition.
     synchronized (mbd.postProcessingLock) {
        if (!mbd.postProcessed) {
@@ -5021,6 +5025,7 @@ protected Object doCreateBean(final String beanName, final RootBeanDefinition mb
        }
     }
 
+    //循环依赖
     // Eagerly cache singletons to be able to resolve circular references
     // even when triggered by lifecycle interfaces like BeanFactoryAware.
     boolean earlySingletonExposure = (mbd.isSingleton() && this.allowCircularReferences &&
@@ -5036,6 +5041,7 @@ protected Object doCreateBean(final String beanName, final RootBeanDefinition mb
     // Initialize the bean instance.
     Object exposedObject = bean;
     try {
+       //填充属性
        populateBean(beanName, mbd, instanceWrapper);
        exposedObject = initializeBean(beanName, exposedObject, mbd);
     }
@@ -5121,7 +5127,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (instanceSupplier != null) {
 			return obtainFromSupplier(instanceSupplier, beanName);
 		}
-		//工厂方法获取bean
+		//工厂方法获取bean @Bean也是使用工厂方法实例化在这里处理的
 		if (mbd.getFactoryMethodName() != null) {
 			return instantiateUsingFactoryMethod(beanName, mbd, args);
 		}
@@ -5468,7 +5474,28 @@ public BeanWrapper instantiateUsingFactoryMethod(
 }
 ```
 
+###### BeanWrapperImpl
 
+```java
+//bean实例的包装类
+public class BeanWrapperImpl extends AbstractNestablePropertyAccessor implements BeanWrapper {
+
+
+
+}
+
+
+public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport implements ConfigurableBeanFactory {
+	
+    //初始化beanWrapper 设置类型转换服务和属性编辑器
+	protected void initBeanWrapper(BeanWrapper bw) {
+		bw.setConversionService(getConversionService());
+        //将自定义的属性编辑器注册到beanWrapper上
+		registerCustomEditors(bw);
+	}
+
+}
+```
 
 
 
@@ -5511,17 +5538,31 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 - 将解析过的`@Lookup`信息加入缓存
 - 
 - `@Autowired`标注的构造方法筛选
-- 通过`candidateConstructorsCache`缓存获取已经解析好的`@Autowired`注解标注的构造方法，如果能获取到，直接返回，获取不到走下面的流程
+- 通过`candidateConstructorsCache`缓存获取已经解析好的`@Autowired、@Inject`注解标注的构造方法，如果能获取到，直接返回，获取不到走下面的流程
 - 获取当前类的全部构造方法，循环遍历所有的构造方法
-- 获取当前构造方法上的`@Autowired`注解，如果没有，检查这个类是否是CGlib代理类，获取原生类的构造方法和对应的注解
-- 根据获取到的`@Autowired`注解，检查是否存在两个以上被`@Autowired(required=true)`注解标注的构造方法，如果有报错
-- 如果当前构造方法的`@Autowired`注解的`required`属性为`true`，将其加入到候选构造方法集合`candidates`中，并且设置`requiredConstructor`为此构造方法
+- 获取当前构造方法上的`@Autowired、@Inject`注解，如果没有，检查这个类是否是CGlib代理类，获取原生类的构造方法和对应的注解
+- 根据获取到的`@Autowired`注解，检查是否存在两个以上被`@Autowired(required=true)`注解标注的构造方法，，如果有报错，`@Inject`没有`required`属性默认为`false`
+- 如果当前构造方法包含`@Autowired、@Inject`无论`required`是`true`或者`false`，都会加入到候选集合`candidates`中，如果`required`属性为`true`，将其设置为`requiredConstructor`，并且设置`requiredConstructor`为此构造方法
 - 如果当前构造方法没有参数，设置`defaultConstructor`为此构造方法
-- 最后处理`candidates`，有`@Autowired`标注使用`@Autowired`标注的构造方法，没有再考虑有参构造方法，如果只有默认无参构造方法，返回null
+- 最后处理`candidates`，把`@Autowired、@Inject`标注的构造方法全都返回去，如果只有默认无参构造方法，返回null
 
 ```java
 public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBeanPostProcessorAdapter
        implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware {
+    
+    //初始化@Autowired、@Value、@Inject注解
+    public AutowiredAnnotationBeanPostProcessor() {
+		this.autowiredAnnotationTypes.add(Autowired.class);
+		this.autowiredAnnotationTypes.add(Value.class);
+		try {
+			this.autowiredAnnotationTypes.add((Class<? extends Annotation>)
+					ClassUtils.forName("javax.inject.Inject", AutowiredAnnotationBeanPostProcessor.class.getClassLoader()));
+			logger.trace("JSR-330 'javax.inject.Inject' annotation found and supported for autowiring");
+		}
+		catch (ClassNotFoundException ex) {
+			// JSR-330 API not available - simply skip.
+		}
+	}
     
     //获取要使用的构造方法
 	@Override
@@ -5797,7 +5838,7 @@ class ConstructorResolver {
 				}
 			}
 			
-             //需要解析构造方法
+             //如果有@Autowired标注的构造方法
 			// Need to resolve the constructor.
 			boolean autowiring = (chosenCtors != null ||
 					mbd.getResolvedAutowireMode() == AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
@@ -5815,7 +5856,7 @@ class ConstructorResolver {
 				ConstructorArgumentValues cargs = mbd.getConstructorArgumentValues();
                   //解析好的构造参数
 				resolvedValues = new ConstructorArgumentValues();
-                 //解析构造参数 返回参数个数
+                 //获取构造参数constructorArgumentValues的数量
 				minNrOfArgs = resolveConstructorArguments(beanName, mbd, bw, cargs, resolvedValues);
 			}
 			
@@ -5827,7 +5868,7 @@ class ConstructorResolver {
 			
              //遍历构造方法 计算参数和构造方法的参数类型的差异性 选择出类型最匹配的那个构造方法
 			for (Constructor<?> candidate : candidates) {
-                 //获取构造方法的参数个数
+                 //获取当前构造方法的参数个数
 				int parameterCount = candidate.getParameterCount();
 
 				if (constructorToUse != null && argsToUse != null && argsToUse.length > parameterCount) {
@@ -5835,17 +5876,17 @@ class ConstructorResolver {
 					// do not look any further, there are only less greedy constructors left.
 					break;
 				}
-                 //如果构造方法的 参数个数 小于 参数列表 直接退出循环 
+                 //如果当前构造方法的参数个数 小于 constructorArgumentValues的数量 直接退出循环 
 				if (parameterCount < minNrOfArgs) {
 					continue;
 				}
 
 				ArgumentsHolder argsHolder;
-                 //获取构造方法的参数类型
+                 //获取当前构造方法的参数类型
 				Class<?>[] paramTypes = candidate.getParameterTypes();
 				if (resolvedValues != null) {
 					try {
-                          //获得构造方法的参数名称
+                          //获得当前构造方法的参数名称
 						String[] paramNames = ConstructorPropertiesChecker.evaluate(candidate, parameterCount);
 						if (paramNames == null) {
 							ParameterNameDiscoverer pnd = this.beanFactory.getParameterNameDiscoverer();
@@ -5853,7 +5894,9 @@ class ConstructorResolver {
 								paramNames = pnd.getParameterNames(candidate);
 							}
 						}
-                          //对参数列表进行类型转换
+                          //根据当前构造方法的参数类型 
+                          //对constructorArgumentValues内的参数尝试进行类型转换
+                          //如果constructorArgumentValues不包含的参数，并且带有@Autowired注解，那么进行自动注入
 						argsHolder = createArgumentArray(beanName, mbd, resolvedValues, bw, paramTypes, paramNames,
 								getUserDeclaredConstructor(candidate), autowiring, candidates.length == 1);
 					}
@@ -5947,7 +5990,7 @@ class ConstructorResolver {
 ```java
 class ConstructorResolver {
     
-    //解析构造方法参数
+    //解析constructorArgumentValues的个数
 	private int resolveConstructorArguments(String beanName, RootBeanDefinition mbd, BeanWrapper bw,
 			ConstructorArgumentValues cargs, ConstructorArgumentValues resolvedValues) {
 		
@@ -5958,7 +6001,7 @@ class ConstructorResolver {
 		BeanDefinitionValueResolver valueResolver =
 				new BeanDefinitionValueResolver(this.beanFactory, beanName, mbd, converter);
 		
-        //获取参数个数
+        //获取constructorArgumentValues的最小个数
 		int minNrOfArgs = cargs.getArgumentCount();
 		
         //遍历下标索引参数列表
@@ -6151,10 +6194,19 @@ class BeanDefinitionValueResolver {
 
 ###### createArgumentArray
 
+- 获取类型转换器，初始化结果参数集合
+- 根据下标遍历当前构造方法的参数列表，获取当前参数类型和对应的下标
+- 首先根据`beanDefinition`中设置的`constructorArgumentValues`进行获取，先根据下标在`indexedArgumentValues`中进行获取，获取不到再从`genericArgumentValues`中找一个没使用过的参数值
+- 对上述从`constructorArgumentValues`中获取到的参数值依照当前参数类型进行一个类型转换，有编辑器优先用编辑器，否则用转换器转换，类型转换成功继续下一个参数类型，类型转换失败，抛出异常证明当前构造方法并不是最匹配的
+- 如果上述`constructorArgumentValues`中没有获取到任何参数值，那么就检查是不是带有`@Autowired`注解，没有就报错，说明少参数
+- 如果有`@Autowired`注解，尝试在容器中查找一个与参数类型匹配的bean，找不到对应参数类型的bean也会报错
+
+
+
 ```java
 class ConstructorResolver {
     
-    //对参数进行类型转换
+    //对constructorArgumentValues尝试进行类型转换，constructorArgumentValues中不包含的进行自动注入
     private ArgumentsHolder createArgumentArray(
 			String beanName, RootBeanDefinition mbd, @Nullable ConstructorArgumentValues resolvedValues,
 			BeanWrapper bw, Class<?>[] paramTypes, @Nullable String[] paramNames, Executable executable,
@@ -6228,9 +6280,12 @@ class ConstructorResolver {
 				args.rawArguments[paramIndex] = originalValue;
 			}
 			else {
+                 //如果没有构造方法参数 那么就是@Autowired要注入的参数
+                 //指定下标参数
 				MethodParameter methodParam = MethodParameter.forExecutable(executable, paramIndex);
 				// No explicit match found: we're either supposed to autowire or
 				// have to fail creating an argument array for the given constructor.
+                 //如果不是@Autowired的 报错
 				if (!autowiring) {
 					throw new UnsatisfiedDependencyException(
 							mbd.getResourceDescription(), beanName, new InjectionPoint(methodParam),
@@ -6238,8 +6293,10 @@ class ConstructorResolver {
 							"] - did you specify the correct bean references as arguments?");
 				}
 				try {
+                     // 解析指定下标@Autowired要注入的参数
 					Object autowiredArgument = resolveAutowiredArgument(
 							methodParam, beanName, autowiredBeanNames, converter, fallback);
+                      //将@Autowired的参数设置到列表中
 					args.rawArguments[paramIndex] = autowiredArgument;
 					args.arguments[paramIndex] = autowiredArgument;
 					args.preparedArguments[paramIndex] = autowiredArgumentMarker;
@@ -6251,7 +6308,7 @@ class ConstructorResolver {
 				}
 			}
 		}
-
+		//缓存
 		for (String autowiredBeanName : autowiredBeanNames) {
 			this.beanFactory.registerDependentBean(autowiredBeanName, beanName);
 			if (logger.isDebugEnabled()) {
@@ -6263,6 +6320,380 @@ class ConstructorResolver {
 		//返回参数列表
 		return args;
 	}
+    
+    
+    //通过指定的类型查找bean
+    @Nullable
+	protected Object resolveAutowiredArgument(MethodParameter param, String beanName,
+			@Nullable Set<String> autowiredBeanNames, TypeConverter typeConverter, boolean fallback) {
+		//获取参数类型
+		Class<?> paramType = param.getParameterType();
+        
+		if (InjectionPoint.class.isAssignableFrom(paramType)) {
+			InjectionPoint injectionPoint = currentInjectionPoint.get();
+			if (injectionPoint == null) {
+				throw new IllegalStateException("No current InjectionPoint available for " + param);
+			}
+			return injectionPoint;
+		}
+		try {
+             //通过指定的类型查找bean
+			return this.beanFactory.resolveDependency(
+					new DependencyDescriptor(param, true), beanName, autowiredBeanNames, typeConverter);
+		}
+		catch (NoUniqueBeanDefinitionException ex) {
+			throw ex;
+		}
+		catch (NoSuchBeanDefinitionException ex) {
+			if (fallback) {
+				// Single constructor or factory method -> let's return an empty array/collection
+				// for e.g. a vararg or a non-null List/Set/Map parameter.
+				if (paramType.isArray()) {
+					return Array.newInstance(paramType.getComponentType(), 0);
+				}
+				else if (CollectionFactory.isApproximableCollectionType(paramType)) {
+					return CollectionFactory.createCollection(paramType, 0);
+				}
+				else if (CollectionFactory.isApproximableMapType(paramType)) {
+					return CollectionFactory.createMap(paramType, 0);
+				}
+			}
+			throw ex;
+		}
+	}
+
+
+}
+```
+
+###### resolveDependency
+
+```java
+public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFactory
+       implements ConfigurableListableBeanFactory, BeanDefinitionRegistry, Serializable {
+
+    //根据指定的类型查找bean
+	@Override
+	@Nullable
+	public Object resolveDependency(DependencyDescriptor descriptor, @Nullable String requestingBeanName,
+			@Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) throws BeansException {
+		//设置参数名称发现器
+		descriptor.initParameterNameDiscovery(getParameterNameDiscoverer());
+        //如果指定的类型是Optional
+		if (Optional.class == descriptor.getDependencyType()) {
+			return createOptionalDependency(descriptor, requestingBeanName);
+		}
+         //如果指定的类型是ObjectFactory或ObjectProvider
+		else if (ObjectFactory.class == descriptor.getDependencyType() ||
+				ObjectProvider.class == descriptor.getDependencyType()) {
+			return new DependencyObjectProvider(descriptor, requestingBeanName);
+		}
+         //如果指定的类型是Provider
+		else if (javaxInjectProviderClass == descriptor.getDependencyType()) {
+			return new Jsr330Factory().createDependencyProvider(descriptor, requestingBeanName);
+		}
+		else {
+             //处理@Lazy @todo??
+			Object result = getAutowireCandidateResolver().getLazyResolutionProxyIfNecessary(
+					descriptor, requestingBeanName);
+			if (result == null) {
+                  //对指定类型查找bean
+				result = doResolveDependency(descriptor, requestingBeanName, autowiredBeanNames, typeConverter);
+			}
+			return result;
+		}
+	}
+    
+    
+    @Nullable
+	public Object doResolveDependency(DependencyDescriptor descriptor, @Nullable String beanName,
+			@Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) throws BeansException {
+
+		InjectionPoint previousInjectionPoint = ConstructorResolver.setCurrentInjectionPoint(descriptor);
+		try {
+             //快捷方式
+			Object shortcut = descriptor.resolveShortcut(this);
+			if (shortcut != null) {
+				return shortcut;
+			}
+			//获取指定的类型
+			Class<?> type = descriptor.getDependencyType();
+             //如果当前要注入的属性或者参数前有@Value注解
+			Object value = getAutowireCandidateResolver().getSuggestedValue(descriptor);
+             //获取@Value注解的值
+			if (value != null) {
+                  //如果是@Value注解的值是字符串
+				if (value instanceof String) {
+                      //那么进行一下占位符的解析替换 ${}
+					String strVal = resolveEmbeddedValue((String) value);
+					BeanDefinition bd = (beanName != null && containsBean(beanName) ?
+							getMergedBeanDefinition(beanName) : null);
+                      //再进行一下spel的解析 #{}
+					value = evaluateBeanDefinitionString(strVal, bd);
+				}
+                 //最后 看看类型是否匹配 如果不匹配尝试进行一下转换 有编辑器先用编辑器 没有用转换服务
+				TypeConverter converter = (typeConverter != null ? typeConverter : getTypeConverter());
+				try {
+					return converter.convertIfNecessary(value, type, descriptor.getTypeDescriptor());
+				}
+				catch (UnsupportedOperationException ex) {
+					// A custom TypeConverter which does not support TypeDescriptor resolution...
+					return (descriptor.getField() != null ?
+							converter.convertIfNecessary(value, type, descriptor.getField()) :
+							converter.convertIfNecessary(value, type, descriptor.getMethodParameter()));
+				}
+			}
+			//如果指定的类型是一个Stream、Collection、数组、Map类型 在这里解析
+			Object multipleBeans = resolveMultipleBeans(descriptor, beanName, autowiredBeanNames, typeConverter);
+			if (multipleBeans != null) {
+				return multipleBeans;
+			}
+			//如果指定的类型是一个普通引用类型
+			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, type, descriptor);
+             //如果没找到对应的bean 并且这个bean是required=true必须的
+			if (matchingBeans.isEmpty()) {
+				if (isRequired(descriptor)) {
+                      //抛出找不到bean异常
+					raiseNoMatchingBeanFound(type, descriptor.getResolvableType(), descriptor);
+				}
+				return null;
+			}
+
+			String autowiredBeanName;
+			Object instanceCandidate;
+			
+             //如果查找到了多余1个匹配的bean
+			if (matchingBeans.size() > 1) {
+                 //通过@Primary注解筛选 和 通过@Priority比较筛选
+				autowiredBeanName = determineAutowireCandidate(matchingBeans, descriptor);
+                 //如果没筛选出来
+				if (autowiredBeanName == null) {
+					//是必须的 抛出不唯一异常 
+                      if (isRequired(descriptor) || !indicatesMultipleBeans(type)) {
+						return descriptor.resolveNotUnique(descriptor.getResolvableType(), matchingBeans);
+					}
+					else {
+						// In case of an optional Collection/Map, silently ignore a non-unique case:
+						// possibly it was meant to be an empty collection of multiple regular beans
+						// (before 4.3 in particular when we didn't even look for collection beans).
+						return null;
+					}
+				}
+                  //获取筛选的bean
+				instanceCandidate = matchingBeans.get(autowiredBeanName);
+			}
+             //如果只有一个匹配的bean
+			else {
+				// We have exactly one match.
+				Map.Entry<String, Object> entry = matchingBeans.entrySet().iterator().next();
+                  //设置这个beanName和bean
+				autowiredBeanName = entry.getKey();
+				instanceCandidate = entry.getValue();
+			}
+			//添加到集合
+			if (autowiredBeanNames != null) {
+				autowiredBeanNames.add(autowiredBeanName);
+			}
+             //instanceCandidate的此时是个class对象 获取bean实例
+			if (instanceCandidate instanceof Class) {
+                  //调用beanFactory.getBean
+				instanceCandidate = descriptor.resolveCandidate(autowiredBeanName, type, this);
+			}
+			Object result = instanceCandidate;
+			if (result instanceof NullBean) {
+				if (isRequired(descriptor)) {
+					raiseNoMatchingBeanFound(type, descriptor.getResolvableType(), descriptor);
+				}
+				result = null;
+			}
+             //最后检查一下获取的类型和所需的类型是否相匹配 抛出类型不匹配异常
+			if (!ClassUtils.isAssignableValue(type, result)) {
+				throw new BeanNotOfRequiredTypeException(autowiredBeanName, type, instanceCandidate.getClass());
+			}
+             //返回结果
+			return result;
+		}
+		finally {
+			ConstructorResolver.setCurrentInjectionPoint(previousInjectionPoint);
+		}
+	}
+
+    //如果指定的类型是一个Stream、Collection、数组、Map类型 解析
+	@Nullable
+	private Object resolveMultipleBeans(DependencyDescriptor descriptor, @Nullable String beanName,
+			@Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) {
+		
+         //获取指定的类型
+		final Class<?> type = descriptor.getDependencyType();
+
+        //如果指定的类型是一个Stream
+		if (descriptor instanceof StreamDependencyDescriptor) {
+             //查找Stream类型的bean
+			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, type, descriptor);
+			if (autowiredBeanNames != null) {
+				autowiredBeanNames.addAll(matchingBeans.keySet());
+			}
+             //再查找Stream中内置类型的bean
+			Stream<Object> stream = matchingBeans.keySet().stream()
+					.map(name -> descriptor.resolveCandidate(name, type, this))
+					.filter(bean -> !(bean instanceof NullBean));
+			if (((StreamDependencyDescriptor) descriptor).isOrdered()) {
+				stream = stream.sorted(adaptOrderComparator(matchingBeans));
+			}
+			return stream;
+		}
+         //如果指定的类型是一个数组
+		else if (type.isArray()) {
+             //获取数组内置的类型
+			Class<?> componentType = type.getComponentType();
+			ResolvableType resolvableType = descriptor.getResolvableType();
+			Class<?> resolvedArrayType = resolvableType.resolve(type);
+			if (resolvedArrayType != type) {
+				componentType = resolvableType.getComponentType().resolve();
+			}
+			if (componentType == null) {
+				return null;
+			}
+             //查找内置类型的bean
+			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, componentType,
+					new MultiElementDescriptor(descriptor));
+			if (matchingBeans.isEmpty()) {
+				return null;
+			}
+			if (autowiredBeanNames != null) {
+				autowiredBeanNames.addAll(matchingBeans.keySet());
+			}
+             //将所有的bean转换成数组类型
+			TypeConverter converter = (typeConverter != null ? typeConverter : getTypeConverter());
+			Object result = converter.convertIfNecessary(matchingBeans.values(), resolvedArrayType);
+			if (result instanceof Object[]) {
+				Comparator<Object> comparator = adaptDependencyComparator(matchingBeans);
+				if (comparator != null) {
+					Arrays.sort((Object[]) result, comparator);
+				}
+			}
+			return result;
+		}
+         //如果指定的类型是Collection
+		else if (Collection.class.isAssignableFrom(type) && type.isInterface()) {
+             //获取内置的类型
+			Class<?> elementType = descriptor.getResolvableType().asCollection().resolveGeneric();
+			if (elementType == null) {
+				return null;
+			}
+             //查找内置类型的bean
+			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, elementType,
+					new MultiElementDescriptor(descriptor));
+			if (matchingBeans.isEmpty()) {
+				return null;
+			}
+			if (autowiredBeanNames != null) {
+				autowiredBeanNames.addAll(matchingBeans.keySet());
+			}
+             //转换成集合类型
+			TypeConverter converter = (typeConverter != null ? typeConverter : getTypeConverter());
+			Object result = converter.convertIfNecessary(matchingBeans.values(), type);
+			if (result instanceof List) {
+				if (((List<?>) result).size() > 1) {
+					Comparator<Object> comparator = adaptDependencyComparator(matchingBeans);
+					if (comparator != null) {
+						((List<?>) result).sort(comparator);
+					}
+				}
+			}
+			return result;
+		}
+         //如果指定的类型是Map
+		else if (Map.class == type) {
+			ResolvableType mapType = descriptor.getResolvableType().asMap();
+             //如果key不是String类型 直接返回
+			Class<?> keyType = mapType.resolveGeneric(0);
+			if (String.class != keyType) {
+				return null;
+			}
+             //获取value的类型
+			Class<?> valueType = mapType.resolveGeneric(1);
+			if (valueType == null) {
+				return null;
+			}
+             //查找指定value类型的bean
+			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, valueType,
+					new MultiElementDescriptor(descriptor));
+			if (matchingBeans.isEmpty()) {
+				return null;
+			}
+			if (autowiredBeanNames != null) {
+				autowiredBeanNames.addAll(matchingBeans.keySet());
+			}
+			return matchingBeans;
+		}
+         //不是上述的集合类型 返回null
+		else {
+			return null;
+		}
+	}
+
+    //查找指定类型的所有bean
+    protected Map<String, Object> findAutowireCandidates(
+			@Nullable String beanName, Class<?> requiredType, DependencyDescriptor descriptor) {
+		//获取指定类型的所有的beanName
+		String[] candidateNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
+				this, requiredType, true, descriptor.isEager());
+		Map<String, Object> result = new LinkedHashMap<>(candidateNames.length);
+        
+         //如果要获取的类型是ApplicationContext、ResourceLoader、ApplicationEventPublisher、BeanFactory类型
+         //直接返回预先设置好的bean
+		for (Map.Entry<Class<?>, Object> classObjectEntry : this.resolvableDependencies.entrySet()) {
+			Class<?> autowiringType = classObjectEntry.getKey();
+			if (autowiringType.isAssignableFrom(requiredType)) {
+				Object autowiringValue = classObjectEntry.getValue();
+				autowiringValue = AutowireUtils.resolveAutowiringValue(autowiringValue, requiredType);
+				if (requiredType.isInstance(autowiringValue)) {
+					result.put(ObjectUtils.identityToString(autowiringValue), autowiringValue);
+					break;
+				}
+			}
+		}
+        //遍历指定类型的所有的beanName
+		for (String candidate : candidateNames) {
+             //如果不是一个自我引用 并且 如果有@Qualifier注解标注 筛选和@Qualifier的value一致的beanName
+			if (!isSelfReference(beanName, candidate) && isAutowireCandidate(candidate, descriptor)) {
+                 //将当前参数名称和获取的类型加入result
+				addCandidateEntry(result, candidate, descriptor, requiredType);
+			}
+		}
+		if (result.isEmpty()) {
+			boolean multiple = indicatesMultipleBeans(requiredType);
+			// Consider fallback matches if the first pass failed to find anything...
+			DependencyDescriptor fallbackDescriptor = descriptor.forFallbackMatch();
+			for (String candidate : candidateNames) {
+				if (!isSelfReference(beanName, candidate) && isAutowireCandidate(candidate, fallbackDescriptor) &&
+						(!multiple || getAutowireCandidateResolver().hasQualifier(descriptor))) {
+					addCandidateEntry(result, candidate, descriptor, requiredType);
+				}
+			}
+			if (result.isEmpty() && !multiple) {
+				// Consider self references as a final pass...
+				// but in the case of a dependency collection, not the very same bean itself.
+				for (String candidate : candidateNames) {
+					if (isSelfReference(beanName, candidate) &&
+							(!(descriptor instanceof MultiElementDescriptor) || !beanName.equals(candidate)) &&
+							isAutowireCandidate(candidate, fallbackDescriptor)) {
+						addCandidateEntry(result, candidate, descriptor, requiredType);
+					}
+				}
+			}
+		}
+		return result;
+	}
+    
+    //获取bean
+    public Object resolveCandidate(String beanName, Class<?> requiredType, BeanFactory beanFactory)
+			throws BeansException {
+
+		return beanFactory.getBean(beanName);
+	}
+
 
 }
 ```
@@ -6450,29 +6881,154 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 
 ##### applyMergedBeanDefinitionPostProcessors()
 
+```java
+protected void applyMergedBeanDefinitionPostProcessors(RootBeanDefinition mbd, Class<?> beanType, String beanName) {
+    for (BeanPostProcessor bp : getBeanPostProcessors()) {
+        //处理MergedBeanDefinitionPostProcessor
+       if (bp instanceof MergedBeanDefinitionPostProcessor) {
+          MergedBeanDefinitionPostProcessor bdp = (MergedBeanDefinitionPostProcessor) bp;
+          bdp.postProcessMergedBeanDefinition(mbd, beanType, beanName);
+       }
+    }
+}
+```
 
+###### InitDestroyAnnotationBeanPostProcessor
 
-
-
-##### BeanWrapperImpl
+- 负责扫描`@PostConstruct`和`@PreDestroy`的所有方法，将其注册到beanDefinition的`externallyManagedInitMethods`和`externallyManagedDestroyMethods`
 
 ```java
-//bean实例的包装类
-public class BeanWrapperImpl extends AbstractNestablePropertyAccessor implements BeanWrapper {
+public class InitDestroyAnnotationBeanPostProcessor
+       implements DestructionAwareBeanPostProcessor, MergedBeanDefinitionPostProcessor, PriorityOrdered, Serializable {
 
+    //@PostConstruct注解
+    @Nullable
+	private Class<? extends Annotation> initAnnotationType;
 
+    //@PreDestroy注解
+	@Nullable
+	private Class<? extends Annotation> destroyAnnotationType;
 
-}
-
-
-public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport implements ConfigurableBeanFactory {
-	
-    //初始化beanWrapper 设置类型转换服务和属性编辑器
-	protected void initBeanWrapper(BeanWrapper bw) {
-		bw.setConversionService(getConversionService());
-        //将自定义的属性编辑器注册到beanWrapper上
-		registerCustomEditors(bw);
+    
+    public void setInitAnnotationType(Class<? extends Annotation> initAnnotationType) {
+		this.initAnnotationType = initAnnotationType;
 	}
+    
+    public void setDestroyAnnotationType(Class<? extends Annotation> destroyAnnotationType) {
+		this.destroyAnnotationType = destroyAnnotationType;
+	}
+    
+    
+    //扫描所有的@PostConstruct和@PreDestroy标注的方法 将其注册到beanDefinition中
+    @Override
+	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
+         //找到所有的@PostConstruct和@PreDestroy的方法
+		LifecycleMetadata metadata = findLifecycleMetadata(beanType);
+         //将找到的方法注册到beanDefinition中
+		metadata.checkConfigMembers(beanDefinition);
+	}
+    
+    //扫描所有的@PostConstruct和@PreDestroy标注的方法
+    private LifecycleMetadata findLifecycleMetadata(Class<?> clazz) {
+		if (this.lifecycleMetadataCache == null) {
+			// Happens after deserialization, during destruction...
+			return buildLifecycleMetadata(clazz);
+		}
+        //从缓存中取
+		// Quick check on the concurrent map first, with minimal locking.
+		LifecycleMetadata metadata = this.lifecycleMetadataCache.get(clazz);
+		if (metadata == null) {
+			synchronized (this.lifecycleMetadataCache) {
+				metadata = this.lifecycleMetadataCache.get(clazz);
+				if (metadata == null) {
+                      //缓存中没有 构建
+					metadata = buildLifecycleMetadata(clazz);
+					this.lifecycleMetadataCache.put(clazz, metadata);
+				}
+				return metadata;
+			}
+		}
+		return metadata;
+	}
+	
+    //扫描所有的@PostConstruct和@PreDestroy标注的方法
+	private LifecycleMetadata buildLifecycleMetadata(final Class<?> clazz) {
+		if (!AnnotationUtils.isCandidateClass(clazz, Arrays.asList(this.initAnnotationType, this.destroyAnnotationType))) {
+			return this.emptyLifecycleMetadata;
+		}
+
+        //初始化初始化方法和销毁方法集合
+		List<LifecycleElement> initMethods = new ArrayList<>();
+		List<LifecycleElement> destroyMethods = new ArrayList<>();
+		Class<?> targetClass = clazz;
+		//遍历当前类和父类
+		do {
+			final List<LifecycleElement> currInitMethods = new ArrayList<>();
+			final List<LifecycleElement> currDestroyMethods = new ArrayList<>();
+			//扫描所有的@PostConstruct和@PreDestroy标注的方法
+			ReflectionUtils.doWithLocalMethods(targetClass, method -> {
+				if (this.initAnnotationType != null && method.isAnnotationPresent(this.initAnnotationType)) {
+					LifecycleElement element = new LifecycleElement(method);
+					currInitMethods.add(element);
+					if (logger.isTraceEnabled()) {
+						logger.trace("Found init method on class [" + clazz.getName() + "]: " + method);
+					}
+				}
+				if (this.destroyAnnotationType != null && method.isAnnotationPresent(this.destroyAnnotationType)) {
+					currDestroyMethods.add(new LifecycleElement(method));
+					if (logger.isTraceEnabled()) {
+						logger.trace("Found destroy method on class [" + clazz.getName() + "]: " + method);
+					}
+				}
+			});
+
+			initMethods.addAll(0, currInitMethods);
+			destroyMethods.addAll(currDestroyMethods);
+			targetClass = targetClass.getSuperclass();
+		}
+		while (targetClass != null && targetClass != Object.class);
+		
+         //将扫描到的方法封装成LifecycleMetadata
+		return (initMethods.isEmpty() && destroyMethods.isEmpty() ? this.emptyLifecycleMetadata :
+				new LifecycleMetadata(clazz, initMethods, destroyMethods));
+	}
+    
+    //生命周期元数据内部类
+	private class LifecycleMetadata {
+        
+        //将LifecycleMetadata中的初始化方法和销毁方法注册到beanDefinition中
+    	public void checkConfigMembers(RootBeanDefinition beanDefinition) {
+			Set<LifecycleElement> checkedInitMethods = new LinkedHashSet<>(this.initMethods.size());
+             //遍历所有初始化方法
+			for (LifecycleElement element : this.initMethods) {
+				String methodIdentifier = element.getIdentifier();
+				if (!beanDefinition.isExternallyManagedInitMethod(methodIdentifier)) {
+                      //注册到beanDefinition的externallyManagedInitMethods中
+					beanDefinition.registerExternallyManagedInitMethod(methodIdentifier);
+					checkedInitMethods.add(element);
+					if (logger.isTraceEnabled()) {
+						logger.trace("Registered init method on class [" + this.targetClass.getName() + "]: " + element);
+					}
+				}
+			}
+			Set<LifecycleElement> checkedDestroyMethods = new LinkedHashSet<>(this.destroyMethods.size());
+			for (LifecycleElement element : this.destroyMethods) {
+				String methodIdentifier = element.getIdentifier();
+				if (!beanDefinition.isExternallyManagedDestroyMethod(methodIdentifier)) {
+                     //注册到beanDefinition的externallyManagedDestroyMethods中
+					beanDefinition.registerExternallyManagedDestroyMethod(methodIdentifier);
+					checkedDestroyMethods.add(element);
+					if (logger.isTraceEnabled()) {
+						logger.trace("Registered destroy method on class [" + this.targetClass.getName() + "]: " + element);
+					}
+				}
+			}
+			this.checkedInitMethods = checkedInitMethods;
+			this.checkedDestroyMethods = checkedDestroyMethods;
+		}
+
+    
+    }
 
 }
 ```
@@ -6481,9 +7037,1210 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 
 
+###### CommonAnnotationBeanPostProcessor
+
+- 负责扫描`@Resource、@WebServiceRef、@EJB`的所有字段和方法，将其注册到beanDefinition的`externallyManagedConfigMembers`中
+
+```java
+
+//CommonAnnotationBeanPostProcessor继承了InitDestroyAnnotationBeanPostProcessor
+
+public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBeanPostProcessor
+       implements InstantiationAwareBeanPostProcessor, BeanFactoryAware, Serializable {
+
+    //包含@Resource、@WebServiceRef、@EJB
+    private static final Set<Class<? extends Annotation>> resourceAnnotationTypes = new LinkedHashSet<>(4);
+
+    
+    //初始化要处理的注解@Resource、@WebServiceRef、@EJB
+	static {
+		webServiceRefClass = loadAnnotationType("javax.xml.ws.WebServiceRef");
+		ejbClass = loadAnnotationType("javax.ejb.EJB");
+
+		resourceAnnotationTypes.add(Resource.class);
+		if (webServiceRefClass != null) {
+			resourceAnnotationTypes.add(webServiceRefClass);
+		}
+		if (ejbClass != null) {
+			resourceAnnotationTypes.add(ejbClass);
+		}
+	}
+    
+ 
+    public CommonAnnotationBeanPostProcessor() {
+		setOrder(Ordered.LOWEST_PRECEDENCE - 3);
+         //设置父类InitDestroyAnnotationBeanPostProcessor处理的注解
+		setInitAnnotationType(PostConstruct.class);
+		setDestroyAnnotationType(PreDestroy.class);
+		ignoreResourceType("javax.xml.ws.WebServiceContext");
+	}
+    
+    @Override
+	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
+         //先处理父类InitDestroyAnnotationBeanPostProcessor的@PostConstruct和@PreDestroy
+		super.postProcessMergedBeanDefinition(beanDefinition, beanType, beanName);
+         //处理@Resource、@WebServiceRef、@EJB
+		InjectionMetadata metadata = findResourceMetadata(beanName, beanType, null);
+		metadata.checkConfigMembers(beanDefinition);
+	}
+    
+    //创建InjectionMetadata 扫描找出带有@Resource、@WebServiceRef、@EJB的所有字段和方法
+    private InjectionMetadata buildResourceMetadata(final Class<?> clazz) {
+		if (!AnnotationUtils.isCandidateClass(clazz, resourceAnnotationTypes)) {
+			return InjectionMetadata.EMPTY;
+		}
+
+		List<InjectionMetadata.InjectedElement> elements = new ArrayList<>();
+		Class<?> targetClass = clazz;
+
+         //遍历当前类和父类
+		do {
+			final List<InjectionMetadata.InjectedElement> currElements = new ArrayList<>();
+			
+             //扫描所有字段 找出带有@Resource、@WebServiceRef、@EJB的所有字段
+			ReflectionUtils.doWithLocalFields(targetClass, field -> {
+				if (webServiceRefClass != null && field.isAnnotationPresent(webServiceRefClass)) {
+					if (Modifier.isStatic(field.getModifiers())) {
+						throw new IllegalStateException("@WebServiceRef annotation is not supported on static fields");
+					}
+					currElements.add(new WebServiceRefElement(field, field, null));
+				}
+				else if (ejbClass != null && field.isAnnotationPresent(ejbClass)) {
+					if (Modifier.isStatic(field.getModifiers())) {
+						throw new IllegalStateException("@EJB annotation is not supported on static fields");
+					}
+					currElements.add(new EjbRefElement(field, field, null));
+				}
+				else if (field.isAnnotationPresent(Resource.class)) {
+					if (Modifier.isStatic(field.getModifiers())) {
+						throw new IllegalStateException("@Resource annotation is not supported on static fields");
+					}
+					if (!this.ignoredResourceTypes.contains(field.getType().getName())) {
+						currElements.add(new ResourceElement(field, field, null));
+					}
+				}
+			});
+
+             //扫描所有方法 找出带有@Resource、@WebServiceRef、@EJB的所有方法
+			ReflectionUtils.doWithLocalMethods(targetClass, method -> {
+				Method bridgedMethod = BridgeMethodResolver.findBridgedMethod(method);
+				if (!BridgeMethodResolver.isVisibilityBridgeMethodPair(method, bridgedMethod)) {
+					return;
+				}
+				if (method.equals(ClassUtils.getMostSpecificMethod(method, clazz))) {
+					if (webServiceRefClass != null && bridgedMethod.isAnnotationPresent(webServiceRefClass)) {
+						if (Modifier.isStatic(method.getModifiers())) {
+							throw new IllegalStateException("@WebServiceRef annotation is not supported on static methods");
+						}
+						if (method.getParameterCount() != 1) {
+							throw new IllegalStateException("@WebServiceRef annotation requires a single-arg method: " + method);
+						}
+						PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
+						currElements.add(new WebServiceRefElement(method, bridgedMethod, pd));
+					}
+					else if (ejbClass != null && bridgedMethod.isAnnotationPresent(ejbClass)) {
+						if (Modifier.isStatic(method.getModifiers())) {
+							throw new IllegalStateException("@EJB annotation is not supported on static methods");
+						}
+						if (method.getParameterCount() != 1) {
+							throw new IllegalStateException("@EJB annotation requires a single-arg method: " + method);
+						}
+						PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
+						currElements.add(new EjbRefElement(method, bridgedMethod, pd));
+					}
+					else if (bridgedMethod.isAnnotationPresent(Resource.class)) {
+						if (Modifier.isStatic(method.getModifiers())) {
+							throw new IllegalStateException("@Resource annotation is not supported on static methods");
+						}
+						Class<?>[] paramTypes = method.getParameterTypes();
+						if (paramTypes.length != 1) {
+							throw new IllegalStateException("@Resource annotation requires a single-arg method: " + method);
+						}
+						if (!this.ignoredResourceTypes.contains(paramTypes[0].getName())) {
+							PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
+                               //创建ResourceElement
+							currElements.add(new ResourceElement(method, bridgedMethod, pd));
+						}
+					}
+				}
+			});
+
+			elements.addAll(0, currElements);
+			targetClass = targetClass.getSuperclass();
+		}
+		while (targetClass != null && targetClass != Object.class);
+		
+        //封装InjectionMetadata数据
+		return InjectionMetadata.forElements(elements, clazz);
+	}
+
+	public class InjectionMetadata {
+        
+        //遍历所有InjectionMetadata数据 注册到beanDefinition的externallyManagedConfigMembers中
+    	public void checkConfigMembers(RootBeanDefinition beanDefinition) {
+            Set<InjectedElement> checkedElements = new LinkedHashSet<>(this.injectedElements.size());
+            //遍历InjectionMetadata数据 
+            for (InjectedElement element : this.injectedElements) {
+                Member member = element.getMember();
+                if (!beanDefinition.isExternallyManagedConfigMember(member)) {
+                    //注册到beanDefinition的externallyManagedConfigMembers中
+                    beanDefinition.registerExternallyManagedConfigMember(member);
+                    checkedElements.add(element);
+                    if (logger.isTraceEnabled()) {
+                        logger.trace("Registered injected element on class [" + this.targetClass.getName() + "]: " + element);
+                    }
+                }
+            }
+            this.checkedElements = checkedElements;
+		}
+        
+     //@Resource对应的类
+	private class ResourceElement extends LookupElement {
+        
+        
+		public ResourceElement(Member member, AnnotatedElement ae, @Nullable PropertyDescriptor pd) {
+			super(member, pd);
+             //获取@Resource的name和type值
+			Resource resource = ae.getAnnotation(Resource.class);
+			String resourceName = resource.name();
+			Class<?> resourceType = resource.type();
+             //如果name没有值 代表使用字段名称
+			this.isDefaultName = !StringUtils.hasLength(resourceName);
+			if (this.isDefaultName) {
+                  //使用字段名作为name
+				resourceName = this.member.getName();
+                  //如果是set方法 就使用set方法后面的名字当name
+				if (this.member instanceof Method && resourceName.startsWith("set") && resourceName.length() > 3) {
+					resourceName = Introspector.decapitalize(resourceName.substring(3));
+				}
+			}
+             //如果指定了名字 需要进行占位符替换解析
+			else if (embeddedValueResolver != null) {
+				resourceName = embeddedValueResolver.resolveStringValue(resourceName);
+			}
+             //如果设置了type 就检查一下type
+			if (Object.class != resourceType) {
+				checkResourceType(resourceType);
+			}
+			else {
+				// No resource type specified... check field/method.
+				resourceType = getResourceType();
+			}
+             //设置name
+			this.name = (resourceName != null ? resourceName : "");
+             //设置查找类型
+			this.lookupType = resourceType;
+             //如果有lookup值 设置给mappedName 方便进行jndi
+			String lookupValue = resource.lookup();
+			this.mappedName = (StringUtils.hasLength(lookupValue) ? lookupValue : resource.mappedName());
+             //如果包含@Lazy注解 获取值
+			Lazy lazy = ae.getAnnotation(Lazy.class);
+			this.lazyLookup = (lazy != null && lazy.value());
+		}
+
+    
+    }
+
+}
+```
+
+###### AutowiredAnnotationBeanPostProcessor
+
+- 负责扫描`@Autowired、@Value、@Inject`的所有字段和方法，将其注册到beanDefinition的`externallyManagedConfigMembers`中
+
+```java
+public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBeanPostProcessorAdapter
+       implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware {
+    
+    //初始化@Autowired、@Value、@Inject注解
+	public AutowiredAnnotationBeanPostProcessor() {
+		this.autowiredAnnotationTypes.add(Autowired.class);
+		this.autowiredAnnotationTypes.add(Value.class);
+		try {
+			this.autowiredAnnotationTypes.add((Class<? extends Annotation>)
+					ClassUtils.forName("javax.inject.Inject", AutowiredAnnotationBeanPostProcessor.class.getClassLoader()));
+			logger.trace("JSR-330 'javax.inject.Inject' annotation found and supported for autowiring");
+		}
+		catch (ClassNotFoundException ex) {
+			// JSR-330 API not available - simply skip.
+		}
+	}
+    
+    //扫描所有@Autowired、@Value、@Inject注解的字段和方法 加入到beanDefinition中去
+    @Override
+	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
+         //获取@Autowired、@Value、@Inject注解的字段和方法
+		InjectionMetadata metadata = findAutowiringMetadata(beanName, beanType, null);
+        //加入到beanDefinition中去
+		metadata.checkConfigMembers(beanDefinition);
+	}
+
+    private InjectionMetadata buildAutowiringMetadata(final Class<?> clazz) {
+		if (!AnnotationUtils.isCandidateClass(clazz, this.autowiredAnnotationTypes)) {
+			return InjectionMetadata.EMPTY;
+		}
+
+		List<InjectionMetadata.InjectedElement> elements = new ArrayList<>();
+		Class<?> targetClass = clazz;
+		
+        //遍历当前类和父类
+		do {
+			final List<InjectionMetadata.InjectedElement> currElements = new ArrayList<>();
+			//遍历所有字段 找到@Autowired、@Value、@Inject注解的字段
+			ReflectionUtils.doWithLocalFields(targetClass, field -> {
+				MergedAnnotation<?> ann = findAutowiredAnnotation(field);
+				if (ann != null) {
+					if (Modifier.isStatic(field.getModifiers())) {
+						if (logger.isInfoEnabled()) {
+							logger.info("Autowired annotation is not supported on static fields: " + field);
+						}
+						return;
+					}
+					boolean required = determineRequiredStatus(ann);
+					currElements.add(new AutowiredFieldElement(field, required));
+				}
+			});
+
+             //遍历所有方法 找到@Autowired、@Value、@Inject注解的方法 不包括构造方法
+			ReflectionUtils.doWithLocalMethods(targetClass, method -> {
+				Method bridgedMethod = BridgeMethodResolver.findBridgedMethod(method);
+				if (!BridgeMethodResolver.isVisibilityBridgeMethodPair(method, bridgedMethod)) {
+					return;
+				}
+				MergedAnnotation<?> ann = findAutowiredAnnotation(bridgedMethod);
+				if (ann != null && method.equals(ClassUtils.getMostSpecificMethod(method, clazz))) {
+					if (Modifier.isStatic(method.getModifiers())) {
+						if (logger.isInfoEnabled()) {
+							logger.info("Autowired annotation is not supported on static methods: " + method);
+						}
+						return;
+					}
+					if (method.getParameterCount() == 0) {
+						if (logger.isInfoEnabled()) {
+							logger.info("Autowired annotation should only be used on methods with parameters: " +
+									method);
+						}
+					}
+					boolean required = determineRequiredStatus(ann);
+					PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
+					currElements.add(new AutowiredMethodElement(method, required, pd));
+				}
+			});
+
+			elements.addAll(0, currElements);
+			targetClass = targetClass.getSuperclass();
+		}
+		while (targetClass != null && targetClass != Object.class);
+
+        //返回封装好的InjectionMetadata
+		return InjectionMetadata.forElements(elements, clazz);
+	}
+    
+    
+    public class InjectionMetadata {
+        
+        //遍历所有InjectionMetadata数据 注册到beanDefinition的externallyManagedConfigMembers中
+    	public void checkConfigMembers(RootBeanDefinition beanDefinition) {
+            Set<InjectedElement> checkedElements = new LinkedHashSet<>(this.injectedElements.size());
+            //遍历InjectionMetadata数据 
+            for (InjectedElement element : this.injectedElements) {
+                Member member = element.getMember();
+                if (!beanDefinition.isExternallyManagedConfigMember(member)) {
+                    //注册到beanDefinition的externallyManagedConfigMembers中
+                    beanDefinition.registerExternallyManagedConfigMember(member);
+                    checkedElements.add(element);
+                    if (logger.isTraceEnabled()) {
+                        logger.trace("Registered injected element on class [" + this.targetClass.getName() + "]: " + element);
+                    }
+                }
+            }
+            this.checkedElements = checkedElements;
+		}
+   
+    
+    }
+
+
+}
+```
 
 
 
+
+
+##### populateBean()
+
+```java
+public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFactory
+		implements AutowireCapableBeanFactory {
+
+    //填充属性
+	@SuppressWarnings("deprecation")  // for postProcessPropertyValues
+	protected void populateBean(String beanName, RootBeanDefinition mbd, @Nullable BeanWrapper bw) {
+		if (bw == null) {
+			if (mbd.hasPropertyValues()) {
+				throw new BeanCreationException(
+						mbd.getResourceDescription(), beanName, "Cannot apply property values to null instance");
+			}
+			else {
+				// Skip property population phase for null instance.
+				return;
+			}
+		}
+
+		// Give any InstantiationAwareBeanPostProcessors the opportunity to modify the
+		// state of the bean before properties are set. This can be used, for example,
+		// to support styles of field injection.
+         //给InstantiationAwareBeanPostProcessor一个机会再去更改beanDefinition 在属性值注入之前
+		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
+			for (BeanPostProcessor bp : getBeanPostProcessors()) {
+				if (bp instanceof InstantiationAwareBeanPostProcessor) {
+					InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
+					if (!ibp.postProcessAfterInstantiation(bw.getWrappedInstance(), beanName)) {
+						return;
+					}
+				}
+			}
+		}
+		
+        //获取beanDefinition的PropertyValues
+		PropertyValues pvs = (mbd.hasPropertyValues() ? mbd.getPropertyValues() : null);
+		
+        //获取属性PropertyValues的注入模式 一般只有xml中才会有 这个设置跟注解的自动注入无关 只针对于PropertyValues
+		int resolvedAutowireMode = mbd.getResolvedAutowireMode();
+		if (resolvedAutowireMode == AUTOWIRE_BY_NAME || resolvedAutowireMode == AUTOWIRE_BY_TYPE) {
+             //处理PropertyValues
+			MutablePropertyValues newPvs = new MutablePropertyValues(pvs);
+             //根据propertyName进行查找PropertyValues中的属性
+			// Add property values based on autowire by name if applicable.
+			if (resolvedAutowireMode == AUTOWIRE_BY_NAME) {
+				autowireByName(beanName, mbd, bw, newPvs);
+			}
+            
+             //根据类型进行查找PropertyValues中的属性
+			// Add property values based on autowire by type if applicable.
+			if (resolvedAutowireMode == AUTOWIRE_BY_TYPE) {
+				autowireByType(beanName, mbd, bw, newPvs);
+			}
+             //将找到的PropertyValues设置回pvs
+			pvs = newPvs;
+		}
+		
+        //检查是否有InstantiationAwareBeanPostProcessor
+		boolean hasInstAwareBpps = hasInstantiationAwareBeanPostProcessors();
+		boolean needsDepCheck = (mbd.getDependencyCheck() != AbstractBeanDefinition.DEPENDENCY_CHECK_NONE);
+
+         //开始进行注解属性注入
+		PropertyDescriptor[] filteredPds = null;
+		if (hasInstAwareBpps) {
+			if (pvs == null) {
+				pvs = mbd.getPropertyValues();
+			}
+             //遍历InstantiationAwareBeanPostProcessor
+			for (BeanPostProcessor bp : getBeanPostProcessors()) {
+				if (bp instanceof InstantiationAwareBeanPostProcessor) {
+					InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
+                      //处理属性填充
+					PropertyValues pvsToUse = ibp.postProcessProperties(pvs, bw.getWrappedInstance(), beanName);
+					if (pvsToUse == null) {
+						if (filteredPds == null) {
+							filteredPds = filterPropertyDescriptorsForDependencyCheck(bw, mbd.allowCaching);
+						}
+						pvsToUse = ibp.postProcessPropertyValues(pvs, filteredPds, bw.getWrappedInstance(), beanName);
+						if (pvsToUse == null) {
+							return;
+						}
+					}
+					pvs = pvsToUse;
+				}
+			}
+		}
+		if (needsDepCheck) {
+			if (filteredPds == null) {
+				filteredPds = filterPropertyDescriptorsForDependencyCheck(bw, mbd.allowCaching);
+			}
+			checkDependencies(beanName, mbd, filteredPds, pvs);
+		}
+
+		if (pvs != null) {
+			applyPropertyValues(beanName, mbd, bw, pvs);
+		}
+	}
+
+
+
+}
+```
+
+
+
+###### CommonAnnotationBeanPostProcessor
+
+
+
+```java
+public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBeanPostProcessor
+       implements InstantiationAwareBeanPostProcessor, BeanFactoryAware, Serializable {
+    
+    //包含@Resource、@WebServiceRef、@EJB
+    private static final Set<Class<? extends Annotation>> resourceAnnotationTypes = new LinkedHashSet<>(4);
+
+    
+    //初始化要处理的注解@Resource、@WebServiceRef、@EJB
+	static {
+		webServiceRefClass = loadAnnotationType("javax.xml.ws.WebServiceRef");
+		ejbClass = loadAnnotationType("javax.ejb.EJB");
+
+		resourceAnnotationTypes.add(Resource.class);
+		if (webServiceRefClass != null) {
+			resourceAnnotationTypes.add(webServiceRefClass);
+		}
+		if (ejbClass != null) {
+			resourceAnnotationTypes.add(ejbClass);
+		}
+	}
+    
+ 
+    public CommonAnnotationBeanPostProcessor() {
+		setOrder(Ordered.LOWEST_PRECEDENCE - 3);
+         //设置父类InitDestroyAnnotationBeanPostProcessor处理的注解
+		setInitAnnotationType(PostConstruct.class);
+		setDestroyAnnotationType(PreDestroy.class);
+		ignoreResourceType("javax.xml.ws.WebServiceContext");
+	}
+
+    //处理@Resource、@WebServiceRef、@EJB注解的字段和方法
+    @Override
+	public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) {
+         //获取之前缓存到injectionMetadataCache的beanName对应的InjectionMetadata
+		InjectionMetadata metadata = findResourceMetadata(beanName, bean.getClass(), pvs);
+		try {
+             //处理@Resource、@WebServiceRef、@EJB注解
+			metadata.inject(bean, beanName, pvs);
+		}
+		catch (Throwable ex) {
+			throw new BeanCreationException(beanName, "Injection of resource dependencies failed", ex);
+		}
+		return pvs;
+	}
+    
+    //获取InjectionMetadata
+    private InjectionMetadata findResourceMetadata(String beanName, final Class<?> clazz, @Nullable PropertyValues pvs) {
+		// Fall back to class name as cache key, for backwards compatibility with custom callers.
+		String cacheKey = (StringUtils.hasLength(beanName) ? beanName : clazz.getName());
+		// Quick check on the concurrent map first, with minimal locking.
+        //从缓存中获取beanName对应的InjectionMetadata
+		InjectionMetadata metadata = this.injectionMetadataCache.get(cacheKey);
+		if (InjectionMetadata.needsRefresh(metadata, clazz)) {
+			synchronized (this.injectionMetadataCache) {
+				metadata = this.injectionMetadataCache.get(cacheKey);
+				if (InjectionMetadata.needsRefresh(metadata, clazz)) {
+					if (metadata != null) {
+						metadata.clear(pvs);
+					}
+                      //重新扫描@Resource、@WebServiceRef、@EJB的字段和方法创建InjectionMetadata
+					metadata = buildResourceMetadata(clazz);
+					this.injectionMetadataCache.put(cacheKey, metadata);
+				}
+			}
+		}
+		return metadata;
+	}
+    
+    public class InjectionMetadata {
+          //遍历所有的带@Resource、@WebServiceRef、@EJB注解的字段和方法 属性注入
+          public void inject(Object target, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
+            Collection<InjectedElement> checkedElements = this.checkedElements;
+            Collection<InjectedElement> elementsToIterate =
+                    (checkedElements != null ? checkedElements : this.injectedElements);
+            if (!elementsToIterate.isEmpty()) {
+                //遍历@Resource、@WebServiceRef、@EJB注解的字段和方法
+                for (InjectedElement element : elementsToIterate) {
+                    if (logger.isTraceEnabled()) {
+                        logger.trace("Processing injected element of bean '" + beanName + "': " + element);
+                    }
+                    //属性注入
+                    element.inject(target, beanName, pvs);
+                }
+            }
+        }
+        
+        //内部类
+        public abstract static class InjectedElement {
+            //属性注入
+            protected void inject(Object target, @Nullable String requestingBeanName, @Nullable PropertyValues pvs)
+                    throws Throwable {
+			   //如果要注入字段
+                if (this.isField) {
+                    Field field = (Field) this.member;
+                    ReflectionUtils.makeAccessible(field);
+                    //获取属性bean 将属性bean设置给实例
+                    field.set(target, getResourceToInject(target, requestingBeanName));
+                }
+                //如果是要注入方法
+                else {
+                    if (checkPropertySkipping(pvs)) {
+                        return;
+                    }
+                    try {
+                        Method method = (Method) this.member;
+                        ReflectionUtils.makeAccessible(method);
+                        method.invoke(target, getResourceToInject(target, requestingBeanName));
+                    }
+                    catch (InvocationTargetException ex) {
+                        throw ex.getTargetException();
+                    }
+                }
+            }
+
+        }
+        
+        private class ResourceElement extends LookupElement {
+        	
+            //获取@Resource注解标注属性/参数的bean
+            @Override
+            protected Object getResourceToInject(Object target, @Nullable String requestingBeanName) {
+                //如果是懒加载 返回一个代理对象 否则直接获取bean
+                return (this.lazyLookup ? buildLazyResourceProxy(this, requestingBeanName) :
+                        getResource(this, requestingBeanName));
+            }
+        
+        }
+
+        
+        
+    }
+    
+    //获取@Resource的bean
+	protected Object getResource(LookupElement element, @Nullable String requestingBeanName)
+			throws NoSuchBeanDefinitionException {
+		
+        //如果有@Resource(lookup="")属性 去jndi中查找对象
+		if (StringUtils.hasLength(element.mappedName)) {
+			return this.jndiFactory.getBean(element.mappedName, element.lookupType);
+		}
+		if (this.alwaysUseJndiLookup) {
+			return this.jndiFactory.getBean(element.name, element.lookupType);
+		}
+		if (this.resourceFactory == null) {
+			throw new NoSuchBeanDefinitionException(element.lookupType,
+					"No resource factory configured - specify the 'resourceFactory' property");
+		}
+         //通过容器查找bean
+		return autowireResource(this.resourceFactory, element, requestingBeanName);
+	}
+    
+	protected Object autowireResource(BeanFactory factory, LookupElement element, @Nullable String requestingBeanName)
+			throws NoSuchBeanDefinitionException {
+
+		Object resource;
+		Set<String> autowiredBeanNames;
+         //获取@Resource中的name属性
+		String name = element.name;
+		
+         //当前容器是AutowireCapableBeanFactory类型
+		if (factory instanceof AutowireCapableBeanFactory) {
+			AutowireCapableBeanFactory beanFactory = (AutowireCapableBeanFactory) factory;
+			DependencyDescriptor descriptor = element.getDependencyDescriptor();
+             //是否回退到根据类型查找？
+			if (this.fallbackToDefaultTypeMatch && element.isDefaultName && !factory.containsBean(name)) {
+				autowiredBeanNames = new LinkedHashSet<>();
+                 //根据类型查找bean
+				resource = beanFactory.resolveDependency(descriptor, requestingBeanName, autowiredBeanNames, null);
+				if (resource == null) {
+					throw new NoSuchBeanDefinitionException(element.getLookupType(), "No resolvable resource object");
+				}
+			}
+             //使用名称进行查找
+			else {
+				resource = beanFactory.resolveBeanByName(name, descriptor);
+				autowiredBeanNames = Collections.singleton(name);
+			}
+		}
+		else {
+             //根据名称查找bean
+			resource = factory.getBean(name, element.lookupType);
+			autowiredBeanNames = Collections.singleton(name);
+		}
+		
+        //注册属性bean和bean的依赖关系
+		if (factory instanceof ConfigurableBeanFactory) {
+			ConfigurableBeanFactory beanFactory = (ConfigurableBeanFactory) factory;
+			for (String autowiredBeanName : autowiredBeanNames) {
+				if (requestingBeanName != null && beanFactory.containsBean(autowiredBeanName)) {
+					beanFactory.registerDependentBean(autowiredBeanName, requestingBeanName);
+				}
+			}
+		}
+		//返回属性bean
+		return resource;
+	}
+
+    
+    
+}
+```
+
+###### AutowiredAnnotationBeanPostProcessor
+
+
+
+```java
+public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBeanPostProcessorAdapter
+       implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware {
+    
+    //@Autowired、@Value、@Inject
+    public AutowiredAnnotationBeanPostProcessor() {
+		this.autowiredAnnotationTypes.add(Autowired.class);
+		this.autowiredAnnotationTypes.add(Value.class);
+		try {
+			this.autowiredAnnotationTypes.add((Class<? extends Annotation>)
+					ClassUtils.forName("javax.inject.Inject", AutowiredAnnotationBeanPostProcessor.class.getClassLoader()));
+			logger.trace("JSR-330 'javax.inject.Inject' annotation found and supported for autowiring");
+		}
+		catch (ClassNotFoundException ex) {
+			// JSR-330 API not available - simply skip.
+		}
+	}
+	
+    //处理@Autowired、@Value、@Inject注解的属性注入
+	@Override
+	public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) {
+		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
+		try {
+			metadata.inject(bean, beanName, pvs);
+		}
+		catch (BeanCreationException ex) {
+			throw ex;
+		}
+		catch (Throwable ex) {
+			throw new BeanCreationException(beanName, "Injection of autowired dependencies failed", ex);
+		}
+		return pvs;
+	}
+    
+    private class AutowiredFieldElement extends InjectionMetadata.InjectedElement {
+
+		private final boolean required;
+
+		private volatile boolean cached = false;
+
+		@Nullable
+		private volatile Object cachedFieldValue;
+
+		public AutowiredFieldElement(Field field, boolean required) {
+			super(field, null);
+			this.required = required;
+		}
+
+        //属性注入
+		@Override
+		protected void inject(Object bean, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
+			Field field = (Field) this.member;
+			Object value;
+             //有缓存从缓存中获得
+			if (this.cached) {
+				value = resolvedCachedArgument(beanName, this.cachedFieldValue);
+			}
+             //否则就获取
+			else {
+                 //将字段做包装DependencyDescriptor
+				DependencyDescriptor desc = new DependencyDescriptor(field, this.required);
+				desc.setContainingClass(bean.getClass());
+				Set<String> autowiredBeanNames = new LinkedHashSet<>(1);
+				Assert.state(beanFactory != null, "No BeanFactory available");
+				TypeConverter typeConverter = beanFactory.getTypeConverter();
+				try {
+                      //根据类型进行获取bean
+					value = beanFactory.resolveDependency(desc, beanName, autowiredBeanNames, typeConverter);
+				}
+				catch (BeansException ex) {
+					throw new UnsatisfiedDependencyException(null, beanName, new InjectionPoint(field), ex);
+				}
+				synchronized (this) {
+					if (!this.cached) {
+						if (value != null || this.required) {
+							this.cachedFieldValue = desc;
+							registerDependentBeans(beanName, autowiredBeanNames);
+							if (autowiredBeanNames.size() == 1) {
+								String autowiredBeanName = autowiredBeanNames.iterator().next();
+								if (beanFactory.containsBean(autowiredBeanName) &&
+										beanFactory.isTypeMatch(autowiredBeanName, field.getType())) {
+									this.cachedFieldValue = new ShortcutDependencyDescriptor(
+											desc, autowiredBeanName, field.getType());
+								}
+							}
+						}
+						else {
+							this.cachedFieldValue = null;
+						}
+						this.cached = true;
+					}
+				}
+			}
+			if (value != null) {
+				ReflectionUtils.makeAccessible(field);
+                 //属性注入
+				field.set(bean, value);
+			}
+		}
+	}
+    
+    private class AutowiredMethodElement extends InjectionMetadata.InjectedElement {
+
+		private final boolean required;
+
+		private volatile boolean cached = false;
+
+		@Nullable
+		private volatile Object[] cachedMethodArguments;
+
+		public AutowiredMethodElement(Method method, boolean required, @Nullable PropertyDescriptor pd) {
+			super(method, pd);
+			this.required = required;
+		}
+		//方法的参数注入
+		@Override
+		protected void inject(Object bean, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
+			if (checkPropertySkipping(pvs)) {
+				return;
+			}
+			Method method = (Method) this.member;
+			Object[] arguments;
+             //有缓存走缓存
+			if (this.cached) {
+				// Shortcut for avoiding synchronization...
+				arguments = resolveCachedArguments(beanName);
+			}
+			else {
+				int argumentCount = method.getParameterCount();
+				arguments = new Object[argumentCount];
+				DependencyDescriptor[] descriptors = new DependencyDescriptor[argumentCount];
+				Set<String> autowiredBeans = new LinkedHashSet<>(argumentCount);
+				Assert.state(beanFactory != null, "No BeanFactory available");
+				TypeConverter typeConverter = beanFactory.getTypeConverter();
+                 //遍历方法上的所有参数
+				for (int i = 0; i < arguments.length; i++) {
+					MethodParameter methodParam = new MethodParameter(method, i);
+					DependencyDescriptor currDesc = new DependencyDescriptor(methodParam, this.required);
+					currDesc.setContainingClass(bean.getClass());
+					descriptors[i] = currDesc;
+					try {
+                          //通过类型查找每个bean
+						Object arg = beanFactory.resolveDependency(currDesc, beanName, autowiredBeans, typeConverter);
+						if (arg == null && !this.required) {
+							arguments = null;
+							break;
+						}
+						arguments[i] = arg;
+					}
+					catch (BeansException ex) {
+                          //如果方法参数有任意一个没有找到对应类型的bean 报错
+						throw new UnsatisfiedDependencyException(null, beanName, new InjectionPoint(methodParam), ex);
+					}
+				}
+				synchronized (this) {
+					if (!this.cached) {
+						if (arguments != null) {
+							DependencyDescriptor[] cachedMethodArguments = Arrays.copyOf(descriptors, arguments.length);
+							registerDependentBeans(beanName, autowiredBeans);
+							if (autowiredBeans.size() == argumentCount) {
+								Iterator<String> it = autowiredBeans.iterator();
+								Class<?>[] paramTypes = method.getParameterTypes();
+								for (int i = 0; i < paramTypes.length; i++) {
+									String autowiredBeanName = it.next();
+									if (beanFactory.containsBean(autowiredBeanName) &&
+											beanFactory.isTypeMatch(autowiredBeanName, paramTypes[i])) {
+										cachedMethodArguments[i] = new ShortcutDependencyDescriptor(
+												descriptors[i], autowiredBeanName, paramTypes[i]);
+									}
+								}
+							}
+							this.cachedMethodArguments = cachedMethodArguments;
+						}
+						else {
+							this.cachedMethodArguments = null;
+						}
+						this.cached = true;
+					}
+				}
+			}
+			if (arguments != null) {
+				try {
+                      //参数注入 调用方法
+					ReflectionUtils.makeAccessible(method);
+					method.invoke(bean, arguments);
+				}
+				catch (InvocationTargetException ex) {
+					throw ex.getTargetException();
+				}
+			}
+		}
+	}
+
+
+
+}
+```
+
+
+
+##### 依赖注入
+
+###### 通过beanName获取依赖
+
+```java
+public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFactory
+       implements AutowireCapableBeanFactory {
+    
+    //通过beanName获取依赖的核心方法
+    @Override
+	public Object resolveBeanByName(String name, DependencyDescriptor descriptor) {
+		InjectionPoint previousInjectionPoint = ConstructorResolver.setCurrentInjectionPoint(descriptor);
+		try {
+             //getBean通过beanName获取
+			return getBean(name, descriptor.getDependencyType());
+		}
+		finally {
+			ConstructorResolver.setCurrentInjectionPoint(previousInjectionPoint);
+		}
+	}
+}
+```
+
+
+
+###### 通过类型获取依赖
+
+```java
+public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFactory
+       implements ConfigurableListableBeanFactory, BeanDefinitionRegistry, Serializable {
+
+    //根据指定的类型查找bean
+	@Override
+	@Nullable
+	public Object resolveDependency(DependencyDescriptor descriptor, @Nullable String requestingBeanName,
+			@Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) throws BeansException {
+		//设置参数名称发现器
+		descriptor.initParameterNameDiscovery(getParameterNameDiscoverer());
+        //如果指定的类型是Optional
+		if (Optional.class == descriptor.getDependencyType()) {
+			return createOptionalDependency(descriptor, requestingBeanName);
+		}
+         //如果指定的类型是ObjectFactory或ObjectProvider
+		else if (ObjectFactory.class == descriptor.getDependencyType() ||
+				ObjectProvider.class == descriptor.getDependencyType()) {
+			return new DependencyObjectProvider(descriptor, requestingBeanName);
+		}
+         //如果指定的类型是Provider
+		else if (javaxInjectProviderClass == descriptor.getDependencyType()) {
+			return new Jsr330Factory().createDependencyProvider(descriptor, requestingBeanName);
+		}
+		else {
+             //处理@Lazy @todo??
+			Object result = getAutowireCandidateResolver().getLazyResolutionProxyIfNecessary(
+					descriptor, requestingBeanName);
+			if (result == null) {
+                  //对指定类型查找bean
+				result = doResolveDependency(descriptor, requestingBeanName, autowiredBeanNames, typeConverter);
+			}
+			return result;
+		}
+	}
+    
+    
+    @Nullable
+	public Object doResolveDependency(DependencyDescriptor descriptor, @Nullable String beanName,
+			@Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) throws BeansException {
+
+		InjectionPoint previousInjectionPoint = ConstructorResolver.setCurrentInjectionPoint(descriptor);
+		try {
+             //快捷方式
+			Object shortcut = descriptor.resolveShortcut(this);
+			if (shortcut != null) {
+				return shortcut;
+			}
+			//获取指定的类型
+			Class<?> type = descriptor.getDependencyType();
+             //如果当前要注入的属性或者参数前有@Value注解
+			Object value = getAutowireCandidateResolver().getSuggestedValue(descriptor);
+             //获取@Value注解的值
+			if (value != null) {
+                  //如果是@Value注解的值是字符串
+				if (value instanceof String) {
+                      //那么进行一下占位符的解析替换 ${}
+					String strVal = resolveEmbeddedValue((String) value);
+					BeanDefinition bd = (beanName != null && containsBean(beanName) ?
+							getMergedBeanDefinition(beanName) : null);
+                      //再进行一下spel的解析 #{}
+					value = evaluateBeanDefinitionString(strVal, bd);
+				}
+                 //最后 看看类型是否匹配 如果不匹配尝试进行一下转换 有编辑器先用编辑器 没有用转换服务
+				TypeConverter converter = (typeConverter != null ? typeConverter : getTypeConverter());
+				try {
+					return converter.convertIfNecessary(value, type, descriptor.getTypeDescriptor());
+				}
+				catch (UnsupportedOperationException ex) {
+					// A custom TypeConverter which does not support TypeDescriptor resolution...
+					return (descriptor.getField() != null ?
+							converter.convertIfNecessary(value, type, descriptor.getField()) :
+							converter.convertIfNecessary(value, type, descriptor.getMethodParameter()));
+				}
+			}
+			//如果指定的类型是一个Stream、Collection、数组、Map类型 在这里解析
+			Object multipleBeans = resolveMultipleBeans(descriptor, beanName, autowiredBeanNames, typeConverter);
+			if (multipleBeans != null) {
+				return multipleBeans;
+			}
+			//如果指定的类型是一个普通引用类型
+			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, type, descriptor);
+             //如果没找到对应的bean 并且这个bean是required=true必须的
+			if (matchingBeans.isEmpty()) {
+				if (isRequired(descriptor)) {
+                      //抛出找不到bean异常
+					raiseNoMatchingBeanFound(type, descriptor.getResolvableType(), descriptor);
+				}
+				return null;
+			}
+
+			String autowiredBeanName;
+			Object instanceCandidate;
+			
+             //如果查找到了多余1个匹配的bean
+			if (matchingBeans.size() > 1) {
+                 //通过@Primary注解筛选 和 通过@Priority比较筛选
+				autowiredBeanName = determineAutowireCandidate(matchingBeans, descriptor);
+                 //如果没筛选出来
+				if (autowiredBeanName == null) {
+					//是必须的 抛出不唯一异常 
+                      if (isRequired(descriptor) || !indicatesMultipleBeans(type)) {
+						return descriptor.resolveNotUnique(descriptor.getResolvableType(), matchingBeans);
+					}
+					else {
+						// In case of an optional Collection/Map, silently ignore a non-unique case:
+						// possibly it was meant to be an empty collection of multiple regular beans
+						// (before 4.3 in particular when we didn't even look for collection beans).
+						return null;
+					}
+				}
+                  //获取筛选的bean
+				instanceCandidate = matchingBeans.get(autowiredBeanName);
+			}
+             //如果只有一个匹配的bean
+			else {
+				// We have exactly one match.
+				Map.Entry<String, Object> entry = matchingBeans.entrySet().iterator().next();
+                  //设置这个beanName和bean
+				autowiredBeanName = entry.getKey();
+				instanceCandidate = entry.getValue();
+			}
+			//添加到集合
+			if (autowiredBeanNames != null) {
+				autowiredBeanNames.add(autowiredBeanName);
+			}
+             //instanceCandidate的此时是个class对象 获取bean实例
+			if (instanceCandidate instanceof Class) {
+                  //调用beanFactory.getBean
+				instanceCandidate = descriptor.resolveCandidate(autowiredBeanName, type, this);
+			}
+			Object result = instanceCandidate;
+			if (result instanceof NullBean) {
+				if (isRequired(descriptor)) {
+					raiseNoMatchingBeanFound(type, descriptor.getResolvableType(), descriptor);
+				}
+				result = null;
+			}
+             //最后检查一下获取的类型和所需的类型是否相匹配 抛出类型不匹配异常
+			if (!ClassUtils.isAssignableValue(type, result)) {
+				throw new BeanNotOfRequiredTypeException(autowiredBeanName, type, instanceCandidate.getClass());
+			}
+             //返回结果
+			return result;
+		}
+		finally {
+			ConstructorResolver.setCurrentInjectionPoint(previousInjectionPoint);
+		}
+	}
+
+    //如果指定的类型是一个Stream、Collection、数组、Map类型 解析
+	@Nullable
+	private Object resolveMultipleBeans(DependencyDescriptor descriptor, @Nullable String beanName,
+			@Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) {
+		
+         //获取指定的类型
+		final Class<?> type = descriptor.getDependencyType();
+
+        //如果指定的类型是一个Stream
+		if (descriptor instanceof StreamDependencyDescriptor) {
+             //查找Stream类型的bean
+			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, type, descriptor);
+			if (autowiredBeanNames != null) {
+				autowiredBeanNames.addAll(matchingBeans.keySet());
+			}
+             //再查找Stream中内置类型的bean
+			Stream<Object> stream = matchingBeans.keySet().stream()
+					.map(name -> descriptor.resolveCandidate(name, type, this))
+					.filter(bean -> !(bean instanceof NullBean));
+			if (((StreamDependencyDescriptor) descriptor).isOrdered()) {
+				stream = stream.sorted(adaptOrderComparator(matchingBeans));
+			}
+			return stream;
+		}
+         //如果指定的类型是一个数组
+		else if (type.isArray()) {
+             //获取数组内置的类型
+			Class<?> componentType = type.getComponentType();
+			ResolvableType resolvableType = descriptor.getResolvableType();
+			Class<?> resolvedArrayType = resolvableType.resolve(type);
+			if (resolvedArrayType != type) {
+				componentType = resolvableType.getComponentType().resolve();
+			}
+			if (componentType == null) {
+				return null;
+			}
+             //查找内置类型的bean
+			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, componentType,
+					new MultiElementDescriptor(descriptor));
+			if (matchingBeans.isEmpty()) {
+				return null;
+			}
+			if (autowiredBeanNames != null) {
+				autowiredBeanNames.addAll(matchingBeans.keySet());
+			}
+             //将所有的bean转换成数组类型
+			TypeConverter converter = (typeConverter != null ? typeConverter : getTypeConverter());
+			Object result = converter.convertIfNecessary(matchingBeans.values(), resolvedArrayType);
+			if (result instanceof Object[]) {
+				Comparator<Object> comparator = adaptDependencyComparator(matchingBeans);
+				if (comparator != null) {
+					Arrays.sort((Object[]) result, comparator);
+				}
+			}
+			return result;
+		}
+         //如果指定的类型是Collection
+		else if (Collection.class.isAssignableFrom(type) && type.isInterface()) {
+             //获取内置的类型
+			Class<?> elementType = descriptor.getResolvableType().asCollection().resolveGeneric();
+			if (elementType == null) {
+				return null;
+			}
+             //查找内置类型的bean
+			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, elementType,
+					new MultiElementDescriptor(descriptor));
+			if (matchingBeans.isEmpty()) {
+				return null;
+			}
+			if (autowiredBeanNames != null) {
+				autowiredBeanNames.addAll(matchingBeans.keySet());
+			}
+             //转换成集合类型
+			TypeConverter converter = (typeConverter != null ? typeConverter : getTypeConverter());
+			Object result = converter.convertIfNecessary(matchingBeans.values(), type);
+			if (result instanceof List) {
+				if (((List<?>) result).size() > 1) {
+					Comparator<Object> comparator = adaptDependencyComparator(matchingBeans);
+					if (comparator != null) {
+						((List<?>) result).sort(comparator);
+					}
+				}
+			}
+			return result;
+		}
+         //如果指定的类型是Map
+		else if (Map.class == type) {
+			ResolvableType mapType = descriptor.getResolvableType().asMap();
+             //如果key不是String类型 直接返回
+			Class<?> keyType = mapType.resolveGeneric(0);
+			if (String.class != keyType) {
+				return null;
+			}
+             //获取value的类型
+			Class<?> valueType = mapType.resolveGeneric(1);
+			if (valueType == null) {
+				return null;
+			}
+             //查找指定value类型的bean
+			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, valueType,
+					new MultiElementDescriptor(descriptor));
+			if (matchingBeans.isEmpty()) {
+				return null;
+			}
+			if (autowiredBeanNames != null) {
+				autowiredBeanNames.addAll(matchingBeans.keySet());
+			}
+			return matchingBeans;
+		}
+         //不是上述的集合类型 返回null
+		else {
+			return null;
+		}
+	}
+
+    //查找指定类型的所有bean
+    protected Map<String, Object> findAutowireCandidates(
+			@Nullable String beanName, Class<?> requiredType, DependencyDescriptor descriptor) {
+		//获取指定类型的所有的beanName
+		String[] candidateNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
+				this, requiredType, true, descriptor.isEager());
+		Map<String, Object> result = new LinkedHashMap<>(candidateNames.length);
+        
+         //如果要获取的类型是ApplicationContext、ResourceLoader、ApplicationEventPublisher、BeanFactory类型
+         //直接返回预先设置好的bean
+		for (Map.Entry<Class<?>, Object> classObjectEntry : this.resolvableDependencies.entrySet()) {
+			Class<?> autowiringType = classObjectEntry.getKey();
+			if (autowiringType.isAssignableFrom(requiredType)) {
+				Object autowiringValue = classObjectEntry.getValue();
+				autowiringValue = AutowireUtils.resolveAutowiringValue(autowiringValue, requiredType);
+				if (requiredType.isInstance(autowiringValue)) {
+					result.put(ObjectUtils.identityToString(autowiringValue), autowiringValue);
+					break;
+				}
+			}
+		}
+        //遍历指定类型的所有的beanName
+		for (String candidate : candidateNames) {
+             //如果不是一个自我引用 并且 如果有@Qualifier注解标注 筛选和@Qualifier的value一致的beanName
+			if (!isSelfReference(beanName, candidate) && isAutowireCandidate(candidate, descriptor)) {
+                 //将当前参数名称和获取的类型加入result
+				addCandidateEntry(result, candidate, descriptor, requiredType);
+			}
+		}
+		if (result.isEmpty()) {
+			boolean multiple = indicatesMultipleBeans(requiredType);
+			// Consider fallback matches if the first pass failed to find anything...
+			DependencyDescriptor fallbackDescriptor = descriptor.forFallbackMatch();
+			for (String candidate : candidateNames) {
+				if (!isSelfReference(beanName, candidate) && isAutowireCandidate(candidate, fallbackDescriptor) &&
+						(!multiple || getAutowireCandidateResolver().hasQualifier(descriptor))) {
+					addCandidateEntry(result, candidate, descriptor, requiredType);
+				}
+			}
+			if (result.isEmpty() && !multiple) {
+				// Consider self references as a final pass...
+				// but in the case of a dependency collection, not the very same bean itself.
+				for (String candidate : candidateNames) {
+					if (isSelfReference(beanName, candidate) &&
+							(!(descriptor instanceof MultiElementDescriptor) || !beanName.equals(candidate)) &&
+							isAutowireCandidate(candidate, fallbackDescriptor)) {
+						addCandidateEntry(result, candidate, descriptor, requiredType);
+					}
+				}
+			}
+		}
+		return result;
+	}
+    
+    //获取bean
+    public Object resolveCandidate(String beanName, Class<?> requiredType, BeanFactory beanFactory)
+			throws BeansException {
+
+		return beanFactory.getBean(beanName);
+	}
+
+
+}
+```
 
 
 
@@ -8074,15 +9831,7 @@ private static class ReplaceOverrideMethodInterceptor extends CglibIdentitySuppo
 
 
 
-## @Autowired各种作用
 
-构造方法
-
-@Bean方法？
-
-属性？
-
-@value和@Resource
 
 ## 梳理各个类的接口继承关系
 

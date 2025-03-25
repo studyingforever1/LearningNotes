@@ -3986,6 +3986,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 		}
 
+        //循环所有创建好的bean 如果属于SmartInitializingSingleton 调用afterSingletonsInstantiated方法
 		// Trigger post-initialization callback for all applicable beans...
 		for (String beanName : beanNames) {
 			Object singletonInstance = getSingleton(beanName);
@@ -5058,6 +5059,7 @@ protected Object doCreateBean(final String beanName, final RootBeanDefinition mb
           logger.trace("Eagerly caching bean '" + beanName +
                 "' to allow for resolving potential circular references");
        }
+       //将当前未完成的bean的代理表达式放入三级缓存
        addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
     }
 
@@ -10099,9 +10101,207 @@ private static class ReplaceOverrideMethodInterceptor extends CglibIdentitySuppo
 
 ## 循环依赖
 
+- 创建对象实例后，在未进行初始化前，将包含对象实例的代理表达式方法`ObjectFactory`放入三级缓存中
+- 当出现获取正在创建的bean时，从一、二级缓存中取，如果没有则调用三级缓存中的`ObjectFactory`，如果bean需要被代理，则返回代理后的bean，如果不需要，则直接返回正在创建的bean
+- 将正在创建的bean的引用或者代理对象返回，完成循环依赖的解决
+
+```java
+	protected Object doCreateBean(String beanName, RootBeanDefinition mbd, @Nullable Object[] args)
+			throws BeanCreationException {
+
+		// Instantiate the bean.
+		BeanWrapper instanceWrapper = null;
+		if (mbd.isSingleton()) {
+			instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
+		}
+		if (instanceWrapper == null) {
+			instanceWrapper = createBeanInstance(beanName, mbd, args);
+		}
+		Object bean = instanceWrapper.getWrappedInstance();
+		Class<?> beanType = instanceWrapper.getWrappedClass();
+		if (beanType != NullBean.class) {
+			mbd.resolvedTargetType = beanType;
+		}
+
+		// Allow post-processors to modify the merged bean definition.
+		synchronized (mbd.postProcessingLock) {
+			if (!mbd.postProcessed) {
+				try {
+					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
+				}
+				catch (Throwable ex) {
+					throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+							"Post-processing of merged bean definition failed", ex);
+				}
+				mbd.markAsPostProcessed();
+			}
+		}
+
+        
+		// Eagerly cache singletons to be able to resolve circular references
+		// even when triggered by lifecycle interfaces like BeanFactoryAware.
+		boolean earlySingletonExposure = (mbd.isSingleton() && this.allowCircularReferences &&
+				isSingletonCurrentlyInCreation(beanName));
+		if (earlySingletonExposure) {
+			if (logger.isTraceEnabled()) {
+				logger.trace("Eagerly caching bean '" + beanName +
+						"' to allow for resolving potential circular references");
+			}
+            //在此将未填充属性的bean的表达式加入三级缓存中
+			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
+		}
+
+		// Initialize the bean instance.
+		Object exposedObject = bean;
+		try {
+			populateBean(beanName, mbd, instanceWrapper);
+			exposedObject = initializeBean(beanName, exposedObject, mbd);
+		}
+		catch (Throwable ex) {
+			if (ex instanceof BeanCreationException bce && beanName.equals(bce.getBeanName())) {
+				throw bce;
+			}
+			else {
+				throw new BeanCreationException(mbd.getResourceDescription(), beanName, ex.getMessage(), ex);
+			}
+		}
+
+		if (earlySingletonExposure) {
+			Object earlySingletonReference = getSingleton(beanName, false);
+			if (earlySingletonReference != null) {
+				if (exposedObject == bean) {
+					exposedObject = earlySingletonReference;
+				}
+				else if (!this.allowRawInjectionDespiteWrapping && hasDependentBean(beanName)) {
+					String[] dependentBeans = getDependentBeans(beanName);
+					Set<String> actualDependentBeans = new LinkedHashSet<>(dependentBeans.length);
+					for (String dependentBean : dependentBeans) {
+						if (!removeSingletonIfCreatedForTypeCheckOnly(dependentBean)) {
+							actualDependentBeans.add(dependentBean);
+						}
+					}
+					if (!actualDependentBeans.isEmpty()) {
+						throw new BeanCurrentlyInCreationException(beanName,
+								"Bean with name '" + beanName + "' has been injected into other beans [" +
+								StringUtils.collectionToCommaDelimitedString(actualDependentBeans) +
+								"] in its raw version as part of a circular reference, but has eventually been " +
+								"wrapped. This means that said other beans do not use the final version of the " +
+								"bean. This is often the result of over-eager type matching - consider using " +
+								"'getBeanNamesForType' with the 'allowEagerInit' flag turned off, for example.");
+					}
+				}
+			}
+		}
+
+		// Register bean as disposable.
+		try {
+			registerDisposableBeanIfNecessary(beanName, bean, mbd);
+		}
+		catch (BeanDefinitionValidationException ex) {
+			throw new BeanCreationException(
+					mbd.getResourceDescription(), beanName, "Invalid destruction signature", ex);
+		}
+
+		return exposedObject;
+	}
+
+```
 
 
 
+
+
+### DefaultSingletonBeanRegistry
+
+```JAVA
+public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements SingletonBeanRegistry {
+
+
+    //一级缓存
+	/** Cache of singleton objects: bean name to bean instance. */
+	private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
+
+    //三级缓存
+	/** Cache of singleton factories: bean name to ObjectFactory. */
+	private final Map<String, ObjectFactory<?>> singletonFactories = new HashMap<>(16);
+
+    //二级缓存
+	/** Cache of early singleton objects: bean name to bean instance. */
+	private final Map<String, Object> earlySingletonObjects = new HashMap<>(16);
+
+
+    //将当前未填充属性的bean的代理表达式放入三级缓存中
+    protected void addSingletonFactory(String beanName, ObjectFactory<?> singletonFactory) {
+		Assert.notNull(singletonFactory, "Singleton factory must not be null");
+		synchronized (this.singletonObjects) {
+			if (!this.singletonObjects.containsKey(beanName)) {
+                  //放入三级缓存
+				this.singletonFactories.put(beanName, singletonFactory);
+				this.earlySingletonObjects.remove(beanName);
+				this.registeredSingletons.add(beanName);
+			}
+		}
+	}
+    
+    
+    
+    //核心 在获取bean时 首先从缓存中获得
+    @Nullable
+	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
+		// Quick check for existing instance without full singleton lock
+        //从一级缓存中获取
+		Object singletonObject = this.singletonObjects.get(beanName);
+         //一级缓存没有 并且要获取的bean正在创建中
+		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
+             //从二级缓存中获取
+			singletonObject = this.earlySingletonObjects.get(beanName);
+             //二级缓存也没用 允许提前暴露
+			if (singletonObject == null && allowEarlyReference) {
+				synchronized (this.singletonObjects) {
+					// Consistent creation of early reference within full singleton lock
+					singletonObject = this.singletonObjects.get(beanName);
+					if (singletonObject == null) {
+						singletonObject = this.earlySingletonObjects.get(beanName);
+						if (singletonObject == null) {
+                              //从三级缓存中获得表达式
+							ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
+							if (singletonFactory != null) {
+                                   //调用方法 获取提前暴露的bean
+								singletonObject = singletonFactory.getObject();
+                                   //放入二级缓存 移出三级缓存
+								this.earlySingletonObjects.put(beanName, singletonObject);
+								this.singletonFactories.remove(beanName);
+							}
+						}
+					}
+				}
+			}
+		}
+		return singletonObject;
+	}
+
+
+}
+```
+
+### AbstractAutowireCapableBeanFactory
+
+```java
+public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFactory
+       implements AutowireCapableBeanFactory {
+    
+    //三级缓存中的表达式 用于获取bean的代理对象 如果不需要代理 直接返回未填充属性的bean
+    protected Object getEarlyBeanReference(String beanName, RootBeanDefinition mbd, Object bean) {
+		Object exposedObject = bean;
+		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
+			for (SmartInstantiationAwareBeanPostProcessor bp : getBeanPostProcessorCache().smartInstantiationAware) {
+				exposedObject = bp.getEarlyBeanReference(exposedObject, beanName);
+			}
+		}
+		return exposedObject;
+	}
+}
+```
 
 ## IOC流程
 
@@ -10214,6 +10414,7 @@ private static class ReplaceOverrideMethodInterceptor extends CglibIdentitySuppo
         - 如果bean设置了`initMethodName`，调用`initMethod`执行
       - 处理`BeanPostProcessor`的`postProcessAfterInitialization`
         - `ApplicationListenerDetector`如果bean属于ApplicationListener 加入事件多播器中
+- 循环所有创建好的`bean` 如果属于`SmartInitializingSingleton` 调用`afterSingletonsInstantiated`方法
 
 
 

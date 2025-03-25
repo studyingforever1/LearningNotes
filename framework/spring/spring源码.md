@@ -281,7 +281,32 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 >
 > <img src="./images/image-20250213111616906.png" alt="image-20250213111616906" style="zoom: 50%;" />
 
+### AbstractEnvironment
 
+```java
+public abstract class AbstractEnvironment implements ConfigurableEnvironment {
+    
+    //是否禁止使用getenv
+	public static final String IGNORE_GETENV_PROPERTY_NAME = "spring.getenv.ignore";
+    //当前使用的配置文件 spring.profiles.active=prod
+    public static final String ACTIVE_PROFILES_PROPERTY_NAME = "spring.profiles.active";
+    public static final String DEFAULT_PROFILES_PROPERTY_NAME = "spring.profiles.default";
+	protected static final String RESERVED_DEFAULT_PROFILE_NAME = "default";
+
+
+	protected final Log logger = LogFactory.getLog(getClass());
+
+	private final Set<String> activeProfiles = new LinkedHashSet<>();
+
+	private final Set<String> defaultProfiles = new LinkedHashSet<>(getReservedDefaultProfiles());
+
+	private final MutablePropertySources propertySources = new MutablePropertySources();
+
+	private final ConfigurablePropertyResolver propertyResolver =
+			new PropertySourcesPropertyResolver(this.propertySources);
+
+}
+```
 
 ### StandardEnvironment
 
@@ -889,10 +914,6 @@ public BeanDefinition parse(Element element, ParserContext parserContext) {
 
 
 
-
-#### 以注解方式加载beanDefinitions
-
-@todo
 
 
 
@@ -1634,6 +1655,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
              //查找指定basePackage下的所有候选bean
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 			for (BeanDefinition candidate : candidates) {
+                  //处理@Scope注解
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
                  //使用名称生成器生成beanName
@@ -4667,6 +4689,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
                        throw ex;
                     }
                  });
+                 //处理FactoryBean
                  bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
               }
  			//如果bean是原型的
@@ -5084,6 +5107,7 @@ protected Object doCreateBean(final String beanName, final RootBeanDefinition mb
 
     // Register bean as disposable.
     try {
+       //对于@PreDestroy或者有destroyMethodName的bean进行注册记录
        registerDisposableBeanIfNecessary(beanName, bean, mbd);
     }
     catch (BeanDefinitionValidationException ex) {
@@ -5541,7 +5565,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 - 通过`candidateConstructorsCache`缓存获取已经解析好的`@Autowired、@Inject`注解标注的构造方法，如果能获取到，直接返回，获取不到走下面的流程
 - 获取当前类的全部构造方法，循环遍历所有的构造方法
 - 获取当前构造方法上的`@Autowired、@Inject`注解，如果没有，检查这个类是否是CGlib代理类，获取原生类的构造方法和对应的注解
-- 根据获取到的`@Autowired`注解，检查是否存在两个以上被`@Autowired(required=true)`注解标注的构造方法，，如果有报错，`@Inject`没有`required`属性默认为`false`
+- 根据获取到的`@Autowired`注解，如果有一个`@Autowired(required=true)`的构造方法，其他`@Autowried(required=false)`也会报错，多个`@Autowired(required=false)`的构造方法可以共存，`@Inject`没有`required`属性默认为`false`
 - 如果当前构造方法包含`@Autowired、@Inject`无论`required`是`true`或者`false`，都会加入到候选集合`candidates`中，如果`required`属性为`true`，将其设置为`requiredConstructor`，并且设置`requiredConstructor`为此构造方法
 - 如果当前构造方法没有参数，设置`defaultConstructor`为此构造方法
 - 最后处理`candidates`，把`@Autowired、@Inject`标注的构造方法全都返回去，如果只有默认无参构造方法，返回null
@@ -5666,7 +5690,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 						}
                           //如果获取到了@Autowired注解
 						if (ann != null) {
-                              //如果有两个以上@Autowired(required=true)注解标注的构造方法 报错
+                              //如果有已经有一个@Autowired(required=true)注解标注的构造方法 报错
 							if (requiredConstructor != null) {
 								throw new BeanCreationException(beanName,
 										"Invalid autowire-marked constructor: " + candidate +
@@ -5677,7 +5701,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 							boolean required = determineRequiredStatus(ann);
                                //如果是requird=true
 							if (required) {
-                                   //检查是不是有两个以上@Autowired(required=true)注解标注的构造方法
+                                   //检查已经有一个@Autowired(required=true)注解标注的构造方法
 								if (!candidates.isEmpty()) {
 									throw new BeanCreationException(beanName,
 											"Invalid autowire-marked constructors: " + candidates +
@@ -7132,6 +7156,7 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 						if (Modifier.isStatic(method.getModifiers())) {
 							throw new IllegalStateException("@WebServiceRef annotation is not supported on static methods");
 						}
+                          //方法的参数只能有1个
 						if (method.getParameterCount() != 1) {
 							throw new IllegalStateException("@WebServiceRef annotation requires a single-arg method: " + method);
 						}
@@ -7142,6 +7167,7 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 						if (Modifier.isStatic(method.getModifiers())) {
 							throw new IllegalStateException("@EJB annotation is not supported on static methods");
 						}
+                          //方法的参数只能有1个
 						if (method.getParameterCount() != 1) {
 							throw new IllegalStateException("@EJB annotation requires a single-arg method: " + method);
 						}
@@ -7153,6 +7179,7 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 							throw new IllegalStateException("@Resource annotation is not supported on static methods");
 						}
 						Class<?>[] paramTypes = method.getParameterTypes();
+                          //方法的参数只能有1个
 						if (paramTypes.length != 1) {
 							throw new IllegalStateException("@Resource annotation requires a single-arg method: " + method);
 						}
@@ -8245,6 +8272,249 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 
 
+
+##### initializeBean()
+
+
+
+```java
+protected Object initializeBean(final String beanName, final Object bean, @Nullable RootBeanDefinition mbd) {
+    if (System.getSecurityManager() != null) {
+       AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+          invokeAwareMethods(beanName, bean);
+          return null;
+       }, getAccessControlContext());
+    }
+    else {
+       //对实现了BeanNameAware、BeanClassLoaderAware、BeanFactoryAware接口的bean进行处理
+       invokeAwareMethods(beanName, bean);
+    }
+
+    Object wrappedBean = bean;
+    if (mbd == null || !mbd.isSynthetic()) {
+       //遍历所有的BeanPostProcessor 调用postProcessBeforeInitialization
+       wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
+    }
+
+    try {
+       //如果bean实现了InitializingBean接口或者有initMethodName
+       invokeInitMethods(beanName, wrappedBean, mbd);
+    }
+    catch (Throwable ex) {
+       throw new BeanCreationException(
+             (mbd != null ? mbd.getResourceDescription() : null),
+             beanName, "Invocation of init method failed", ex);
+    }
+    if (mbd == null || !mbd.isSynthetic()) {
+        //遍历所有的BeanPostProcessor 调用applyBeanPostProcessorsAfterInitialization
+       wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
+    }
+
+    return wrappedBean;
+}
+```
+
+###### invokeAwareMethods
+
+```java
+//对实现了BeanNameAware、BeanClassLoaderAware、BeanFactoryAware接口的bean进行处理
+private void invokeAwareMethods(final String beanName, final Object bean) {
+    if (bean instanceof Aware) {
+       if (bean instanceof BeanNameAware) {
+          ((BeanNameAware) bean).setBeanName(beanName);
+       }
+       if (bean instanceof BeanClassLoaderAware) {
+          ClassLoader bcl = getBeanClassLoader();
+          if (bcl != null) {
+             ((BeanClassLoaderAware) bean).setBeanClassLoader(bcl);
+          }
+       }
+       if (bean instanceof BeanFactoryAware) {
+          ((BeanFactoryAware) bean).setBeanFactory(AbstractAutowireCapableBeanFactory.this);
+       }
+    }
+}
+```
+
+###### applyBeanPostProcessorsBeforeInitialization
+
+```java
+//调用beanPostProcessor的postProcessBeforeInitialization
+@Override
+public Object applyBeanPostProcessorsBeforeInitialization(Object existingBean, String beanName)
+       throws BeansException {
+
+    //遍历所有的BeanPostProcessor 调用postProcessBeforeInitialization
+    Object result = existingBean;
+    for (BeanPostProcessor processor : getBeanPostProcessors()) {
+       Object current = processor.postProcessBeforeInitialization(result, beanName);
+       if (current == null) {
+          return result;
+       }
+       result = current;
+    }
+    return result;
+}
+```
+
+###### ApplicationContextAwareProcessor
+
+```java
+class ApplicationContextAwareProcessor implements BeanPostProcessor {
+    
+    //对实现了EnvironmentAware、EmbeddedValueResolverAware、ResourceLoaderAware、ApplicationEventPublisherAware、MessageSourceAware、ApplicationContextAware接口的bean进行处理
+    @Override
+	@Nullable
+	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		if (!(bean instanceof EnvironmentAware || bean instanceof EmbeddedValueResolverAware ||
+				bean instanceof ResourceLoaderAware || bean instanceof ApplicationEventPublisherAware ||
+				bean instanceof MessageSourceAware || bean instanceof ApplicationContextAware)){
+			return bean;
+		}
+
+		AccessControlContext acc = null;
+
+		if (System.getSecurityManager() != null) {
+			acc = this.applicationContext.getBeanFactory().getAccessControlContext();
+		}
+
+		if (acc != null) {
+			AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+				invokeAwareInterfaces(bean);
+				return null;
+			}, acc);
+		}
+		else {
+			invokeAwareInterfaces(bean);
+		}
+
+		return bean;
+	}
+
+}
+```
+
+
+
+###### InitDestroyAnnotationBeanPostProcessor
+
+```java
+public class InitDestroyAnnotationBeanPostProcessor
+       implements DestructionAwareBeanPostProcessor, MergedBeanDefinitionPostProcessor, PriorityOrdered, Serializable {
+    
+    //调用@PostConstruct标注的方法
+	@Override
+	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		LifecycleMetadata metadata = findLifecycleMetadata(bean.getClass());
+		try {
+			metadata.invokeInitMethods(bean, beanName);
+		}
+		catch (InvocationTargetException ex) {
+			throw new BeanCreationException(beanName, "Invocation of init method failed", ex.getTargetException());
+		}
+		catch (Throwable ex) {
+			throw new BeanCreationException(beanName, "Failed to invoke init method", ex);
+		}
+		return bean;
+	}
+
+}
+```
+
+###### invokeInitMethods
+
+```java
+protected void invokeInitMethods(String beanName, final Object bean, @Nullable RootBeanDefinition mbd)
+       throws Throwable {
+
+    //如果bean实现了InitializingBean接口
+    boolean isInitializingBean = (bean instanceof InitializingBean);
+    //并且没有执行过afterPropertiesSet方法
+    if (isInitializingBean && (mbd == null || !mbd.isExternallyManagedInitMethod("afterPropertiesSet方法"))) {
+       if (logger.isTraceEnabled()) {
+          logger.trace("Invoking afterPropertiesSet() on bean with name '" + beanName + "'");
+       }
+       if (System.getSecurityManager() != null) {
+          try {
+             AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
+                ((InitializingBean) bean).afterPropertiesSet();
+                return null;
+             }, getAccessControlContext());
+          }
+          catch (PrivilegedActionException pae) {
+             throw pae.getException();
+          }
+       }
+       else {
+           //调用afterPropertiesSet方法
+          ((InitializingBean) bean).afterPropertiesSet();
+       }
+    }
+
+    //如果bean设置了initMethodName
+    if (mbd != null && bean.getClass() != NullBean.class) {
+       String initMethodName = mbd.getInitMethodName();
+       //并且不是afterPropertiesSet和执行过的方法
+       if (StringUtils.hasLength(initMethodName) &&
+             !(isInitializingBean && "afterPropertiesSet".equals(initMethodName)) &&
+             !mbd.isExternallyManagedInitMethod(initMethodName)) {
+           //调用initMethod执行
+          invokeCustomInitMethod(beanName, bean, mbd);
+       }
+    }
+}
+```
+
+
+
+###### applyBeanPostProcessorsAfterInitialization
+
+```java
+//处理BeanPostProcessor的postProcessAfterInitialization
+@Override
+public Object applyBeanPostProcessorsAfterInitialization(Object existingBean, String beanName)
+       throws BeansException {
+
+    Object result = existingBean;
+    for (BeanPostProcessor processor : getBeanPostProcessors()) {
+       Object current = processor.postProcessAfterInitialization(result, beanName);
+       if (current == null) {
+          return result;
+       }
+       result = current;
+    }
+    return result;
+}
+```
+
+###### ApplicationListenerDetector
+
+```java
+
+//如果bean属于ApplicationListener 加入事件多播器中
+@Override
+public Object postProcessAfterInitialization(Object bean, String beanName) {
+    if (bean instanceof ApplicationListener) {
+       // potentially not detected as a listener by getBeanNamesForType retrieval
+       Boolean flag = this.singletonNames.get(beanName);
+       if (Boolean.TRUE.equals(flag)) {
+          // singleton bean (top-level or inner): register on the fly
+          this.applicationContext.addApplicationListener((ApplicationListener<?>) bean);
+       }
+       else if (Boolean.FALSE.equals(flag)) {
+          if (logger.isWarnEnabled() && !this.applicationContext.containsBean(beanName)) {
+             // inner bean with other scope - can't reliably process events
+             logger.warn("Inner bean '" + beanName + "' implements ApplicationListener interface " +
+                   "but is not reachable for event multicasting by its containing ApplicationContext " +
+                   "because it does not have singleton scope. Only top-level listener beans are allowed " +
+                   "to be of non-singleton scope.");
+          }
+          this.singletonNames.remove(beanName);
+       }
+    }
+    return bean;
+}
+```
 
 
 
@@ -9833,7 +10103,119 @@ private static class ReplaceOverrideMethodInterceptor extends CglibIdentitySuppo
 
 
 
-## 梳理各个类的接口继承关系
+## IOC流程
+
+以`AnnotationConfigApplicationContext`的创建为例
+
+- 创建`AnnotationConfigApplicationContext`，负责`beanDefinition`的扫描注册以及内部`bean`的创建注册工作
+  - 创建`PathMatchingResourcePatternResolver`作为资源匹配加载器，内置`AntPathMatcher`使用`Ant`风格进行资源路径匹配，使用类加载器`classLoader`的双亲委派加载核心类库`jre/lib`下、扩展类库`jre/lib/ext`以及`classpath`下的类和资源文件。
+  - 创建`DefaultListableBeanFactory`负责管理创建`bean`和`beanDefinition`
+  - 创建`StandardEnvironment`装载`systemEnvironment`和`systemProperties`的`key-value`属性以及`.yml .properties`文件`key-value`属性，内置`PropertySourcesPropertyResolver`负责利用`environment`中的`key-value`属性解析替换`#{user.name}`占位符的值
+  - 创建`AnnotationBeanNameGenerator`作为默认的`beanName`生成策略，要么使用指定的`@Component(value="xxx")`，要么使用类名首字母小写。
+  - 创建`ConfigurationClassPostProcessor、AutowiredAnnotationBeanPostProcessor、CommonAnnotationBeanPostProcessor`，注册到容器中
+- 扫描`basePackages`下的类
+  - 将`basePackage`封装成`Ant`风格`classpath*:com/zcq/demo/getbean/autowired/**/*.class`，利用类加载器加载资源`cl.getResources(path)`筛选匹配路径的资源
+  - 读取类文件，筛选匹配`@Component、@ManagedBean、@Named`注解标注的类，计算`@Conditional`满足条件的，不是接口和抽象类的或者抽象类带有`@Lookup`注解的，被封装成`ScannedGenericBeanDefinition`加入候选`beanDefinition`集合
+  - 处理候选`beanDefinition`的`@Scope`注解，设置`singleton`或者`prototype`，利用`AnnotationBeanNameGenerator`生成`beanName`
+  - 处理候选`beanDefinition`注解`@Lazy、@Primary、@DependsOn、@Role、@Description`，设置到`beanDefinition`的属性中
+  - 将处理完的`beanDefinition`注册到容器`beanFactory`中
+- 设置`AnnotationConfigApplicationContext`的刷新时间、状态
+- 设置`beanFactory`的`spel`表达式解析器、默认的属性编辑器注册器、处理`Aware`接口的`BeanPostProcessor`，注册`environment、systemProperties、systemEnvironment`到容器`beanFactory`中
+- 处理执行`BeanDefinitionRegistryPostProcessor、BeanFactoryPostProcessor`，调用`postProcessBeanDefinitionRegistry`和`postProcessBeanFactory`
+  - `ConfigurationClassPostProcessor`执行`postProcessBeanDefinitionRegistry`时，扫描所有的`beanDefinition`，对包含`@Configuration`或者`@Component、@ComponentScan、@Import、@ImportResource、@Bean`注解的加入候选处理集合
+  - 依据`@Order`对候选处理集合排序，循环解析候选类，首先判断`@Conditional`注解的条件是否满足
+    - 对于带有`@Component`注解的类，递归处理其内部类的`@Component、@ComponentScan、@Import、@ImportResource、@Bean、@PropertySource`注解
+    - 对于带有`@PropertySource、@PropertySources`注解的类，解析替换指定的文件路径占位符和`name`，加载指定的文件到`Environment`中
+    - 对于带有`@ComponentScan、@ComponentScans`注解的类，计算`@Conditional`的条件，扫描并注册指定的`basePackages`，迭代处理新扫描进入容器的`@Component、@ComponentScan、@Import、@ImportResource、@Bean、@PropertySource`注解
+    - 对于带有`@Import`注解的类，递归扫描收集当前类及其父类所有导入的类
+      - 如果导入的类属于`ImportSelector`，如果属于`DeferredImportSelector`加入集合稍后处理，否则调用`selectImports`导入类，递归处理导入类的`@Import`注解
+      - 如果导入的类属于`ImportBeanDefinitionRegistrar`，加入集合稍后处理
+      - 如果导入的类不属于上述两种类型，那么去递归处理它身上的`@Component、@ComponentScan、@Import、@ImportResource、@Bean、@PropertySource`注解，将此类加入到`this.configurationClasses`，稍后加入到容器中
+    - 对于带有`@ImportResource`注解的类，读取`locations`的值加入到集合中，稍后进行处理
+    - 对于带有`@Bean`注解的类，读取`locations`的值加入到集合中，稍后进行处理
+    - 处理下接口的默认方法是否带有`@Bean`注解，加入集合稍后处理
+    - 递归父类
+    - 处理`DeferredImportSelector`类型的类
+  - 上述处理完成的类，处理需要导入到容器的类
+    - 循环所有处理完成的类，首先判断`@Conditional`注解的条件是否满足
+    - 如果当前类是被导入进来的，那么将这个类注册到容器中
+    - 如果当前类的`beanMethod`集合不为空，循环遍历，首先判断方法上的`@Conditional`注解的条件是否满足
+      - 解析`@Bean`的属性`name`确定`beanName`，没有的话使用方法名作为`beanName`，创建`ConfigurationClassBeanDefinition`
+      - 如果是静态方法，设置`factoryMethodName`为此方法名称，设置当前类为`beanClass` （稍后使用静态工厂的创建方法创建）
+      - 如果不是静态方法，设置`factoryMethodName`为此方法名称，设置当前类为`factoryBeanName`（稍后使用实例工厂的创建方法创建）
+      - 处理`@Lazy、@Primary、@DependsOn、@Role、@Description`，设置到`beanDefinition`的属性中，解析设置`@Bean`的属性值，注册到容器中
+    - 如果当前类的`importedResources`集合不为空，循环遍历，以`xml`方式或者`.groovy`方式读取文件导入`beanDefinition`
+    - 如果当前类`importBeanDefinitionRegistrars`集合不为空，遍历调用`registerBeanDefinitions`注册`beanDefinition`
+  - 递归所有未处理的`beanDefinition`
+- 遍历`beanFactory`中的所有`BeanPostProcessor`，实例化创建`BeanPostProcessor`
+- 设置定义国际化 创建`messageSource`的对象
+- 创建注册`ApplicationEventMulticaster`
+- 注册所有的`ApplicationListener`到`ApplicationEventMulticaster`，发布`earlyApplicationEvents`
+- 循环遍历所有`beanDefinition`，合并父子`beanDefinition`，将所有的`GenericBeanDefinition`变成`RootBeanDefinition`，对于非抽象的、单例的、非懒加载的`beanDefinition`
+  - 如果当前类是`FactoryBean`，在容器中创建名为`beanName`的实例，如果设置了`isEagerInit`，那么创建调用`beanName`对应`getObject`的实例，存放在`factoryBeanObjectCache`中
+  - 如果当前类不是`FactoryBean`，正常创建创建名为`beanName`的实例，`getBean()->doGetBean()`
+    - 转换别名，去掉`&`前缀，从一级缓存中取，如果有实例，针对`FatoryBean`做处理，如果获取的名字中包含`&`，返回`FatoryBean`的实例，否则调用`getObject`，创建`beanName`的实例存放在`factoryBeanObjectCache`中
+    - 有父容器，优先让父容器进行创建
+    - 标记创建中，合并父子`beanDefinition`，获取`@DependsOn`依赖的`beanName`，优先创建
+    - `createBean()`
+    - 解析获得`beanDefinition`的`class`对象，设置`beanClass`
+    - 如果有`MethodOverides`的话进行检查
+    - 如果有`InstantiationAwareBeanPostProcessor`，可以使用`applyBeanPostProcessorsBeforeInstantiation`创建`bean`实例，并使用`applyBeanPostProcessorsAfterInitialization`处理实例，返回实例
+    - `doCreateBean()`
+    - `createBeanInstance()`
+      - 如果有`Supplier`，调用`beanDefinition`设置的`Supplier`创建`bean`实例
+      - 如果有`FactoryMethod`
+        - 如果是实例工厂，获取实例工厂对象
+        - 如果是静态工厂，获取静态工厂类
+        - 获取所有重载的工厂方法，如果只有一个工厂方法并且没有构造参数`constructorArgumentValues`，直接调用当前工厂方法实例化
+        - 如果有多个工厂方法和构造参数，需要遍历工厂方法，将构造参数转换成对应工厂方法参数列表的类型，没有构造参数的需要调用`beanFactory.resolveDependency()`来根据类型进行获取`bean`设置参数列表
+        - 比较权重值筛选出参数列表类型和构造参数最匹配的工厂方法，调用工厂方法和参数进行实例化
+      - 获取缓存中已经解析到的参数和构造方法，如果获取到，直接使用参数和构造方法进行实例化
+      - 如果有`InstantiationAwareBeanPostProcessor`，使用`determineCandidateConstructors`获取决定构造方法
+        - `AutowiredAnnotationBeanPostProcessor`在这里负责`@Lookup`注解的处理和`@Autowired`标注构造方法的收集
+        - 遍历此类及其父类所有方法，获取`@Lookup`标注的方法封装`LookupOverride`加入`MethodOverrides`
+        - 遍历所有构造方法，收集所有`@Autowired`标注的构造方法，如果`@Autowired(required=true)`，不允许其他任何`@Autowired`构造方法存在，`@Autowired(required=false)`可以共存
+        - 将收集到的构造方法返回
+      - 如果有选中的构造方法、有构造参数`constructorArgumentValues`那么就筛选选中的构造方法来实例化
+        - 获取所有重载的构造方法，如果只有一个默认构造方法并且没有构造参数`constructorArgumentValues`，直接调用默认构造方法实例化
+        - 如果有多个构造方法和构造参数，需要遍历构造方法，将构造参数转换成对应构造方法参数列表的类型，没有构造参数的需要调用`beanFactory.resolveDependency()`来根据类型进行获取`bean`设置参数列表
+        - 比较权重值筛选出参数列表类型和构造参数最匹配的构造方法，调用构造方法和参数进行实例化
+      - 没有选中的构造方法和构造参数，调用默认的构造方法进行实例化
+        - 实例化时，如果没有`MethodOverrides`，使用默认的构造方法直接实例化
+        - 否则创建当前类的CGlib代理子类，设置`LookupOverrideMethodInterceptor、ReplaceOverrideMethodInterceptor`来处理调用`Lookup`和`ReplaceMethod`标注的方法时，做覆盖处理
+    - 处理所有的`MergedBeanDefinitionPostProcessor`，调用`postProcessMergedBeanDefinition`
+      - `InitDestroyAnnotationBeanPostProcessor`查找所有的方法，将`@PostConstruct、@PreDestroy`标注的方法封装为`LifecycleMetadata`，设置到`beanDefinition`的`externallyManagedInitMethods`和`externallyManagedDestroyMethods`中
+      - `CommonAnnotationBeanPostProcessor`查找所有的属性和方法，将`@Resource、@EJB、@WebServiceRef`标注的方法封装为`InjectionMetadata`，设置到`beanDefinition`的`externallyManagedConfigMembers`中，方法的参数数量只能是1个
+      - `AutowiredAnnotationBeanPostProcessor`查找所有的属性和方法，将`@Autowired、@Value、@Inject`标注的方法封装为`InjectionMetadata`，设置到`beanDefinition`的`externallyManagedConfigMembers`中
+    - `populateBean()`
+      - 如果有`InstantiationAwareBeanPostProcessor`，执行`postProcessAfterInstantiation`
+      - 如果有`propertyValues`，对`pvs`进行`AUTOWIRE_BY_NAME`和`AUTOWIRE_BY_TYPE`的属性填充解析
+      - 如果有`InstantiationAwareBeanPostProcessor`，执行`postProcessProperties`，对`@Resource、@EJB、@WebServiceRef、@Autowired、@Value、@Inject`标注的字段和方法做属性填充
+        - `CommonAnnotationBeanPostProcessor`负责将上述封装的`@Resource、@EJB、@WebServiceRef`进行属性和方法注入
+          - 遍历所有`InjectionMetadata`，如果是字段，如果是懒加载，，否则如果允许类型匹配并且容器中不包含`beanName`的实例，尝试使用类型匹配`beanFactory.resolveDependency()`，正常使用`beanFactory.resolveBeanByName(beanName)`即`getBean(beanName)`
+          - 如果是方法，如果是懒加载，，否则如果允许类型匹配并且容器中不包含`beanName`的实例，尝试使用类型匹配`beanFactory.resolveDependency()`，正常使用`beanFactory.resolveBeanByName(beanName)`即`getBean(beanName)`
+        - `AutowiredAnnotationBeanPostProcessor`负责上述封装的`@Autowired、@Value、@Inject`进行属性和方法注入
+          - 遍历所有`InjectionMetadata`，如果是字段
+            - 使用`beanFactory.resolveDependency()`进行类型匹配，如果是懒加载，创建代理对象返回
+              - 获取注解中的`value`值，在`@Autowired、@Value、@Inject`中只有`@Value`有`value`值，对`value`值利用`environment`进行占位符解析替换，如果是`spel`表达式，再利用`spel`解析器计算一下，最后将值转换成字段一致的类型。
+              - 如果类型是`Stream、Collection、数组、Map类型`，对内置类型进行单一类型注入查找，返回集合
+              - 如果类型是单一类型，获取容器中指定类型的所有`beanDefinition`，根据`@Qualifier`的值匹配，返回匹配的`beanName`
+              - 根据`@Primary`和`@Priority`筛选`beanName`
+              - 通过`getBean(beanName)`获取bean，检查bean类型是否匹配，返回bean
+          - 如果是方法，
+            - 遍历参数列表，使用`beanFactory.resolveDependency()`进行类型匹配，如果是懒加载，创建代理对象返回
+    - `initializeBean()`
+      - 对实现了`BeanNameAware、BeanClassLoaderAware、BeanFactoryAware`接口的bean进行处理
+      - 调用`beanPostProcessor`的`postProcessBeforeInitialization`
+        - `ApplicationContextAwareProcessor`对实现了`EnvironmentAware、EmbeddedValueResolverAware、ResourceLoaderAware、ApplicationEventPublisherAware、MessageSourceAware、ApplicationContextAware`接口的bean进行处理
+        - `InitDestroyAnnotationBeanPostProcessor`调用`@PostConstruct`标注的方法
+      - `invokeInitMethods()`
+        - 如果bean实现了`InitializingBean`接口，调用`afterPropertiesSet`方法
+        - 如果bean设置了`initMethodName`，调用`initMethod`执行
+      - 处理`BeanPostProcessor`的`postProcessAfterInitialization`
+        - `ApplicationListenerDetector`如果bean属于ApplicationListener 加入事件多播器中
+
+
 
 
 

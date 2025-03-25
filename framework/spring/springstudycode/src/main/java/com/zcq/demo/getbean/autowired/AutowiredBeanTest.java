@@ -10,6 +10,9 @@ public class AutowiredBeanTest {
 
         MyAutowiredBean bean = applicationContext.getBean(MyAutowiredBean.class);
         System.out.println(bean);
+        MyLazyBean myLazyBean = (MyLazyBean) applicationContext.getBean("myLazyBean");
+        System.out.println(myLazyBean);
+
 
         applicationContext.close();
     }

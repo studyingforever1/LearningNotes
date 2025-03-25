@@ -4,20 +4,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
-import org.springframework.http.HttpCookie;
-import org.springframework.http.HttpHeaders;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import javax.annotation.Priority;
 import javax.annotation.Resource;
-import javax.inject.Inject;
 import java.util.List;
 import java.util.Map;
 
 @Component
+@Scope
 public class MyAutowiredBean {
 
     private MyComponet myComponet;
@@ -27,6 +25,7 @@ public class MyAutowiredBean {
     private MyPropertyBean myPropertyBean;
 
     @Resource
+    @Lazy
     private MyResourceBean myResourceBean;
 
     @Value("${user.name}")
@@ -36,7 +35,7 @@ public class MyAutowiredBean {
     List<MyPropertyBean> myBeans;
 
     @Autowired
-    Map<String, Object> map;
+    Map<String, MyPropertyBean> map;
 
     @Autowired
     MyAutowiredBean myAutowiredBean;
@@ -76,6 +75,13 @@ public class MyAutowiredBean {
         System.out.println(myBeanBean);
     }
 
+
+    @Resource
+    @Lazy
+    public void ffff(MyBeanBean myBeanBean) {
+        System.out.println(myBeanBean);
+    }
+
     @Override
     public String toString() {
         return "MyAutowiredBean{" +
@@ -84,6 +90,34 @@ public class MyAutowiredBean {
                 ", myResourceBean=" + myResourceBean +
                 ", username='" + username + '\'' +
                 '}';
+    }
+
+    public MyComponet getMyComponet() {
+        return myComponet;
+    }
+
+    public MyPropertyBean getMyPropertyBean() {
+        return myPropertyBean;
+    }
+
+    public MyResourceBean getMyResourceBean() {
+        return myResourceBean;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public List<MyPropertyBean> getMyBeans() {
+        return myBeans;
+    }
+
+    public Map<String, MyPropertyBean> getMap() {
+        return map;
+    }
+
+    public MyAutowiredBean getMyAutowiredBean() {
+        return myAutowiredBean;
     }
 }
 

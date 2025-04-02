@@ -8037,7 +8037,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			
              //如果查找到了多余1个匹配的bean
 			if (matchingBeans.size() > 1) {
-                 //通过@Primary注解筛选 和 通过@Priority比较筛选
+                 //通过@Primary注解筛选 和 通过@Priority比较筛选 如果这两个都没有 那么使用字段名称匹配
 				autowiredBeanName = determineAutowireCandidate(matchingBeans, descriptor);
                  //如果没筛选出来
 				if (autowiredBeanName == null) {
@@ -8267,6 +8267,30 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		return beanFactory.getBean(beanName);
 	}
 
+    //从众多类型相匹配的bean中选择@Primary或者@Priority优先级高的 
+    //都没有的话 默认使用字段名称匹配
+	@Nullable
+	protected String determineAutowireCandidate(Map<String, Object> candidates, DependencyDescriptor descriptor) {
+		Class<?> requiredType = descriptor.getDependencyType();
+		String primaryCandidate = determinePrimaryCandidate(candidates, requiredType);
+		if (primaryCandidate != null) {
+			return primaryCandidate;
+		}
+		String priorityCandidate = determineHighestPriorityCandidate(candidates, requiredType);
+		if (priorityCandidate != null) {
+			return priorityCandidate;
+		}
+		// Fallback: pick directly registered dependency or qualified bean name match
+		for (Map.Entry<String, Object> entry : candidates.entrySet()) {
+			String candidateName = entry.getKey();
+			Object beanInstance = entry.getValue();
+			if ((beanInstance != null && this.resolvableDependencies.containsValue(beanInstance)) ||
+					matchesBeanName(candidateName, descriptor.getDependencyName())) {
+				return candidateName;
+			}
+		}
+		return null;
+	}
 
 }
 ```

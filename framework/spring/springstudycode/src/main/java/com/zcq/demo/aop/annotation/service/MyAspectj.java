@@ -1,9 +1,8 @@
 package com.zcq.demo.aop.annotation.service;
 
-import org.aspectj.lang.annotation.After;
-import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
-import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.stereotype.Component;
 
@@ -12,18 +11,29 @@ import org.springframework.stereotype.Component;
 @EnableAspectJAutoProxy
 public class MyAspectj {
 
-    @Pointcut("execution(* com.zcq.demo.aop.annotation.*.*.* (..))")
-    public void pointcut(){
+    @Pointcut("@annotation(org.springframework.beans.factory.annotation.Value)")
+    public void pointcut() {
     }
 
-    @Before("pointcut()")
-    public void before(){
+    @Before(value = "pointcut()")
+    public void before() {
         System.out.println("before");
     }
-    @After("pointcut()")
-    public void after(){
+
+    @After(value = "pointcut()")
+    public void after() {
         System.out.println("after");
     }
 
+    @Around("execution(* com.zcq.demo.aop.annotation.*.*.* (..)) && @annotation(value)")
+    public Object around(ProceedingJoinPoint joinPoint, Value value) {
+        try {
+            System.out.println("around---" + value.value());
+            joinPoint.proceed();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+        return 100;
+    }
 
 }

@@ -14,6 +14,8 @@ public class AopTest {
 //        enhancer.create();
 
         MyComponet bean = ac.getBean(MyComponet.class);
+        bean.test();
+        bean.test2();
         System.out.println(bean);
         ac.close();
     }

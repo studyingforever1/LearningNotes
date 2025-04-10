@@ -6,9 +6,9 @@
 >
 > Netty 是一个**异步事件驱动**的网络应用程序框架，用于快速开发**可维护的高性能协议服务器和客户端**。
 
-![img](https://netty.io/images/components.png)
+![img](./images/components.png)
 
-<img src=".\images\image-20240624111124224.png" alt="image-20240624111124224" style="zoom: 33%;" />
+<img src="./images/image-20240624111124224.png" alt="image-20240624111124224" style="zoom: 33%;" />
 
 时延：服务器处理一个请求所需要的时间。
 
@@ -44,7 +44,7 @@ public class FileIO {
 
 JVM和内核做交互的时候，在各自的内存区域开辟了一块缓存区来存储读写的数据，malloc是jvm源码中开辟JVM的内存缓存区的方法，IO_Read则负责将操作系统的数据缓存区的数据读取到JVM的缓存区中，最后通过SetByteArrayRegion来将JVM的缓存区的数据搬到堆内存的数组中去。下图是调用FileInputSteam.readBytes()方法时 navtive方法做的事情。
 
-![](.\images\readBytes原理.png)
+![](./images/readBytes原理.png)
 
 
 
@@ -72,11 +72,11 @@ Buffer 是装载字节数据的，Channel是读写数据的操作通道，Select
 
 NIO是个模型 底层依然是inputstream那一套东西，只是把jvm和操作系统进行交互的过程抽象模型化成第二个图片的样子
 
-<img src=".\images\image-20240624172408016.png" alt="image-20240624172408016" style="zoom:50%;" />
+<img src="./images/image-20240624172408016.png" alt="image-20240624172408016" style="zoom:50%;" />
 
 JVM和操作系统进行交互的写入和读取操作被抽象成了Channel，而在其中传输的数据则被抽象成了Buffer 
 
-<img src=".\images\image-20240625084217786.png" alt="image-20240625084217786" style="zoom:50%;" />
+<img src="./images/image-20240625084217786.png" alt="image-20240625084217786" style="zoom:50%;" />
 
 ```java
 //NIO模型代码佐证
@@ -159,7 +159,7 @@ public class IOUtil {
 
 Buffer是ByteBuffer的父类，继承关系如下
 
-<img src=".\images\image-20240626133842813.png" alt="image-20240626133842813" style="zoom:33%;" />
+<img src="./images/image-20240626133842813.png" alt="image-20240626133842813" style="zoom:33%;" />
 
 HeapByteBuffer是在JVM堆空间中开辟的数组，而DirectByteBuffer则是在整个JVM进程中的堆外空间中开辟的缓存区，直接内存是采用Unsafe类通过进行开辟的，DirectByteBuffer和HeapByteBuffer都有四个指针，
 
@@ -179,7 +179,7 @@ public abstract class Buffer {
 
 Mark代表标志指针，用于用户随意放置标志下标索引的，Position则是read时当前指针的所指向位置，Limit是调用flip()方法时，Position归零，limit来指向Position位置的指针，Capacity则代表整个buffer的大小，不会变化。
 
-![](.\images\NIO Buffer原理图.png)
+![](./images/NIO Buffer原理图.png)
 
 ```java
 //接下来对DirectByteBuffer的部分关键代码进行分析
@@ -491,13 +491,13 @@ Unsafe类中allocateMemory()方法用于分配指定大小的空间，返回当�
 
 实际上的事件循环组指的是EventLoopGroup 这个接口，但是为了介绍这个接口具有的能力 我们需要从它的所有继承父类来看，而事件循环组中的具体执行任务的应该指的是EventLoop这个接口，这就是我理解的在组和成员的定义中的两大顶层接口。
 
-<img src=".\images\image-20240703163835885.png" alt="image-20240703163835885" style="zoom:50%;" />
+<img src="./images/image-20240703163835885.png" alt="image-20240703163835885" style="zoom:50%;" />
 
 
 
 #### 事件循环组流程图
 
-![](.\images\事件循环组流程.png)
+![](./images/事件循环组流程.png)
 
 
 
@@ -1254,7 +1254,7 @@ public interface EventExecutor extends EventExecutorGroup {
 
 NioEventLoop 继承了 SingleThreadEventExecutor，具有了
 
-<img src=".\images\image-20240703093045714.png" alt="image-20240703093045714" style="zoom:50%;" />
+<img src="./images/image-20240703093045714.png" alt="image-20240703093045714" style="zoom:50%;" />
 
 
 
@@ -2765,7 +2765,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
 ##### ChannelOutboundBuffer
 
-<img src=".\images\ChannelOutboundBuffer.png" style="zoom: 50%;" />
+<img src="./images/ChannelOutboundBuffer.png" style="zoom: 50%;" />
 
 ```java
 package io.netty.channel;
@@ -2927,7 +2927,7 @@ public final class ChannelOutboundBuffer {
 **事件如何在管道中流动?**
 下图描述了 ChannelPipeline 中的 ChannelHandler 通常如何处理 I/O 事件。I/O 事件由 ChannelInboundHandler 或 ChannelOutboundHandler 处理，并通过调用 ChannelHandlerContext 中定义的事件传播方法（如 ChannelHandlerContext.fireChannelRead(Object) 和 ChannelHandlerContext.write(Object)）转发到最近的ChannelHandler 。
 
-<img src=".\images\image-20240705095824032.png" alt="image-20240705095824032" style="zoom:50%;" />
+<img src="./images/image-20240705095824032.png" alt="image-20240705095824032" style="zoom:50%;" />
 
 入站事件由入站处理程序自下而上的方向处理，如关系图左侧所示。入站处理程序通常处理由关系图底部的 I/ O 线程生成的入站数据。入站数据通常是通过实际的输入操作从远程对等体读取的，例如 SocketChannel. read(ByteBuffer)。如果入站事件超出了顶部入站处理程序的范围，则会以静默方式丢弃该事件，或者在需要您注意时将其记录下来。
 出站事件由出站处理程序以自上而下的方向进行处理，如关系图右侧所示。出站处理程序通常会生成或转换出站流量，例如写入请求。如果出站事件超出了底部出站处理程序的范围，则由与 Channel关联的 I/ O 线程处理。I/ O 线程通常执行实际的输出操作，例如 SocketChannel. write(ByteBuffer)。
@@ -4183,7 +4183,7 @@ final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
 
 Promise 代表了对于异步执行的结果
 
-<img src=".\images\image-20240704115657629.png" alt="image-20240704115657629" style="zoom:50%;" />
+<img src="./images/image-20240704115657629.png" alt="image-20240704115657629" style="zoom:50%;" />
 
 ##### Future
 
@@ -4342,7 +4342,7 @@ public interface Promise<V> extends Future<V> {
 
 ##### ChannelFuture
 
-<img src=".\images\image-20240704115903935.png" alt="image-20240704115903935" style="zoom:50%;" />
+<img src="./images/image-20240704115903935.png" alt="image-20240704115903935" style="zoom:50%;" />
 
 ```java
 package io.netty.channel;
@@ -5104,7 +5104,7 @@ private static final AtomicReferenceFieldUpdater<SingleThreadEventExecutor, Thre
 
 JDK 并发队列按照实现方式可以分为阻塞队列和非阻塞队列两种类型，阻塞队列是基于锁实现的，非阻塞队列是基于 CAS 操作实现的。
 
-<img src=".\images\Mpsc Queue.png" style="zoom: 50%;" />
+<img src="./images/Mpsc Queue.png" style="zoom: 50%;" />
 
 ###### 阻塞队列
 
@@ -5128,7 +5128,7 @@ JDK 并发队列按照实现方式可以分为阻塞队列和非阻塞队列两�
 
 Mpsc 的全称是 Multi Producer Single Consumer，多生产者单消费者。Mpsc Queue 可以保证多个生产者同时访问队列是线程安全的，而且同一时刻只允许一个消费者从队列中读取数据。Netty Reactor 线程中任务队列 taskQueue 必须满足多个生产者可以同时提交任务，所以 JCTools 提供的 Mpsc Queue 非常适合 Netty Reactor 线程模型。
 
-<img src=".\images\Mpsc Queue01.png" style="zoom: 50%;" />
+<img src="./images/Mpsc Queue01.png" style="zoom: 50%;" />
 
 除了顶层 JDK 原生的 AbstractCollection、AbstractQueue，MpscArrayQueue 还继承了很多类似于 MpscXxxPad 以及 MpscXxxField 的类。我们可以发现一个很有意思的规律，每个有包含属性的类后面都会被 MpscXxxPad 类隔开。MpscXxxPad 到底起到什么作用呢？我们自顶向下，将所有类的字段合并在一起，看下 MpscArrayQueue 的整体结构。
 
@@ -5200,7 +5200,7 @@ public class FalseSharingPadding {
 
 从上述代码中可以看出，变量 value 前后都填充了 7 个 long 类型的变量。这样不论在什么情况下，都可以保证在多线程访问 value 变量时，value 与其他不相关的变量处于不同的 Cache Line，如下图所示。
 
-<img src=".\images\Mpsc Queue03.png" style="zoom:50%;" />
+<img src="./images/Mpsc Queue03.png" style="zoom:50%;" />
 
 ###### Mpsc Queue 源码分析
 
@@ -5330,13 +5330,13 @@ public class MpscArrayQueue<E> extends MpscArrayQueueL3Pad<E>{
 
 内存是按 Page 进行分配的，即便我们只需要很小的内存，操作系统至少也会分配 4K 大小的 Page，单个 Page 内只有一部分字节都被使用，剩余的字节形成了内部碎片，如下图所示。
 
-<img src=".\images\内碎片.png" style="zoom: 50%;" />
+<img src="./images/内碎片.png" style="zoom: 50%;" />
 
 ##### 外碎片
 
 外部碎片与内部碎片相反，是在分配较大内存块时产生的。我们试想一下，当需要分配大内存块的时候，操作系统只能通过分配连续的 Page 才能满足要求，在程序不断运行的过程中，这些 Page 被频繁的回收并重新分配，Page 之间就会出现小的空闲内存块，这样就形成了外部碎片，如下图所示。
 
-<img src=".\images\外碎片.png" style="zoom: 33%;" />
+<img src="./images/外碎片.png" style="zoom: 33%;" />
 
 #### 常用内存算法
 
@@ -5348,19 +5348,19 @@ DMA 是从一整块内存中按需分配，对于分配出的内存会记录元�
 
 **第一种是首次适应算法（first fit）**，空闲分区链以地址递增的顺序将空闲分区以双向链表的形式连接在一起，从空闲分区链中找到第一个满足分配条件的空闲分区，然后从空闲分区中划分出一块可用内存给请求进程，剩余的空闲分区仍然保留在空闲分区链中。如下图所示，P1 和 P2 的请求可以在内存块 A 中完成分配。该算法每次都从低地址开始查找，造成低地址部分会不断被分配，同时也会产生很多小的空闲分区。
 
-<img src=".\images\首次适应算法.png" style="zoom:50%;" />
+<img src="./images/首次适应算法.png" style="zoom:50%;" />
 
 
 
 **第二种是循环首次适应算法（next fit）**，该算法是由首次适应算法的变种，循环首次适应算法不再是每次从链表的开始进行查找，而是从上次找到的空闲分区的下⼀个空闲分区开始查找。如下图所示，P1 请求在内存块 A 完成分配，然后再为 P2 分配内存时，是直接继续向下寻找可用分区，最终在 B 内存块中完成分配。该算法相比⾸次适应算法空闲分区的分布更加均匀，而且查找的效率有所提升，但是正因为如此会造成空闲分区链中大的空闲分区会越来越少。
 
-<img src=".\images\循环首次适应算法.png" style="zoom:50%;" />
+<img src="./images/循环首次适应算法.png" style="zoom:50%;" />
 
 
 
 **第三种是最佳适应算法（best fit）**，空闲分区链以空闲分区大小递增的顺序将空闲分区以双向链表的形式连接在一起，每次从空闲分区链的开头进行查找，这样第一个满足分配条件的空间分区就是最优解。如下图所示，在 A 内存块分配完 P1 请求后，空闲分区链重新按分区大小进行排序，再为 P2 请求查找满足条件的空闲分区。该算法的空间利用率更高，但同样也会留下很多较难利用的小空闲分区，由于每次分配完需要重新排序，所以会有造成性能损耗。
 
-<img src=".\images\最佳适应算法.png" style="zoom:50%;" />
+<img src="./images/最佳适应算法.png" style="zoom:50%;" />
 
 
 
@@ -5370,7 +5370,7 @@ DMA 是从一整块内存中按需分配，对于分配出的内存会记录元�
 
 伙伴算法相对比较复杂，我们结合下面这张图来讲解它的分配原理。
 
-<img src=".\images\伙伴算法.png" style="zoom: 33%;" />
+<img src="./images/伙伴算法.png" style="zoom: 33%;" />
 
 伙伴算法把内存划分为 11 组不同的 2 次幂大小的内存块集合，每组内存块集合都用双向链表连接。链表中每个节点的内存块大小分别为 1、2、4、8、16、32、64、128、256、512 和 1024 个连续的 Page，例如第一组链表的节点为 2^0 个连续 Page，第二组链表的节点为 2^1 个连续 Page，以此类推。
 
@@ -5395,7 +5395,7 @@ DMA 是从一整块内存中按需分配，对于分配出的内存会记录元�
 
 Linux 内核使用的就是 Slab 算法，因为内核需要频繁地分配小内存，所以 Slab 算法提供了一种高速缓存机制，使用缓存存储内核对象，当内核需要分配内存时，基本上可以通过缓存中获取。此外 Slab 算法还可以支持通用对象的初始化操作，避免对象重复初始化的开销。下图是 Slab 算法的结构图，Slab 算法实现起来非常复杂，本文只做一个简单的了解。
 
-<img src=".\images\Slab算法.png" style="zoom: 33%;" />
+<img src="./images/Slab算法.png" style="zoom: 33%;" />
 
 在 Slab 算法中维护着大小不同的 Slab 集合，在最顶层是 cache_chain，cache_chain 中维护着一组 kmem_cache 引用，kmem_cache 负责管理一块固定大小的对象池。通常会提前分配一块内存，然后将这块内存划分为大小相同的 slot，不会对内存块再进行合并，同时使用位图 bitmap 记录每个 slot 的使用情况。
 
@@ -5411,7 +5411,7 @@ kmem_cache 中包含三个 Slab 链表：**完全分配使用 slab_full**、**�
 
 Netty 保留了内存规格分类的设计理念，不同大小的内存块采用的分配策略是不同的，具体内存规格的分类情况如下图所示。
 
-<img src=".\images\netty内存规格.png" style="zoom:50%;" />
+<img src="./images/netty内存规格.png" style="zoom:50%;" />
 
 上图中 Tiny 代表 0 ~ 512B 之间的内存块，Samll 代表 512B ~ 8K 之间的内存块，Normal 代表 8K ~ 16M 的内存块，Huge 代表大于 16M 的内存块。在 Netty 中定义了一个 SizeClass 类型的枚举，用于描述上图中的内存规格类型，分别为 Tiny、Small 和 Normal。但是图中 Huge 并未在代码中定义，当分配大于 16M 时，可以归类为 Huge 场景，Netty 会直接使用非池化的方式进行内存分配。
 
@@ -5452,7 +5452,7 @@ Subpage 负责 Page 内的内存分配，假如我们分配的内存大小远小
 
 Netty 中的内存池可以看作一个 Java 版本的 jemalloc 实现，并结合 JVM 的诸多特性做了部分优化。如下图所示，我们首先从全局视角看下 Netty 内存池的整体布局，对它有一个宏观的认识。
 
-<img src=".\images\Netty内存池架构设计.png" style="zoom:50%;" />
+<img src="./images/Netty内存池架构设计.png" style="zoom:50%;" />
 
 #### netty内存管理相关类
 
@@ -5935,7 +5935,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
 ###### PoolArena
 
-![](.\images\PoolArena.png)
+![](./images/PoolArena.png)
 
 ```java
 package io.netty.buffer;
@@ -6300,9 +6300,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
 ###### PoolSubpage
 
-<img src=".\images\PoolSubpage.png" style="zoom: 67%;" />
+<img src="./images/PoolSubpage.png" style="zoom: 67%;" />
 
-<img src=".\images\PoolSubpage02.png" alt="PoolSubpage02" style="zoom: 33%;" />
+<img src="./images/PoolSubpage02.png" alt="PoolSubpage02" style="zoom: 33%;" />
 
 ```java
 
@@ -6434,7 +6434,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
 ###### PoolChunk
 
-<img src=".\images\PoolChunk.png" style="zoom:50%;" />
+<img src="./images/PoolChunk.png" style="zoom:50%;" />
 
 ```java
 package io.netty.buffer;
@@ -6714,9 +6714,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
 ###### PoolChunkList
 
-<img src=".\images\PoolChunkList.png" style="zoom:50%;" />
+<img src="./images/PoolChunkList.png" style="zoom:50%;" />
 
-<img src=".\images\PoolChunkList02.png" style="zoom:50%;" />
+<img src="./images/PoolChunkList02.png" style="zoom:50%;" />
 
 ```java
 
@@ -6886,9 +6886,9 @@ final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
 
 ###### PoolThreadCache
 
-<img src=".\images\MemoryRegionCache.png" style="zoom: 33%;" />
+<img src="./images/MemoryRegionCache.png" style="zoom: 33%;" />
 
-<img src=".\images\MemoryRegionCache02.png" alt="MemoryRegionCache02" style="zoom: 50%;" />
+<img src="./images/MemoryRegionCache02.png" alt="MemoryRegionCache02" style="zoom: 50%;" />
 
 ```java
 package io.netty.buffer;
@@ -7276,7 +7276,7 @@ public interface ReferenceCounted {
 
 ByteBuf 提供两个指针变量来支持顺序读取和写入操作 - readerIndex 分别用于读取操作和 writerIndex 写入操作。下图显示了缓冲区如何通过两个指针划分为三个区域：
 
-<img src=".\images\ByteBuf.png" alt="image-20240724165809395" style="zoom: 67%;" />
+<img src="./images/ByteBuf.png" alt="image-20240724165809395" style="zoom: 67%;" />
 
 > 可读字节（实际内容）
 > 此段是实际数据存储的位置。任何名称以 read 或 skip 开头的操作都将获取或跳过当前 readerIndex 处的数据并将其增加读取的字节数。如果读取操作的参数也是 ByteBuf 并且未指定目标索引，则指定缓冲区的 writerIndex 也会一起增加。
@@ -7286,7 +7286,7 @@ ByteBuf 提供两个指针变量来支持顺序读取和写入操作 - readerInd
 
 此段包含已由读取操作读取的字节。最初，此段的大小为 0，但随着读取操作的执行，其大小会增加到 writerIndex。可以通过调用 discardReadBytes() 丢弃读取的字节，以回收未使用的区域，如下图所示：
 
-<img src=".\images\ByteBuf01.png" alt="image-20240724171111546" style="zoom:50%;" />
+<img src="./images/ByteBuf01.png" alt="image-20240724171111546" style="zoom:50%;" />
 
 > 派生缓冲区
 > 您可以通过调用以下方法之一来创建现有缓冲区的视图：
@@ -7564,11 +7564,11 @@ final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByt
 
 ###### Recycler
 
-<img src=".\images\Recycler.png" style="zoom: 33%;" />
+<img src="./images/Recycler.png" style="zoom: 33%;" />
 
-<img src=".\images\Recycler01.png" style="zoom:50%;" />
+<img src="./images/Recycler01.png" style="zoom:50%;" />
 
-<img src=".\images\Recycler02.png" style="zoom:50%;" />
+<img src="./images/Recycler02.png" style="zoom:50%;" />
 
 ```java
 package io.netty.util;
@@ -8297,7 +8297,7 @@ public class ResourceLeakDetector<T> {
 
 CPU在读取缓存的时候，因为缓存具有空间局部性，所以会将目标地址及其周围的数据都加载到缓存中，当多个线程修改同一个缓存行内的数据时，根据缓存一致性原则，会通知其他CPU的缓存行失效，所以造成了性能下降，这就是缓存行对齐的必要性。
 
-<img src=".\images\f3e479fee2e60c7d4412d9fe30030569.png" alt="img" style="zoom:50%;" />
+<img src="./images/f3e479fee2e60c7d4412d9fe30030569.png" alt="img" style="zoom:50%;" />
 
 ##### 强软弱虚
 
@@ -8565,7 +8565,7 @@ final class Finalizer extends FinalReference<Object> { /* Package-private; must 
 
 强引用并不会被加入到ReferenceHandler进行处理，只有软弱虚final四种继承的类的对象，才会在绑定对象被回收后，放入到ReferenceHandler进行处理
 
-<img src=".\images\Reference.png" alt="image-20240802153111223" style="zoom:50%;" />
+<img src="./images/Reference.png" alt="image-20240802153111223" style="zoom:50%;" />
 
 ```java
 package java.lang.ref;
@@ -8872,7 +8872,7 @@ httpBuf.addComponents(true, header, body);
 
 CompositeByteBuf 通过调用 addComponents() 方法来添加多个 ByteBuf，但是底层的 byte 数组是复用的，不会发生内存拷贝。但对于用户来说，它可以当作一个整体进行操作。那么 CompositeByteBuf 内部是如何存放这些 ByteBuf，并且如何进行合并的呢？我们先通过一张图看下 CompositeByteBuf 的内部结构：
 
-<img src=".\images\Netty中的零拷贝.png" style="zoom: 33%;" />
+<img src="./images/Netty中的零拷贝.png" style="zoom: 33%;" />
 
 从图上可以看出，CompositeByteBuf 内部维护了一个 Components 数组。在每个 Component 中存放着不同的 ByteBuf，各个 ByteBuf 独立维护自己的读写索引，而 CompositeByteBuf 自身也会单独维护一个读写索引。由此可见，Component 是实现 CompositeByteBuf 的关键所在，下面看下 Component 结构定义：
 
@@ -8898,13 +8898,13 @@ private static final class Component {
 
 为了方便理解上述 Component 中的属性含义，我同样以 HTTP 协议中 header 和 body 为示例，通过一张图来描述 CompositeByteBuf 组合后其中 Component 的布局情况，如下所示：
 
-<img src=".\images\Netty中的零拷贝01.png" style="zoom:33%;" />
+<img src="./images/Netty中的零拷贝01.png" style="zoom:33%;" />
 
 从图中可以看出，header 和 body 分别对应两个 ByteBuf，假设 ByteBuf 的内容分别为 “header” 和 “body”，那么 header ByteBuf 中 offset~endOffset 为 0~6，body ByteBuf 对应的 offset~endOffset 为 0~10。由此可见，Component 中的 offset 和 endOffset 可以表示当前 ByteBuf 可以读取的范围，通过 offset 和 endOffset 可以将每一个 Component 所对应的 ByteBuf 连接起来，形成一个逻辑整体。
 
 此外 Component 中 srcAdjustment 和 adjustment 表示 CompositeByteBuf 起始索引相对于 ByteBuf 读索引的偏移。初始 adjustment = readIndex - offset，这样通过 CompositeByteBuf 的起始索引就可以直接定位到 Component 中 ByteBuf 的读索引位置。当 header ByteBuf 读取 1 个字节，body ByteBuf 读取 2 个字节，此时每个 Component 的属性又会发生什么变化呢？如下图所示。
 
-<img src=".\images\Netty中的零拷贝02.png" style="zoom:33%;" />
+<img src="./images/Netty中的零拷贝02.png" style="zoom:33%;" />
 
 至此，CompositeByteBuf 的基本原理我们已经介绍完了，关于具体 CompositeByteBuf 数据操作的细节在这里就不做展开了，有兴趣的同学可以自己深入研究 CompositeByteBuf 的源码。
 
@@ -8914,7 +8914,7 @@ private static final class Component {
 
 Unpooled 提供了一系列用于包装数据源的 wrappedBuffer 方法，如下所示：
 
-<img src=".\images\Netty中的零拷贝03.png" style="zoom: 50%;" />
+<img src="./images/Netty中的零拷贝03.png" style="zoom: 50%;" />
 
 Unpooled.wrappedBuffer 方法可以将不同的数据源的一个或者多个数据包装成一个大的 ByteBuf 对象，其中数据源的类型包括 byte[]、ByteBuf、ByteBuffer。包装的过程中不会发生数据拷贝操作，包装后生成的 ByteBuf 对象和原始 ByteBuf 对象是共享底层的 byte 数组。
 
@@ -8942,7 +8942,7 @@ ByteBuf body = httpBuf.slice(6, 4);
 
 通过 slice 切分后都会返回一个新的 ByteBuf 对象，而且新的对象有自己独立的 readerIndex、writerIndex 索引，如下图所示。由于新的 ByteBuf 对象与原始的 ByteBuf 对象数据是共享的，所以通过新的 ByteBuf 对象进行数据操作也会对原始 ByteBuf 对象生效。
 
-<img src=".\images\Netty中的零拷贝04.png" style="zoom:50%;" />
+<img src="./images/Netty中的零拷贝04.png" style="zoom:50%;" />
 
 ###### 文件传输 FileRegion
 
@@ -9232,7 +9232,7 @@ public class Thread implements Runnable {
 
 ##### ThreadLocal
 
-<img src=".\images\ThreadLocal.png" style="zoom:33%;" />
+<img src="./images/ThreadLocal.png" style="zoom:33%;" />
 
 当调用 ThreadLocal.set() 添加 Entry 对象时，是如何解决 Hash 冲突的呢？
 
@@ -9451,7 +9451,7 @@ public class ThreadLocal<T> {
 
 ##### FastThreadLocalThread
 
-<img src=".\images\FastThreadLocalThread.png" style="zoom: 50%;" />
+<img src="./images/FastThreadLocalThread.png" style="zoom: 50%;" />
 
 ```java
 package io.netty.util.concurrent;
@@ -9719,13 +9719,13 @@ public class FastThreadLocal<V> {
 
 从 InternalThreadLocalMap 内部实现来看，与 ThreadLocalMap 一样都是采用数组的存储方式。但是 InternalThreadLocalMap 并没有使用线性探测法来解决 Hash 冲突，而是在 FastThreadLocal 初始化的时候分配一个数组索引 index，index 的值采用原子类 AtomicInteger 保证顺序递增，通过调用 InternalThreadLocalMap.nextVariableIndex() 方法获得。然后在读写数据的时候通过数组下标 index 直接定位到 FastThreadLocal 的位置，时间复杂度为 O(1)。如果数组下标递增到非常大，那么数组也会比较大，所以 FastThreadLocal 是通过空间换时间的思想提升读写性能。下面通过一幅图描述 InternalThreadLocalMap、index 和 FastThreadLocal 之间的关系。
 
-<img src=".\images\InternalThreadLocalMap.png" style="zoom: 33%;" />
+<img src="./images/InternalThreadLocalMap.png" style="zoom: 33%;" />
 
 通过上面 FastThreadLocal 的内部结构图，我们对比下与 ThreadLocal 有哪些区别呢？FastThreadLocal 使用 Object 数组替代了 Entry 数组，Object[0] 存储的是一个Set> 集合，从数组下标 1 开始都是直接存储的 value 数据，不再采用 ThreadLocal 的键值对形式进行存储。
 
 假设现在我们有一批数据需要添加到数组中，分别为 value1、value2、value3、value4，对应的 FastThreadLocal 在初始化的时候生成的数组索引分别为 1、2、3、4。如下图所示。
 
-<img src=".\images\InternalThreadLocalMap02.png" style="zoom: 33%;" />
+<img src="./images/InternalThreadLocalMap02.png" style="zoom: 33%;" />
 
 
 

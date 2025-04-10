@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import javax.sql.DataSource;
 
 @Configuration
-@EnableAspectJAutoProxy
+//@EnableAspectJAutoProxy
 @EnableTransactionManagement
 public class JdbcConfig {
     @Bean

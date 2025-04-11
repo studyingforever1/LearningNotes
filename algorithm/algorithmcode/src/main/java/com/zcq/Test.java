@@ -1,14 +1,63 @@
 package com.zcq;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+
 public class Test {
     public static void main(String[] args) {
-//        Solution solution = new Solution();
-//        System.out.println(solution.isBalanced("583"));
+        Solution solution = new Solution();
+        System.out.println(Arrays.toString(solution.maxSlidingWindow(new int[]{2, 3, 4, 5, 1}, 4)));
     }
-
-
 }
 
+class Solution {
+
+    class MonQueue {
+
+        LinkedList<Integer> linkedList = new LinkedList<>();
+
+        public int pop(int x) {
+            if (x == linkedList.peekFirst()) {
+                return linkedList.pollFirst();
+            }
+            return -1;
+        }
+
+        public void push(int x) {
+            while (!linkedList.isEmpty() && linkedList.peekLast() < x) {
+                linkedList.pollLast();
+            }
+            linkedList.addLast(x);
+        }
+
+        public int max() {
+            return linkedList.peekFirst();
+        }
+    }
+
+    public int[] maxSlidingWindow(int[] nums, int k) {
+        MonQueue queue = new MonQueue();
+        int i = 0;
+        List<Integer> ans = new ArrayList<>();
+        while (i < nums.length) {
+            if (i < k - 1) {
+                queue.push(nums[i]);
+            } else {
+                queue.push(nums[i]);
+                ans.add(queue.max());
+                queue.pop(nums[i - k + 1]);
+            }
+            i++;
+        }
+        int[] ansArr = new int[ans.size()];
+        for (int j = 0; j < ans.size(); j++) {
+            ansArr[j] = ans.get(j);
+        }
+        return ansArr;
+    }
+}
 
 
 //class Solution {

@@ -1,65 +1,76 @@
 package com.zcq;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Deque;
 import java.util.LinkedList;
-import java.util.List;
 
 public class Test {
     public static void main(String[] args) {
         Solution solution = new Solution();
-        System.out.println(Arrays.toString(solution.maxSlidingWindow(new int[]{2, 3, 4, 5, 1}, 4)));
+        System.out.println(solution.shortestSubarray(new int[]{2, -1, 2}, 3));
     }
 }
 
 class Solution {
-
-    class MonQueue {
-
-        LinkedList<Integer> linkedList = new LinkedList<>();
-
-        public int pop(int x) {
-            if (x == linkedList.peekFirst()) {
-                return linkedList.pollFirst();
+    public int shortestSubarray(int[] nums, int k) {
+        long[] preSum = new long[nums.length + 1];
+        for (int i = 1; i < preSum.length; i++) {
+            preSum[i] = preSum[i - 1] + nums[i - 1];
+        }
+        Queue<Long> queue = new Queue<>();
+        int left = 0, right = 0, ans = Integer.MAX_VALUE;
+        while (right < preSum.length) {
+            long c = preSum[right];
+            queue.push(c);
+            right++;
+            while (left < right && !queue.isEmpty() && c - queue.min() >= k) {
+                ans = Math.min(right - left - 1, ans);
+                queue.pop();
+                left++;
             }
-            return -1;
         }
-
-        public void push(int x) {
-            while (!linkedList.isEmpty() && linkedList.peekLast() < x) {
-                linkedList.pollLast();
-            }
-            linkedList.addLast(x);
-        }
-
-        public int max() {
-            return linkedList.peekFirst();
-        }
+        return ans == Integer.MAX_VALUE ? -1 : ans;
     }
 
-    public int[] maxSlidingWindow(int[] nums, int k) {
-        MonQueue queue = new MonQueue();
-        int i = 0;
-        List<Integer> ans = new ArrayList<>();
-        while (i < nums.length) {
-            if (i < k - 1) {
-                queue.push(nums[i]);
-            } else {
-                queue.push(nums[i]);
-                ans.add(queue.max());
-                queue.pop(nums[i - k + 1]);
+    class Queue<E extends Comparable<E>> {
+        Deque<E> minQueue = new LinkedList<>();
+        Deque<E> maxQueue = new LinkedList<>();
+        Deque<E> queue = new LinkedList<>();
+
+        public void push(E x) {
+            while (!minQueue.isEmpty() && x.compareTo(minQueue.getLast()) < 0) {
+                minQueue.removeLast();
             }
-            i++;
+            minQueue.addLast(x);
+            while (!maxQueue.isEmpty() && x.compareTo(maxQueue.getLast()) > 0) {
+                maxQueue.removeLast();
+            }
+            maxQueue.addLast(x);
+            queue.addLast(x);
         }
-        int[] ansArr = new int[ans.size()];
-        for (int j = 0; j < ans.size(); j++) {
-            ansArr[j] = ans.get(j);
+
+        public void pop() {
+            E removeFirst = queue.removeFirst();
+            if (removeFirst.equals(minQueue.getFirst())) {
+                minQueue.removeFirst();
+            }
+            if (removeFirst.equals(maxQueue.getFirst())) {
+                maxQueue.removeFirst();
+            }
         }
-        return ansArr;
+
+        public E min() {
+            return minQueue.getFirst();
+        }
+
+        public E max() {
+            return maxQueue.getFirst();
+        }
+
+        public boolean isEmpty() {
+            return queue.isEmpty();
+        }
     }
 }
-
-
 //class Solution {
 //    public long countOfSubstrings(String word, int k) {
 //        long ans = 0, len = word.length();

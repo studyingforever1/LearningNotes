@@ -3,14 +3,19 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-    <bean id="simpleUrlMapping" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
-        <property name="mappings">
-            <props>
-                <prop key="/userlist">userController</prop>
-            </props>
-        </property>
-    </bean>
+<!--    <bean id="simpleUrlMapping" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">-->
+<!--        <property name="mappings">-->
+<!--            <props>-->
+<!--                <prop key="/userlist">userController</prop>-->
+<!--                <prop key="/fileupload">fileController</prop>-->
+<!--            </props>-->
+<!--        </property>-->
+<!--    </bean>-->
+
+    <bean id="multipartResolver" class="org.springframework.web.multipart.support.StandardServletMultipartResolver"/>
 
     <bean id="userController" class="com.zcq.springmvcstudycode.controller.HelloController" />
+    <bean id="fileController" class="com.zcq.springmvcstudycode.controller.FileController" />
+
 
 </beans>

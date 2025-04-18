@@ -1195,6 +1195,607 @@ POST /_bulk?filter_path=items.*.error
 
 
 
+#### 模糊查询
+
+##### 前缀搜索：prefix
+
+以xx开头的搜索，不计算相关度评分。
+
+- 前缀搜索匹配的是term(分词后的词项)，而不是field(整段文本)。
+- 前缀搜索的性能很差
+- 前缀搜索没有缓存
+- 前缀搜索尽可能把前缀长度设置的更长
+
+```json
+GET <index>/_search
+{
+  "query": {
+    "prefix": {
+      "<field>": {
+        "value": "<word_prefix>"
+      }
+    }
+  }
+}
+//如果在mapping中设置了此字段 那么会将当前文本拆分最短2个 最长5的前缀 来加快前缀匹配的速度 
+index_prefixes: 默认   "min_chars" : 2,   "max_chars" : 5 
+```
+
+##### 通配符：wildcard
+
+通配符运算符是匹配一个或多个字符的占位符。例如，*通配符运算符匹配零个或多个字符。您可以将通配符运算符与其他字符结合使用以创建通配符模式。
+
+通配符匹配的也是term(分词后的词项)，而不是field(整段文本)。
+
+```json
+GET <index>/_search
+{
+  "query": {
+    "wildcard": {
+      "<field>": {
+        "value": "<word_with_wildcard>"
+      }
+    }
+  }
+}
+```
+
+##### 正则：regexp
+
+regexp查询的性能可以根据提供的正则表达式而有所不同。为了提高性能，应避免使用通配符模式，如.*或 .*?+未经前缀或后缀
+
+```json
+GET <index>/_search
+{
+  "query": {
+    "regexp": {
+      "<field>": {
+        "value": "<regex>",
+        "flags": "ALL",
+      }
+    }
+  }
+}
+```
+
+**flags**
+
+- ALL
+
+  启用所有可选操作符。
+
+- COMPLEMENT
+
+  启用~操作符。可以使用~对下面最短的模式进行否定。例如
+
+  a~bc  # matches 'adc' and 'aec' but not 'abc'
+
+- INTERVAL
+
+  启用<>操作符。可以使用<>匹配数值范围。例如
+
+  foo<1-100>    # matches 'foo1', 'foo2' ... 'foo99', 'foo100'
+
+  foo<01-100>   # matches 'foo01', 'foo02' ... 'foo99', 'foo100'
+
+- INTERSECTION
+
+  启用&操作符，它充当AND操作符。如果左边和右边的模式都匹配，则匹配成功。例如:
+
+  aaa.+&.+bbb  # matches 'aaabbb'
+
+- ANYSTRING
+
+  启用@操作符。您可以使用@来匹配任何整个字符串。
+  您可以将@操作符与&和~操作符组合起来，创建一个“everything except”逻辑。例如:
+
+  @&~(abc.+)  # matches everything except terms beginning with 'abc'
+
+##### 模糊查询：fuzzy
+
+混淆字符 (**b**ox → fox)							缺少字符 (**b**lack → lack)
+
+多出字符 (sic → sic**k**)							 颠倒次序 (a**c**t → **c**at)
+
+```json
+GET <index>/_search
+{
+  "query": {
+    "fuzzy": {
+      "<field>": {
+        "value": "<keyword>"
+      }
+    }
+  }
+}
+```
+
+- value：（必须，关键词）
+
+- fuzziness：编辑距离，（0，1，2）并非越大越好，召回率高但结果不准确
+
+  1) 两段文本之间的Damerau-Levenshtein距离是使一个字符串与另一个字符串匹配所需的插入、删除、替换和调换的数量
+
+  2) 距离公式：Levenshtein是lucene的，es改进版：Damerau-Levenshtein，
+
+  axe=>aex  Levenshtein=2  Damerau-Levenshtein=1
+
+- transpositions：（可选，布尔值）指示编辑是否包括两个相邻字符的变位（ab→ba）。默认为true。
+
+```json
+//match也支持模糊查询 但match会对query进行分词 每个词允许的编辑距离是fuzziness
+//fuzzy不会对query做分词
+GET product_en/_search
+{
+  "query": {
+    "match": {
+      "desc": {
+        "query": "shoujei zheng",
+        "fuzziness": 1
+      }
+    }
+  }
+}
+
+```
+
+
+
+
+
+##### 短语前缀：match_phrase_prefix
+
+**match_phrase**：
+
+- match_phrase会分词
+- 被检索字段必须包含match_phrase中的所有词项并且顺序必须是相同的
+- 被检索字段包含的match_phrase中的词项之间不能有其他词项
+
+
+
+**match_phrase_prefix**
+
+**概念**：
+
+​	match_phrase_prefix与match_phrase相同,但是它多了一个特性,就是它允许在文本的最后一个词项(term)上的前缀匹配,如果 是一个单词,比如a,它会匹配文档字段所有以a开头的文档,如果是一个短语,比如 "this is ma" ,他会**先**在倒排索引中做以ma做**前缀搜索**,**然后**在匹配到的doc中做**match_phrase查询**
+
+```json
+GET product_en/_search
+{
+  "query": {
+    "match_phrase_prefix": {
+      "desc": {
+        "query": "shouji d",
+        "slop": 1
+      }
+    }
+  }
+}
+```
+
+**参数**
+
+- analyzer 指定何种分析器来对该短语进行分词处理
+
+- max_expansions 限制前缀匹配的最大词项数量
+
+  即便设置max_expansions:1，由于一个分词可能对应多个doc，那么前缀实际匹配到的词内部的doc也可能是多个，结果>1
+
+  在多个分片中，max_expansions只对单个分片生效，这意味着当聚合多个分片的结果时，结果依然>1
+
+- boost 用于设置该查询的权重
+
+- slop 允许短语间的词项(term)间隔：slop 参数告诉 match_phrase 查询词条相隔多远时仍然能将文档视为匹配 什么是相隔多远？ 意思是说为了让查询和文档匹配你需要移动词条多少次？
+
+  ```json
+  // source: shouji zhong de hongzhaji
+  // query:  de zhong shouji hongzhaji
+  
+  // de shouji/zhong  hongzhaji  1次
+  // shouji/de zhong  hongzhaji  2次
+  // shouji zhong/de  hongzhaji  3次
+  // shouji zhong de  hongzhaji  4次
+  
+  /代表两个词占用一个位置
+  ```
+
+  
+
+**原理解析**：https://www.elastic.co/cn/blog/found-fuzzy-search#performance-considerations
+
+
+
+##### N-gram
+
+从分词角度，创建不同长度的前缀词索引
+
+**tokenizer**
+
+分词器中的ngram
+
+```json
+GET _analyze
+{
+  "tokenizer": "ngram",
+  "text": "reba always loves me"
+}
+```
+
+**token filter**
+
+令牌过滤器中的ngram
+
+```json
+GET _analyze
+{
+  "tokenizer": "ik_max_word",
+  "filter": [ "ngram" ],
+  "text": "reba always loves me"
+}
+//在ik_max_word将词进行分词切分后，对每个词项进行ngram的切分工作
+//min_gram =1   "max_gram": 1
+//r a l m
+
+//min_gram =1   "max_gram": 2
+//r a l m
+//re al lo me
+
+//min_gram =2   "max_gram": 3
+//re al lo me
+//eb lw ov me
+//ba ay ve me
+// ...
+//reb alw lov me
+
+```
+
+- min_gram：创建索引所拆分字符的最小阈值
+- max_gram：创建索引所拆分字符的最大阈值
+
+**两种令牌过滤器**
+
+- ngram：**从每一个字符开始**,按照步长,进行分词,适合前缀中缀检索
+- edge_ngram：**从第一个字符开始**,按照步长,进行分词,适合前缀匹配场景
+
+
+
+
+
+#### 搜索推荐
+
+搜索一般都会要求具有“搜索推荐”或者叫“搜索补全”的功能，即在用户输入搜索的过程中，进行自动补全或者纠错。以此来提高搜索文档的匹配精准度，进而提升用户的搜索体验，这就是Suggest。
+
+##### term suggester
+
+term suggester正如其名，只基于tokenizer之后的单个term去匹配建议词，并不会考虑多个term之间的关系
+
+```json
+POST <index>/_search
+{ 
+  "suggest": {
+    "<suggest_name>": {
+      "text": "<search_content>",
+      "term": {
+        "suggest_mode": "<suggest_mode>",
+        "field": "<field_name>"
+      }
+    }
+  }
+}
+```
+
+**Options**：
+
+- **text**：用户搜索的文本
+- **field**：要从哪个字段选取推荐数据
+- **analyzer**：使用哪种分词器
+- **size**：每个建议返回的最大结果数
+- **sort**：如何按照提示词项排序，参数值只可以是以下两个枚举：
+  - **score**：分数>词频>词项本身
+  - **frequency**：词频>分数>词项本身
+- **suggest_mode**：搜索推荐的推荐模式，参数值亦是枚举：
+  - missing：默认值，仅为不在索引中的词项生成建议词
+  - popular：仅返回与搜索词文档词频或文档词频更高的建议词
+  - always：根据 建议文本中的词项 推荐 任何匹配的建议词
+- **max_edits**：可以具有最大偏移距离候选建议以便被认为是建议。只能是1到2之间的值。任何其他值都将导致引发错误的请求错误。默认为2
+- **prefix_length**：前缀匹配的时候，必须满足的最少字符
+- **min_word_length**：最少包含的单词数量
+- **min_doc_freq**：最少的文档频率 筛选freq > min_doc_freq的展示
+- **max_term_freq**：最大的词频
+
+##### phrase suggester
+
+term suggester可以对单个term进行建议或者纠错，不会考虑多个term之间的关系，但是phrase suggester在term suggester的基础上，考虑多个term之间的关系，比如是否同时出现一个索引原文中，相邻程度以及词频等等。
+
+Options：
+
+- real_word_error_likelihood： 此选项的默认值为 0.95。此选项告诉 Elasticsearch 索引中 5% 的术语拼写错误。这意味着随着这个参数的值越来越低，Elasticsearch 会将越来越多存在于索引中的术语视为拼写错误，即使它们是正确的
+- max_errors：为了形成更正，最多被认为是拼写错误的术语的最大百分比。默认值为 1
+- confidence：默认值为 1.0，最大值也是。该值充当与建议分数相关的阈值。只有得分超过此值的建议才会显示。例如，置信度为 1.0 只会返回得分高于输入短语的建议
+- collate：告诉 Elasticsearch 根据指定的查询检查每个建议，以修剪索引中不存在匹配文档的建议。在这种情况下，它是一个匹配查询。由于此查询是模板查询，因此搜索查询是当前建议，位于查询中的参数下。可以在查询下的“params”对象中添加更多字段。同样，当参数“prune”设置为true时，我们将在响应中增加一个字段“collate_match”，指示建议结果中是否存在所有更正关键字的匹配
+- direct_generator：phrase suggester使用候选生成器生成给定文本中每个项可能的项的列表。单个候选生成器类似于为文本中的每个单独的调用term suggester。生成器的输出随后与建议候选项中的候选项结合打分。目前只支持一种候选生成器，即direct_generator。建议API接受密钥直接生成器下的生成器列表；列表中的每个生成器都按原始文本中的每个项调用。
+
+```json
+//需要设置自定义的分词器到具体的字段上
+PUT test
+{
+  "settings": {
+    "index": {
+      "analysis": {
+        "analyzer": {
+          "trigram": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+              "lowercase",
+              "shingle"
+            ]
+          }
+        },
+        "filter": {
+          "shingle": {
+            "type": "shingle", //主要要用shingle来进行拆分词 和n-gram类似 n-gram针对字符 shingle针对词
+            "min_shingle_size": 2,
+            "max_shingle_size": 3
+          }
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "title": {
+        "type": "text",
+        "fields": {
+          "trigram": {
+            "type": "text",
+            "analyzer": "trigram" //设置自定义分词器
+          }
+        }
+      }
+    }
+  }
+}
+
+
+GET /_analyze
+{
+  "tokenizer": "standard",
+  "filter": [
+    {
+      "type": "shingle",
+      "min_shingle_size": 2,
+      "max_shingle_size": 3
+    }
+  ],
+  "text": "lucene and elasticsearch"
+}
+//lucene
+//lucene and
+//lucene and elasticsearch
+//and
+//and elasticsearch
+//elasticsearch
+```
+
+
+
+##### completion suggester
+
+**最常用的**
+
+自动补全，自动完成，支持三种查询【前缀查询（prefix）模糊查询（fuzzy）正则表达式查询（regex)】 ，主要针对的应用场景就是"Auto Completion"。 此场景下用户每输入一个字符的时候，就需要即时发送一次查询请求到后端查找匹配项，在用户输入速度较高的情况下对后端响应速度要求比较苛刻。因此实现上它和前面两个Suggester采用了不同的数据结构，索引并非通过倒排来完成，而是将analyze过的数据编码成FST和索引一起存放。对于一个open状态的索引，FST会被ES整个装载到内存里的，进行前缀查找速度极快。但是FST只能用于前缀查找，这也是Completion Suggester的局限所在。
+
+- completion：es的一种特有类型，专门为suggest提供，基于内存，性能很高。
+
+  ```json
+  PUT suggest_carinfo
+  {
+    "mappings": {
+      "properties": {
+          "title": {
+            "type": "text",
+            "analyzer": "ik_max_word",
+            "fields": {
+              "suggest": {
+                "type": "completion",
+                "analyzer": "ik_max_word"
+              }
+            }
+          },
+          "content": {
+            "type": "text",
+            "analyzer": "ik_max_word"
+          }
+        }
+    }
+  }
+  ```
+
+- prefix query：基于前缀查询的搜索提示，是最常用的一种搜索推荐查询。
+
+  - prefix：客户端搜索词
+
+  - field：建议词字段
+
+  - size：需要返回的建议词数量（默认5）
+
+  - skip_duplicates：是否过滤掉重复建议，默认false
+
+    ```json
+    POST suggest_carinfo/_search
+    {
+      "suggest": {
+        "car_suggest": {
+          "prefix": "宝马5系",
+          "completion": {
+            "field": "title.suggest",
+            "skip_duplicates":true,
+            "fuzzy": {
+              "fuzziness": 1
+            }
+          }
+        }
+      }
+    }
+    ```
+
+    
+
+- fuzzy query
+
+  - fuzziness：允许的偏移量，默认auto
+
+  - transpositions：如果设置为true，则换位计为一次更改而不是两次更改，默认为true。
+
+  - min_length：返回模糊建议之前的最小输入长度，默认 3
+
+  - prefix_length：输入的最小长度（不检查模糊替代项）默认为 1
+
+  - unicode_aware：如果为true，则所有度量（如模糊编辑距离，换位和长度）均以Unicode代码点而不是以字节为单位。这比原始字节略慢，因此默认情况下将其设置为false。
+
+    ```json
+    POST suggest_carinfo/_search
+    {
+      "suggest": {
+        "car_suggest": {
+          "prefix": "宝马5系",
+          "completion": {
+            "field": "title.suggest",
+            "skip_duplicates":true,
+            "fuzzy": {
+              "fuzziness": 1
+            }
+          }
+        }
+      }
+    }
+    ```
+
+    
+
+- regex query：可以用正则表示前缀，不建议使用
+
+```json
+POST suggest_carinfo/_search
+{
+  "suggest": {
+    "car_suggest": {
+      "regex": "nir",
+      "completion": {
+        "field": "title.suggest",
+        "size": 10
+      }
+    }
+  }
+}
+```
+
+
+
+##### context suggester
+
+完成建议者会考虑索引中的所有文档，但是通常来说，我们在进行智能推荐的时候最好通过某些条件过滤，并且有可能会针对某些特性提升权重。
+
+- contexts：上下文对象，可以定义多个
+  - name：`context`的名字，用于区分同一个索引中不同的`context`对象。需要在查询的时候指定当前name
+  - type：`context`对象的类型，目前支持两种：category和geo，分别用于对suggest  item分类和指定地理位置。
+  - boost：权重值，用于提升排名
+- path：如果没有path，相当于在PUT数据的时候需要指定context.name字段，如果在Mapping中指定了path，在PUT数据的时候就不需要了，因为           Mapping是一次性的，而PUT数据是频繁操作，这样就简化了代码。
+
+```json
+PUT place
+{
+  "mappings": {
+    "properties": {
+      "suggest": {
+        "type": "completion",
+        "contexts": [
+          {
+            "name": "place_type",
+            "type": "category"
+          },
+          {
+            "name": "location",
+            "type": "geo",
+            "precision": 4
+          }
+        ]
+      }
+    }
+  }
+}
+PUT place/_doc/1
+{
+  "suggest": {
+    "input": [ "timmy's", "starbucks", "dunkin donuts" ], //将这些词与cafe和food类绑定
+    "contexts": {
+      "place_type": [ "cafe", "food" ]                    
+    }
+  }
+}
+
+POST place/_search?pretty
+{
+  "suggest": {
+    "place_suggestion": {
+      "prefix": "tim",
+      "completion": {
+        "field": "suggest",
+        "contexts": {
+          "place_type": [                             
+            { "context": "cafe" }, //筛选cafe类中前缀为sta的推荐词
+            { "context": "money", "boost": 2 } //筛选money类中前缀为sta的推荐词 +2分 优先推荐
+          ]
+        }
+      }
+    }
+  }
+}
+
+
+# 地理位置筛选器
+PUT place/_doc/3
+{
+  "suggest": {
+    "input": "timmy's",
+    "contexts": {
+      "location": [
+        {
+          "lat": 43.6624803,
+          "lon": -79.3863353
+        },
+        {
+          "lat": 43.6624718,
+          "lon": -79.3873227
+        }
+      ]
+    }
+  }
+}
+POST place/_search
+{
+  "suggest": {
+    "place_suggestion": {
+      "prefix": "tim",
+      "completion": {
+        "field": "suggest",
+        "contexts": {
+          "location": {
+            "lat": 43.662,
+            "lon": -79.380
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+
+
 
 
 #### 分词器-analyzer
@@ -1307,6 +1908,8 @@ GET my_index/_analyze
 
 
 ##### 令牌过滤器-token filter
+
+令牌过滤器是在分词器分词后，对每个词做处理
 
 停用词、时态转换、大小写转换、同义词转换、语气词处理等。比如：has=>have  him=>he  apples=>apple  the/oh/a=>干掉
 

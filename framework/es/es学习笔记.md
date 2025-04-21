@@ -1794,6 +1794,309 @@ POST place/_search
 
 
 
+#### 数据建模
+
+##### 嵌套类型：Nested
+
+nested属于object类型的一种，是Elasticsearch中用于复杂类型对象数组的索引操作。Elasticsearch没有内部对象的概念，因此，ES在存储复杂类型的时候会把对象的复杂层次结果扁平化为一个键值对列表。
+
+**比如**：
+
+```json
+PUT my-index-000001/_doc/1
+{
+  "group" : "fans",
+  "user" : [ 
+    {
+      "first" : "John",
+      "last" :  "Smith"
+    },
+    {
+      "first" : "Alice",
+      "last" :  "White"
+    }
+  ]
+} 
+```
+
+上面的文档被创建之后，user数组中的每个json对象会以下面的形式存储
+
+```json
+{
+  "group" :        "fans",
+  "user.first" : [ "alice", "john" ],
+  "user.last" :  [ "smith", "white" ]
+}
+```
+
+`user.first`和`user.last`字段被扁平化为多值字段，`first`和`last`之间的关联丢失。
+
+**使用nested为复杂类型创建mapping：**
+
+```json
+PUT order
+{
+  "mappings": {
+    "properties": {
+      "goods_list": {
+        "type": "nested", //指定nested
+        "properties": {
+          "name": { //指定内部的name属性的结构
+            "type": "text",
+            "analyzer": "ik_max_word",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**查询**：
+
+```json
+GET /order/_search
+{
+  "query": {
+    "nested": {
+      "path": "goods_list",
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": { //都会计算一个分数
+                "goods_list.name": "小米10"
+              }
+            },
+            {
+              "match": { //计算一个分数
+                "goods_list.price": 4999
+              }
+            }
+          ]
+        }
+      },
+      "score_mode" : "max" //取上面俩分数的最大值
+    }
+  }
+}
+```
+
+**Optins:**
+
+- path：nested对象的查询深度
+- score_mode：评分计算方式
+  - avg （默认）：使用所有匹配的子对象的平均相关性得分。
+  - max：使用所有匹配的子对象中的最高相关性得分。
+  - min：使用所有匹配的子对象中最低的相关性得分。
+  - none：不要使用匹配的子对象的相关性分数。该查询为父文档分配得分为0。
+  - sum：将所有匹配的子对象的相关性得分相加。
+
+##### 父子级关系：Join
+
+连接数据类型是一个特殊字段，它在同一索引的文档中创建父/子关系。关系部分在文档中定义了一组可能的关系，每个关系是一个父名和一个子名。父/子关系可以定义如下
+
+```json
+PUT <index_name>
+{
+  "mappings": {
+    "properties": {
+      "<join_field_name>": { 
+        "type": "join",
+        "relations": {
+          "<parent_name>": "<child_name>" 
+        }
+      }
+    }
+  }
+}
+
+PUT msb_depart
+{
+  "mappings": {
+    "properties": {
+      "msb_join_field": {
+        "type": "join",
+        "relations": {
+          "depart": "employee"
+        }
+      },
+      "my_id": {
+        "type": "keyword"
+      }
+    }
+  }
+}
+
+PUT msb_depart/_doc/1
+{
+  "my_id": 1,
+  "name":"教学部",
+  "msb_join_field":{
+    "name":"depart"
+  }
+}
+
+PUT msb_depart/_doc/3?routing=1&refresh
+{
+  "my_id": 3,
+  "name":"马老师",
+  "msb_join_field":{
+    "name":"employee",
+    "parent":1
+  }
+}
+
+# 搜索周老师所在部门
+GET msb_depart/_search
+{
+  "query": {
+    "has_child": {
+      "type": "employee",
+      "query": {
+        "match": {
+          "name.keyword": "周老师"
+        }
+      }
+    }
+  }
+}
+# 搜索咨询部所有老师
+GET msb_depart/_search
+{
+  "query": {
+    "has_parent": {
+      "parent_type": "depart",
+      "query": {
+        "match": {
+          "name.keyword": "咨询部"
+        }
+      }
+    }
+  }
+}
+# 搜索部门id为2的部门员工
+GET msb_depart/_search
+{
+  "query": {
+    "parent_id":{
+      "type":"employee",
+      "id":2
+    }
+  }
+}
+```
+
+**使用场景**
+
+`join`类型不能像关系数据库中的表链接那样去用，不论是`has_child`或者是`has_parent`查询都会对索引的查询性能有严重的负面影响。并且会触发[global ordinals](https://www.elastic.co/guide/en/elasticsearch/reference/7.12/eager-global-ordinals.html#_what_are_global_ordinals)
+
+`join`**唯一**合适应用场景是：当索引数据包含一对多的关系，并且其中一个实体的数量远远超过另一个的时候。比如：`老师`有`一万个学生`
+
+**注意**
+
+- 在索引父子级关系数据的时候必须传入routing参数，即指定把数据存入哪个分片，因为父文档和子文档必须在同一个分片上，因此，在获取、删除或更新子文档时需要提供相同的路由值。
+- 每个索引只允许有一个`join`类型的字段映射
+- 一个元素可以有多个子元素但只有一个父元素
+- 可以向现有连接字段添加新关系
+- 也可以向现有元素添加子元素，但前提是该元素已经是父元素
+
+
+
+##### 数据建模
+
+**概念**
+
+数据模型是描述现实世界某种现象或者状态的物理抽象，比如我们之前用`FSA`来描述`周老师的一天`这种现象，就是把现实世界抽象成某种模型。现实世界有很多重要的关联关系：博客帖子有一些评论，银行账户有多次交易记录，客户有多个银行账户，订单有多个订单明细，文件目录有多个文件和子目录。
+
+关系型数据库关联关系：
+
+- 每个实体（或 行 ，在关系世界中）可以被`主键`唯一标识。
+- 实体`规范化 `（范式）。唯一实体的数据只存储一次，而相关实体只存储它的主键。只能在一个具体位置修改这个实体的数据。
+- 实体可以进行关联查询，可以跨实体搜索。
+- 单个实体的变化是`原子性`，`一致性`，`隔离性`， 和`持久性`。 （可以在 [*ACID Transactions*](http://en.wikipedia.org/wiki/ACID_transactions) 中查看更多细节。）
+- 大多数关系数据库支持跨多个实体的 ACID 事务。
+
+但是关系型数据库有其局限性，包括对全文检索有限的支持能力。 实体关联查询时间消耗是很昂贵的，关联的越多，消耗就越昂贵。特别是跨服务器进行实体关联时成本极其昂贵，基本不可用。 但单个的服务器上又存在数据量的限制。
+
+Elasticsearch ，和大多数 NoSQL 数据库类似，是扁平化的。索引是独立文档的集合体。 文档是否匹配搜索请求取决于它是否包含所有的所需信息。
+
+Elasticsearch 中单个文档的数据变更是 [ACIDic](http://en.wikipedia.org/wiki/ACID_transactions) 的， 而涉及多个文档的事务则不是。当一个事务部分失败时，无法回滚索引数据到前一个状态。
+
+扁平化有以下优势：
+
+- 索引过程是快速和无锁的。
+- 搜索过程是快速和无锁的。
+- 因为每个文档相互都是独立的，大规模数据可以在多个节点上进行分布。
+
+但关联关系仍然非常重要。某些时候，我们需要缩小扁平化和现实世界关系模型的差异。以下四种常用的方法，用来在 Elasticsearch 中进行关系型数据的管理：
+
+- [Application-side joins](https://www.elastic.co/guide/cn/elasticsearch/guide/current/application-joins.html)
+- [Data denormalization](https://www.elastic.co/guide/cn/elasticsearch/guide/current/denormalization.html)
+- [Nested objects](https://www.elastic.co/guide/cn/elasticsearch/guide/current/nested-objects.html)
+- [Parent/child relationships](https://www.elastic.co/guide/cn/elasticsearch/guide/current/parent-child.html)
+
+**对象和实体**
+
+对象和实体的关系就是现实世界和数据模型的映射，我们在做Java开发的时候经常用到的POJO的领域模型就是这种关系：
+
+分层领域模型规约：
+
+- DO（ Data Object）：与数据库表结构一一对应，通过DAO层向上传输数据源对象。
+- DTO（ Data Transfer Object）：数据传输对象，Service或Manager向外传输的对象。
+- BO（ Business Object）：业务对象。 由Service层输出的封装业务逻辑的对象。
+- AO（ Application Object）：应用对象。 在Web层与Service层之间抽象的复用对象模型，极为贴近展示层，复用度不高。
+- VO（ View Object）：显示层对象，通常是Web向模板渲染引擎层传输的对象。
+- POJO（ Plain Ordinary Java Object）：在本手册中， POJO专指只有setter/getter/toString的简单类，包括DO/DTO/BO/VO等。
+- Query：数据查询对象，各层接收上层的查询请求。 注意超过2个参数的查询封装，禁止使用Map类来传输。
+
+领域模型命名规约：
+
+- 数据对象：xxxDO，xxx即为数据表名。
+- 数据传输对象：xxxDTO，xxx为业务领域相关的名称。
+- 展示对象：xxxVO，xxx一般为网页名称。
+- POJO是DO/DTO/BO/VO的统称，禁止命名成xxxPOJO。
+
+**数据建模的过程**
+
+- 概念：需求 => 抽象。即把实际的用户需求抽象为某种数据模型，比如我们在存储`倒排表`的时候，就是把”储存倒排表“这个需求抽象成`FST`的这种抽象的数据模型。
+- 逻辑：抽象 => 具体。仍然以”存储倒排表“为例，FST模型构建完成之后，我们需要把其抽象变成具体的代码和对象，把实现变为肉眼可见的东西。
+- 物理：具体 => 落地。同上，当我们有了逻辑之后，就可以通过具体的对象、属性编程实实在在的数据文件，保存在你的磁盘里。
+
+**数据建模的包含的内容**
+
+- ##### 关联关系处理（index relations）：
+
+  - ##### **数据模型的关联**：我们通过在我们的应用程序中实现联接可以（部分）模拟关系数据库。应用层联接的主要优点是可以对数据进行标准化处理。只能在 `user` 文档中修改用户的名称。缺点是，为了在搜索时联接文档，必须运行额外的查询
+
+  - **非规范化数据**：使用 Elasticsearch 得到最好的搜索性能的方法是有目的的通过在索引时进行非规范化 [denormalizing](http://en.wikipedia.org/wiki/Denormalization)。对每个文档保持一定数量的冗余副本可以在需要访问时避免进行关联
+
+  - **稀疏字段**：避免稀疏字段文档
+
+  - **并发问题**：全局锁、文档锁、树锁（独占锁、共享锁）、乐观锁、悲观锁
+
+- Object类型：通俗点就是通过字段冗余，以一张大宽表来实现粗粒度的index，这样可以充分发挥扁平化的优势。但是这是以牺牲索引性能及灵活度为代价的。使用的前提：冗余的字段应该是很少改变的；比较适合与一对少量关系的处理。当业务数据库并非采用非规范化设计时，这时要将数据同步到作为二级索引库的ES中，就很难使用上述增量同步方案，必须进行定制化开发，基于特定业务进行应用开发来处理join关联和实体拼接
+
+- **嵌套对象**：索引性能和查询性能二者不可兼得，必须进行取舍。嵌套文档将实体关系嵌套组合在单文档内部（类似与json的一对多层级结构），这种方式牺牲索引性能（文档内任一属性变化都需要重新索引该文档）来换取查询性能，可以同时返回关系实体，比较适合于一对少量的关系处理。当使用嵌套文档时，使用通用的查询方式是无法访问到的，必须使用合适的查询方式（nested query、nested filter、nested facet等），很多场景下，使用嵌套文档的复杂度在于索引阶段对关联关系的组织拼装
+
+- **父子级关系**：父子文档牺牲了一定的查询性能来换取索引性能，适用于一对多的关系处理。其通过两种type的文档来表示父子实体，父子文档的索引是独立的。父-子文档ID映射存储在 Doc Values 中。当映射完全在内存中时， Doc Values 提供对映射的快速处理能力，另一方面当映射非常大时，可以通过溢出到磁盘提供足够的扩展能力。 在查询parent-child替代方案时，发现了一种filter-terms的语法，要求某一字段里有关联实体的ID列表。基本的原理是在terms的时候，对于多项取值，如果在另外的index或者type里已知主键id的情况下，某一字段有这些值，可以直接嵌套查询。具体可参考官方文档的示例：通过用户里的粉丝关系，微博和用户的关系，来查询某个用户的粉丝发表的微博列表。
+
+- **扩展性**：
+
+  - 分片分配感知
+  - 索引模板
+  - 索引生命周期
+  - 冷热架构
+  - 分片管理和规划
+  - 滚动索引和别名
+  - 跨集群搜索
+
 
 
 
@@ -2212,6 +2515,397 @@ ik访问数据库
    2. https://dev.mysql.com/doc/connector-j/5.1/en/connector-j-versions.html
 2. 驱动下载地址
    1. https://mvnrepository.com/artifact/mysql/mysql-connector-java
+
+
+
+#### 客户端
+
+ES的客户端分为两大类 JavaAPI和REST API
+
+**Java API**
+
+- Transport Client（5.x）
+- Java API Client (8.x)
+
+**REST API**
+
+- High Level REST Client（7.x）（6.7.x）（6.3.x）
+- Low Level REST Client (5.x)
+
+
+
+##### Java API
+
+###### Transport Client
+
+<img src="./images/image-20250421150046541.png" alt="image-20250421150046541" style="zoom:50%;" />
+
+**生命周期（ES 0.9 - ES 7.x）**
+
+`Java API`使用的客户端名称叫`TransportClient`，从7.0.0开始，官方已经不建议使用`TransportClient`作为ES的Java客户端了，并且从8.0会被彻底删除。
+
+**注意事项**
+
+- `TransportClient` 使用`transport`模块（**9300端口**）远程连接到 Elasticsearch 集群，客户端并不加入集群，而是通过获取单个或者多个transport地址来以轮询的方式与他们通信。
+- `TransportClient`**使用`transport`协议**与Elasticsearch节点通信，如果客户端的版本和与其通信的ES实例的版本不同，就会出现兼容性问题。而`low-level REST`使用的是HTTP协议，可以与任意版本ES集群通信。`high-level REST`是基于`low-level REST`的。
+
+**Maven依赖**
+
+```xml
+<dependency>
+    <groupId>org.elasticsearch.client</groupId>
+    <artifactId>transport</artifactId>
+    <version>7.12.1</version>
+</dependency>
+```
+
+**使用**
+
+```java
+// 创建客户端连接
+TransportClient client = new PreBuiltTransportClient(Settings.EMPTY)
+        .addTransportAddress(new TransportAddress(InetAddress.getByName("host1"), 9300))
+        .addTransportAddress(new TransportAddress(InetAddress.getByName("host2"), 9300));
+
+// 关闭客户端
+client.close();
+```
+
+**嗅探器**
+
+```java
+Settings settings = Settings.builder()
+        .put("client.transport.sniff", true).build();
+TransportClient client = new PreBuiltTransportClient(settings);
+```
+
+
+
+###### Java API Client
+
+
+
+
+
+
+
+##### REST API
+
+`RestClient` 是线程安全的，`RestClient`使用 Elasticsearch 的 HTTP 服务，默认为`9200`端口，这一点和`transport client`不同。
+
+<img src="./images/image-20250421150158953.png" alt="image-20250421150158953" style="zoom:50%;" />
+
+
+
+###### Java Low-level REST client
+
+第一个 5.0.0 版 Java REST 客户端，之所以称为低级客户端，是因为它几乎没有帮助 Java 用户构建请求或解析响应。它处理请求的路径和查询字符串构造，但它将 JSON 请求和响应主体视为必须由用户处理的不透明字节数组。
+
+**特点**
+
+- 与任何 Elasticsearch 版本兼容
+  - ES 5.0.0只是发布第一个`Java Low-level REST client`时的ES版本（2016年），不代表其向前只兼容到5.0，`Java Low-level REST client`基于Apache HTTP 客户端，它允许使用 HTTP 与任何版本的 Elasticsearch 集群进行通信。
+- 最小化依赖
+- 跨所有可用节点的负载平衡
+- 在节点故障和特定响应代码的情况下进行故障转移
+- 连接失败惩罚（是否重试失败的节点取决于它连续失败的次数；失败的尝试越多，客户端在再次尝试同一节点之前等待的时间就越长）
+- 持久连接
+- 请求和响应的跟踪记录
+- 可选的集群节点自动发现（也称为嗅探）
+
+**Maven依赖**
+
+```xml
+<dependency>
+    <groupId>org.elasticsearch.client</groupId>
+    <artifactId>elasticsearch-rest-client</artifactId>
+    <version>7.12.0</version>
+</dependency>
+```
+
+**初始化**
+
+```java
+RestClient restClient = RestClient.builder(
+    new HttpHost("localhost1", 9200, "http"),
+    new HttpHost("localhost2", 9200, "http")).build();
+```
+
+**资源释放**
+
+```java
+restClient.close();
+```
+
+**嗅探器**
+
+允许从正在运行的 Elasticsearch 集群中自动发现节点并将它们设置为现有 RestClient 实例的最小库
+
+**Maven依赖**
+
+```
+<dependency>
+    <groupId>org.elasticsearch.client</groupId>
+    <artifactId>elasticsearch-rest-client-sniffer</artifactId>
+    <version>7.12.1</version>
+</dependency>
+```
+
+**代码**
+
+```java
+// 默认每五分钟发现一次
+RestClient restClient = RestClient.builder(
+    new HttpHost("localhost", 9200, "http"))
+    .build();
+Sniffer sniffer = Sniffer.builder(restClient).build();
+```
+
+**资源释放**
+
+`Sniffer` 对象应该与`RestClient` 具有相同的生命周期，并在客户端之前关闭。
+
+```java
+sniffer.close();
+restClient.close();
+```
+
+**设置嗅探间隔**
+
+```java
+RestClient restClient = RestClient.builder(
+    new HttpHost("localhost", 9200, "http"))
+    .build();
+// 设置嗅探间隔为60000毫秒
+Sniffer sniffer = Sniffer.builder(restClient)
+    .setSniffIntervalMillis(60000).build();
+```
+
+**失败时重启嗅探**
+
+启用失败时嗅探，也就是在每次失败后，节点列表会立即更新，而不是在接下来的普通嗅探轮中更新。在这种情况下，首先需要创建一个 SniffOnFailureListener 并在 RestClient 创建时提供。此外，一旦稍后创建嗅探器，它需要与同一个 SniffOnFailureListener 实例相关联，它将在每次失败时收到通知，并使用嗅探器执行额外的嗅探轮
+
+```java
+SniffOnFailureListener sniffOnFailureListener =
+    new SniffOnFailureListener();
+RestClient restClient = RestClient.builder(
+    new HttpHost("localhost", 9200))
+    .setFailureListener(sniffOnFailureListener) //将失败侦听器设置为 RestClient 实例 
+    .build();
+Sniffer sniffer = Sniffer.builder(restClient)
+    .setSniffAfterFailureDelayMillis(30000) //在嗅探失败时，不仅节点在每次失败后都会更新，而且还会比平常更早安排额外的嗅探轮次，默认情况下是在失败后一分钟，假设事情会恢复正常并且我们想要检测尽快地。可以在 Sniffer 创建时通过 setSniffAfterFailureDelayMillis 方法自定义所述间隔。请注意，如果如上所述未启用故障嗅探，则最后一个配置参数无效。
+    .build();
+sniffOnFailureListener.setSniffer(sniffer); //将 Sniffer 实例设置为失败侦听器
+```
+
+
+
+###### Java High Level REST Client
+
+**生命周期（ES 5.0.0-alpha4至今）**
+
+Java 高级 REST 客户端在 Java 低级 REST 客户端之上运行。它的主要目标是公开 API 特定的方法，接受请求对象作为参数并返回响应对象，以便请求编组和响应解组由客户端本身处理。要求Elasticsearch版本为`2.0`或者更高。
+
+
+
+```java
+public class Test {
+
+    @SneakyThrows
+    public static void main(String[] args) {
+
+        SniffOnFailureListener sniffOnFailureListener = new SniffOnFailureListener();
+
+        //region 初始化
+        RestClientBuilder builder = RestClient.builder(new HttpHost("10.1.24.135", 9200, "http"))
+                .setFailureListener(sniffOnFailureListener);
+
+        RestHighLevelClient highLevelClient = new RestHighLevelClient(builder);
+
+        Sniffer sniffer = Sniffer.builder(highLevelClient.getLowLevelClient()).setSniffIntervalMillis(5000)
+                .setSniffAfterFailureDelayMillis(30000)
+                .build();
+
+        sniffOnFailureListener.setSniffer(sniffer);
+
+        //endregion
+
+        sniffer.close();
+        highLevelClient.close();
+    }
+}
+
+```
+
+
+
+
+
+##### 客户端优缺点及兼容性建议
+
+阅读：https://www.elastic.co/cn/blog/benchmarking-rest-client-transport-client
+
+###### Java API
+
+- **优点**：
+  - 性能略好：
+  - 吞吐量大：`Transport Client`的批量索引吞吐量比HTTP 客户端大 4% 到 7%（实验室条件）
+- **缺点**：
+  - 重依赖：并非单独意义上的“客户端”，其依赖于lucene、log4j2等，可能会产生依赖冲突
+  - 不安全：Java API通过传输层调用服务，不安全。
+  - 重耦合：和ES核心服务有共同依赖，版本兼容性要求高。
+
+###### REST API
+
+- **优点**
+
+  - 安全：`REST API`使用单一的集群入口点，可以通过 HTTPS 保障数据安全性，传输层只用于内部节点到节点的通信。
+
+  - 易用：客户端只通过 REST 层而不是通过传输层调用服务，可以大大简化代码编写
+
+- **缺点**
+  - 性能略逊于`Java API`，但是差距不大
+
+
+------
+
+- ##### Low level Client
+
+  - **优点**：
+    - 轻依赖：Apache HTTP 异步客户端及其传递依赖项（Apache HTTP 客户端、Apache HTTP Core、Apache HTTP Core NIO、Apache Commons Codec 和 Apache Commons Logging）
+    - 兼容性强：兼容所有ES版本
+  - **缺点**：
+    - 功能少：显而易见，轻量化带来的必然后果
+
+- ##### High level Client
+
+  - **优点**：
+    - 功能强大：支持所有ES的API调用。
+    - 松耦合：客户端和ES核心服务完全独立，无共同依赖。
+    - 接口稳定：REST API 比与 Elasticsearch 版本完全匹配的`Transport Client`接口稳定得多。
+  - **缺点**：
+    - 兼容性中等：基于Low Level Client，只向后兼容ES的大版本，比如6.0的客户端兼容6.x（即6.0之后的版本），但是6.1的客户端未必支持所有6.0ES的API，但是这并不是什么大问题，咱们使用相同版本的客户端和服务端即可，而且不会带来其他问题。
+
+
+
+#### Spring Data Elasticsearch
+
+**是什么**
+
+Spring Data 的目的是用统一的接口，适配所有不同的存储类型。
+
+Spring Data Elasticsearch是Spring Data的一个子项目，该项目旨在为新数据存储提供熟悉且一致的基于 Spring 的编程模型，同时保留特定于存储的功能和功能。Spring Data Elasticsearch是一个以 POJO 为中心的模型，用于与 Elastichsearch 文档交互并轻松编写 Repository 风格的数据访问层
+
+**特点**
+
+- Spring 配置支持使用基于 Java 的`@Configuration`类或用于 ES 客户端实例的 XML 命名空间。
+- `ElasticsearchTemplate`提高执行常见 ES 操作的生产力的助手类。包括文档和 POJO 之间的集成对象映射。
+- 功能丰富的对象映射与 Spring 的转换服务集成
+- 基于注释的映射元数据但可扩展以支持其他元数据格式
+- `Repository`接口的自动实现，包括对自定义查找器方法的支持。
+- 对存储库的 CDI 支持
+
+**官网**
+
+https://spring.io/projects/spring-data-elasticsearch
+
+**兼容性**
+
+https://docs.spring.io/spring-data/elasticsearch/docs/4.2.1/reference/html/#preface.requirements
+
+**文档地址**
+
+https://docs.spring.io/spring-data/elasticsearch/docs/4.2.1/reference/html/#reference
+
+**优缺点**
+
+- 优点：用统一的接口，适配所有不同的存储类型，学习成本低。
+- 缺点：适配的版本要比原生的 API 要慢。这个取决于 Spring Data Elasticsearch 团队的开发速度。无法使用ES的一些新特性
+
+**Maven Repository**
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+</dependency>
+```
+
+**注解**
+
+```java
+@Document：在类级别应用，以指示该类是映射到数据库的候选类。最重要的属性包括：
+
+indexName：用于存储此实体的索引的名称。它可以包含类似于“日志-#{T（java.time.LocalDate）.now（）.toString（）}”
+
+type :映射类型。如果未设置，则使用该类的小写简单名称。（自4.0版起已弃用）
+
+createIndex：标记是否在存储库引导时创建索引。默认值为true。请参阅自动创建带有相应映射的索引
+
+versionType：版本管理的配置。默认值为外部 .
+
+@Id：在字段级别应用，以标记用于标识的字段。
+
+@Transient：默认情况下，存储或检索文档时，所有字段都映射到文档，此批注不包括该字段。
+
+@PersistenceConstructor：标记在从数据库实例化对象时要使用的给定构造函数（甚至是包受保护的构造函数）。构造函数参数按名称映射到检索文档中的键值。
+
+@Field：应用于字段级别并定义字段的属性，大多数属性映射到相应的Elasticsearch映射定义（以下列表不完整，请查看注释Javadoc以获取完整的参考）：
+
+name：将在Elasticsearch文档中表示的字段的名称，如果未设置，则使用Java字段名称。
+
+type：字段类型，可以是Text，关键字，Long，Integer，Short，Byte，Double，Float，Half_Float，Scaled_Float，日期，日期Nanos，Boolean，Binary，Integer_Range，Float_Range，Long_Range，DoubleˉRange，DateˉRange，Object，Nested，Ip，TokenCount，percollator，flatten，搜索。请参阅Elasticsearch映射类型
+
+format：一个或多个内置日期格式，请参阅下一节格式数据映射 .
+
+pattern：一个或多个自定义日期格式，请参阅下一节格式数据映射 .
+
+store：标志是否应将原始字段值存储在Elasticsearch中，默认值为假 .
+
+analyzer ,搜索分析器 ,normalizer用于指定自定义分析器和规格化器。
+
+@GeoPoint：将字段标记为地理点如果字段是GeoPoint班级
+```
+
+**操作类型**
+
+Spring Data Elasticsearch 使用多个接口来定义可以针对 Elasticsearch 索引调用的操作。
+
+- `IndexOperations`定义索引级别的操作，例如创建或删除索引。
+- `DocumentOperations`定义基于 id 存储、更新和检索实体的操作。
+- `SearchOperations`定义使用查询搜索多个实体的操作
+- `ElasticsearchOperations`结合了`DocumentOperations`和`SearchOperations`接口。
+
+**High Level REST Client**
+
+```java
+@Configuration
+public class RestClientConfig extends AbstractElasticsearchConfiguration {
+
+    @Override
+    @Bean
+    public RestHighLevelClient elasticsearchClient() {
+
+        final ClientConfiguration clientConfiguration = ClientConfiguration.builder()  
+            .connectedTo("localhost:9200")
+            .build();
+
+        return RestClients.create(clientConfiguration).rest();                         
+    }
+}
+
+@Autowired
+RestHighLevelClient highLevelClient;
+RestClient lowLevelClient = highLevelClient.lowLevelClient();                        
+
+
+IndexRequest request = new IndexRequest("spring-data")
+  .id(randomID())
+  .source(singletonMap("feature", "high-level-rest-client"))
+  .setRefreshPolicy(IMMEDIATE);
+
+IndexResponse response = highLevelClient.index(request,RequestOptions.DEFAULT); 
+```
 
 
 

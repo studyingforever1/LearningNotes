@@ -1,74 +1,39 @@
 package com.zcq;
 
-import java.util.Deque;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 
 public class Test {
     public static void main(String[] args) {
         Solution solution = new Solution();
-        System.out.println(solution.shortestSubarray(new int[]{2, -1, 2}, 3));
     }
 }
 
 class Solution {
-    public int shortestSubarray(int[] nums, int k) {
-        long[] preSum = new long[nums.length + 1];
-        for (int i = 1; i < preSum.length; i++) {
-            preSum[i] = preSum[i - 1] + nums[i - 1];
-        }
-        Queue<Long> queue = new Queue<>();
-        int left = 0, right = 0, ans = Integer.MAX_VALUE;
-        while (right < preSum.length) {
-            long c = preSum[right];
-            queue.push(c);
-            right++;
-            while (left < right && !queue.isEmpty() && c - queue.min() >= k) {
-                ans = Math.min(right - left - 1, ans);
-                queue.pop();
-                left++;
-            }
-        }
-        return ans == Integer.MAX_VALUE ? -1 : ans;
+
+    List<TreeNode> res = new LinkedList<>();
+    HashMap<String, Integer> map = new HashMap<>();
+
+    public List<TreeNode> findDuplicateSubtrees(TreeNode root) {
+        res.clear();
+        map.clear();
+        getTreeString(root);
+        return res;
     }
 
-    class Queue<E extends Comparable<E>> {
-        Deque<E> minQueue = new LinkedList<>();
-        Deque<E> maxQueue = new LinkedList<>();
-        Deque<E> queue = new LinkedList<>();
-
-        public void push(E x) {
-            while (!minQueue.isEmpty() && x.compareTo(minQueue.getLast()) < 0) {
-                minQueue.removeLast();
-            }
-            minQueue.addLast(x);
-            while (!maxQueue.isEmpty() && x.compareTo(maxQueue.getLast()) > 0) {
-                maxQueue.removeLast();
-            }
-            maxQueue.addLast(x);
-            queue.addLast(x);
+    public String getTreeString(TreeNode root) {
+        if (root == null) {
+            return "#";
         }
-
-        public void pop() {
-            E removeFirst = queue.removeFirst();
-            if (removeFirst.equals(minQueue.getFirst())) {
-                minQueue.removeFirst();
-            }
-            if (removeFirst.equals(maxQueue.getFirst())) {
-                maxQueue.removeFirst();
-            }
+        String left = getTreeString(root.left);
+        String right = getTreeString(root.right);
+        String curTreeString = left + "," + right + "," + root.val;
+        if (map.getOrDefault(curTreeString, 0) == 1) {
+            res.add(root);
         }
-
-        public E min() {
-            return minQueue.getFirst();
-        }
-
-        public E max() {
-            return maxQueue.getFirst();
-        }
-
-        public boolean isEmpty() {
-            return queue.isEmpty();
-        }
+        map.merge(curTreeString, 1, Integer::sum);
+        return curTreeString;
     }
 }
 //class Solution {

@@ -868,5 +868,32 @@ public class PropertiesTest {
 
 
 
+## 原反补码
+
+### 算数右移和除法
+
+- 正数：右移 `n` 位和除以 `2^n` 是等效的。
+- 负数：算术右移 `n` 位相当于将该数除以 `2^n` 并向负无穷取整，整数除法是向零取整，二者处理方式不同，结果也就不同。
+
+```java
+   		System.out.println(196658 >> 16); //3
+	    System.out.println(196658 / (1 << 16)); //3
+        System.out.println(196658 & ((1 << 16) - 1)); //50 取余数
+
+        System.out.println(-196658 >> 16); //-4
+        System.out.println(-196658 / (1 << 16)); //-3
+        System.out.println(-196658 & ((1 << 16) - 1)); //65486
+```
+
+
+
+
+
+
+
+
+
+
+
 
 

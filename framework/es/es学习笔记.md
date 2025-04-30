@@ -3571,9 +3571,19 @@ search_after不是自由跳转到随机页面而是并行滚动多个查询的�
 
 <img src="./images/16e14070c5b23beb3c3d0605d943d550.png" style="zoom: 33%;" />
 
+#### 数据结构
+
+- 词项索引：FST
+- 词项字典：FST
+- 倒排表：跳跃表/位图
+
+![](D:\doc\my\studymd\LearningNotes\framework\es\images\v2-317b7b60974c54c9bbbdae811138e97e_1440w.jpg)
+
+
+
 #### 倒排表
 
-倒排表中存储了匹配某个term的所有文档id
+倒排表中存储了匹配某个term的所有文档id，底层数据结构可能采用跳跃表和位图，使用压缩算法进行了压缩
 
 
 
@@ -3591,7 +3601,7 @@ search_after不是自由跳转到随机页面而是并行滚动多个查询的�
 
 ###### RBM: RoaringBitmap
 
-
+<img src="./images/ab68b29361f20cabad3be8a2ecfdf096.png" style="zoom: 80%;" />
 
 
 
@@ -3601,11 +3611,21 @@ search_after不是自由跳转到随机页面而是并行滚动多个查询的�
 
 #### 词项字典
 
-
+存放在磁盘中的字典，存储了全部词项，关联倒排表，使用FST存储。
 
 
 
 #### 词项索引
+
+存放在内存中的索引，只存储部分词的前缀，用于快速索引词项字典。
+
+例如：对于词项apple和banana，词项索引中可能只存储a,b两个前缀指向对应前缀的词项字典
+
+##### FST（Finit state Transducers）
+
+FST最重要的功能是可以实现Key到Value的映射，相当于HashMap<Key,Value>，共享前缀和共享后缀的特性可以大量节省空间。
+
+<img src=".\images\a05d5d3e1dc08fe60af7b5cb63794330.png" style="zoom:50%;" />
 
 
 
@@ -3655,6 +3675,12 @@ search_after不是自由跳转到随机页面而是并行滚动多个查询的�
 - 检索结果丰富
 
   召回率
+
+
+
+### 高级检索
+
+
 
 
 

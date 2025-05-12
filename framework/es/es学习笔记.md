@@ -61,7 +61,7 @@ chmod -R 755 /var/lib/elasticsearch：将该目录及其子目录的权限设置
 
 
 
-![image-20250411112041349](.\images\image-20250411112041349.png)
+![image-20250411112041349](./images/image-20250411112041349.png)
 
 ### 下载kibana
 
@@ -3395,7 +3395,7 @@ ES基于Bully和Paxos两种算法实现，而并非就是两种算法或之一�
 - 专用主节点：即 node.roles: [master]，一般指的是只保留master角色的候选节点。
 - 仅投票节点：即 node.roles: [master, voting_only]，指仅具备选举权，而被阉割了被选举权的master节点。仅投票节点的意义是在出现平票的时候投出关键票（决胜票）。仅投票节点因为没有被选举权，因此永远不会被选举为active master,即永远不会成为活跃的主节点，因此通常同时配置为数据节点，以提高资源利用率。
 
-![](D:\doc\my\studymd\LearningNotes\framework\es\images\827c221e2840b754793ac0af4c259bd4.png)
+![](./images/827c221e2840b754793ac0af4c259bd4.png)
 
 ###### 有效选票与法定票数
 
@@ -3602,7 +3602,7 @@ search_after不是自由跳转到随机页面而是并行滚动多个查询的�
 - 词项字典：FST
 - 倒排表：跳跃表/位图
 
-![](D:\doc\my\studymd\LearningNotes\framework\es\images\v2-317b7b60974c54c9bbbdae811138e97e_1440w.jpg)
+![](./images/v2-317b7b60974c54c9bbbdae811138e97e_1440w.jpg)
 
 
 
@@ -3650,7 +3650,7 @@ search_after不是自由跳转到随机页面而是并行滚动多个查询的�
 
 FST最重要的功能是可以实现Key到Value的映射，相当于HashMap<Key,Value>，共享前缀和共享后缀的特性可以大量节省空间。
 
-<img src=".\images\a05d5d3e1dc08fe60af7b5cb63794330.png" style="zoom:50%;" />
+<img src="./images/a05d5d3e1dc08fe60af7b5cb63794330.png" style="zoom:50%;" />
 
 
 
@@ -3745,7 +3745,7 @@ GET product/_search
 
 ```
 
-![](D:\doc\my\studymd\LearningNotes\framework\es\images\9def26ac216cd0fed339fc761a064753.png)
+![](./images/9def26ac216cd0fed339fc761a064753.png)
 
 
 
@@ -3874,7 +3874,7 @@ GET product/_search/template
 
 Term Vector用于统计某个字段中词项的出现次数/偏移量等数据
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\es\images\image-20250506163856519.png" alt="image-20250506163856519" style="zoom: 50%;" />
+<img src="./images/image-20250506163856519.png" alt="image-20250506163856519" style="zoom: 50%;" />
 
 ```json
 {

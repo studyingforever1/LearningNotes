@@ -3374,7 +3374,7 @@ ES基于Bully和Paxos两种算法实现，而并非就是两种算法或之一�
   - Candidate：候选节点
   - Follower：跟随节点
 
-所有的节点开始都是跟随节点。如果跟随节点收不89到领导节点的信号，则他们可以成为候选节点候选节点接着请求其他节点投票节点将以他们的投票回复候选节点如果候选节点获取到大多数节点的投票，则他将会成为领导节点此过程称为Leader选举。此时，所有对系统的修改将通过Leader节点进行。任意改变将以entry的形式添加到节点的日志中。这个日志的entry此时是没有提交的，所以，它不会更新节点的值。为了提交entry，节点首先会备份至跟随节点，然后leader等待，知直到多数节点将entry写入（自己的日志），此时Leader节点将提交entry，并且节点的数据被修改，接着Leader通知其他跟随者entry已经被提交了。此时集群的系统状态称为一致的。这个过程称为日志复制
+所有的节点开始都是跟随节点。如果跟随节点收不到领导节点的信号，则他们可以成为候选节点候选节点接着请求其他节点投票节点将以他们的投票回复候选节点如果候选节点获取到大多数节点的投票，则他将会成为领导节点此过程称为Leader选举。此时，所有对系统的修改将通过Leader节点进行。任意改变将以entry的形式添加到节点的日志中。这个日志的entry此时是没有提交的，所以，它不会更新节点的值。为了提交entry，节点首先会备份至跟随节点，然后leader等待，知直到多数节点将entry写入（自己的日志），此时Leader节点将提交entry，并且节点的数据被修改，接着Leader通知其他跟随者entry已经被提交了。此时集群的系统状态称为一致的。这个过程称为日志复制
 
 在Raft中有两个设置超时时间的地方去控制选举
 **选举超时**：
@@ -3391,11 +3391,18 @@ ES基于Bully和Paxos两种算法实现，而并非就是两种算法或之一�
 
 - **候选节点：**具备 `master`角色的节点默认都有“被选举权”，即是一个候选节点。候选节点可以参与Master选举过程
 - **投票节点：**每个候选节点默认都有投票权，即每个候选节点默认都是一个投票节点，但如果配置了“voting_only ”的候选节点将只有选举权而没有被选举权，即仅投票节点。
+- 主节点（active master）：一般指的是集群中活跃的主节点，每个集群中只能有一个。
+- 专用主节点：即 node.roles: [master]，一般指的是只保留master角色的候选节点。
+- 仅投票节点：即 node.roles: [master, voting_only]，指仅具备选举权，而被阉割了被选举权的master节点。仅投票节点的意义是在出现平票的时候投出关键票（决胜票）。仅投票节点因为没有被选举权，因此永远不会被选举为active master,即永远不会成为活跃的主节点，因此通常同时配置为数据节点，以提高资源利用率。
+
+![](D:\doc\my\studymd\LearningNotes\framework\es\images\827c221e2840b754793ac0af4c259bd4.png)
 
 ###### 有效选票与法定票数
 
 - **有效选票**：包括非候选节点的所有节点都会参与选举并参与投票，但是只有投票节点的投票才是有效投票。
 - **法定票数**：即当选Master所需的最小票数，可通过：discovery.zen.minimum_master_nodes配置，通常情况下法定票数为投票数过半（不包含一半）。为了避免平票而导致脑裂，一般候选节点数量一般设置为奇数，即便是偶数，系统默认也会阉割掉其中一个节点的投票权，以保证不出选平票或多主。
+
+
 
 ##### 选举过程
 
@@ -3410,10 +3417,28 @@ are alive. And on the other end, each node pings to master to verify if
 its still alive or an election process needs to be initiated
 ```
 
-1. NodesFaultDetection：即NodesFD，用于定期检查集群中的节点是否存活。
+1. NodesFaultDetection：即NodesFD，用于定期检查集群中的节点是否存活。**主节点在探测到当前集群节点数量不足法定数量时，放弃Master身份，避免脑裂**
 2. MasterFaultDetection：即MasterFD，作用是定期检查Master节点是否存活。
 
-##### 脑裂问题：
+###### 触发选举的两种情况
+
+- **当`master-eligible`节点数量小于法定票数**：当主节点侦测到候选节点数量小于法定票数的时候，会主动放弃主节点身份。
+- **当主节点宕机**。
+
+
+
+###### 选主流程
+
+在节点监测失效监测到主节点断开连接后
+
+- 各个节点发出加入集群请求（投票）给候选主节点
+- 如果候选主节点投票给自己，那么候选主节点成为临时主节点，临时主节点在等待达到法定投票数量后成为主节点，否则重新选举
+- 新主节点发布集群状态，主节点和子节点开启节点失效监测
+- 老主节点放弃主节点身份，以候选节点加入集群
+
+
+
+##### 脑裂问题
 
 - 何为脑裂：双主或多主
 - 解决办法：discovery.zen.minimum_master_nodes=N/2+1，N为有效投票节点数。
@@ -3680,7 +3705,846 @@ FST最重要的功能是可以实现Key到Value的映射，相当于HashMap<Key,
 
 ### 高级检索
 
+#### 多字段检索
 
+```json
+GET <index>/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "<query keyword>",
+      "type": "<multi_match_type>",
+      "fields": [
+        "<field_a>",
+        "<field_b>"
+      ]
+    }
+  }
+}
+//即 Select * From Table Where a=x and b = x
+```
+
+##### best_fields
+
+best_fields是multi_match中type的默认值，best_fields是指
+
+query语句在对单个文档中的name和desc字段分别计算评分后，取name和desc分数中的最大值充当整个文档的分数和其他文档进行比较
+
+```json
+GET product/_search
+{
+  "query": {
+    "multi_match" : {
+      "query":      "super charge",
+      "type":       "best_fields", // 默认
+      "fields":     [ "name", "desc" ],
+      "tie_breaker": 0.3
+    }
+  }
+}
+
+```
+
+![](D:\doc\my\studymd\LearningNotes\framework\es\images\9def26ac216cd0fed339fc761a064753.png)
+
+
+
+###### tie_breaker
+
+在best_fields中，tie_breaker的作用是让除了最大得分的子查询之外的其他匹配子查询也能对最终得分产生一定影响。
+
+具体计算方式为：最终得分 = 最大子查询得分 + `tie_breaker` * 其他匹配子查询得分之和。
+
+##### most_fields
+
+`most_fields` 策略会对每个匹配的字段单独计算得分，然后将这些得分累加起来作为文档的最终得分。这意味着一个文档匹配的字段越多，其最终得分就越高。
+
+```json
+GET product/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "chiji shouji",
+      "type": "most_fields",
+      "fields": [
+        "name",
+        "desc"
+      ]
+    }
+  }
+}
+
+//相当于
+
+GET product/_search
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "match": {
+            "name": "chiji shouji"
+          }
+        },
+        {
+          "match": {
+            "desc": "chiji shouji"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+
+
+##### cross_fields
+
+`cross_fields`会将查询字符串拆分，**当搜索词可能分散在不同字段时**，比如在一个包含人物信息的索引中，姓名可能被拆分成 “first_name” 和 “last_name” 字段存储
+
+```json
+# 以下查询语义：
+# 吴 必须包含在 name.姓 或者 name.名 里
+# 或者  or/and
+# 磊 必须包含在 name.姓 或者 name.名 里
+GET teacher/_search
+{
+  "query": {
+    "multi_match" : {
+      "query":      "吴磊",
+      "type":       "cross_fields",
+      "fields":     [ "name.姓", "name.名" ],
+      "operator":   "or"
+    }
+  }
+}
+```
+
+
+
+#### 搜索模板
+
+```json
+# 创建搜索模板
+PUT _scripts/my-search-template
+{
+  "script": {
+    "lang": "mustache",
+    "source": {
+      "query": {
+        "match": {
+          "message": "{{query_string}}"
+        }
+      },
+      "from": "{{from}}",
+      "size": "{{size}}"
+    },
+    "params": {
+      "query_string": "nfc phone"
+    }
+  }
+}
+# 验证使用模板
+POST _render/template
+{
+  "id": "my-search-template",
+  "params": {
+    "query_string": "nfc phone",
+    "from": 20,
+    "size": 10
+  }
+}
+
+# 使用搜索模板
+GET product/_search/template
+{
+  "id":"my-search-template",
+  "params": {
+    "query_string":"nfc phone",
+    "from":0,
+    "size":10
+  }
+}
+```
+
+
+
+#### Term Vector
+
+Term Vector用于统计某个字段中词项的出现次数/偏移量等数据
+
+<img src="D:\doc\my\studymd\LearningNotes\framework\es\images\image-20250506163856519.png" alt="image-20250506163856519" style="zoom: 50%;" />
+
+```json
+{
+    "mappings": {
+        "properties": {
+            "content": {
+                "type": "text",
+                "term_vector": "with_positions_offsets"
+            }
+        }
+    }
+}
+```
+
+
+
+- `fields`（可选，字符串）要包含在统计信息中的字段的逗号分隔列表或通配符表达式。
+
+除非在 `completion_fields`或 `fielddata_fields`参数中提供了特定字段列表，否则用作默认列表。
+
+- **`field_statistics`**（可选，布尔值）如果 `true`，则响应包括文档计数、文档频率总和和总词频总和。默认为 `true`.
+- **`<offsets>`**（可选，布尔值）如果 `true`，则响应包括术语偏移量。默认为 `true`.
+- **`payloads`**（可选，布尔值）如果 `true`，则响应包括术语有效负载。默认为 `true`.
+- **`positions`**（可选，布尔值）如果 `true`，则响应包括术语位置。默认为 `true`.
+- **`preference`**（可选，字符串）指定应在其上执行操作的节点或分片。默认随机。
+- **`routing`**（可选，字符串）用于将操作路由到特定分片的自定义值。
+- **`realtime`**（可选，布尔值）如果 `true`，则请求是实时的，而不是接近实时的。默认为 `true`. 请参阅[实时](https://www.elastic.co/guide/en/elasticsearch/reference/7.13/docs-get.html#realtime)。
+- **`term_statistics`**（可选，布尔值）如果 `true`，则响应包括词频和文档频率。默认为 `false`.
+- **`version`**（可选，布尔值）如果 `true`，则返回文档版本作为命中的一部分。
+- **`version_type`**（可选，枚举）特定版本类型：`external`, `external_gte`.
+
+
+
+
+
+
+
+#### 高亮查询
+
+```json
+GET hightlight_index/_search
+{
+  "query": {
+    "match": {
+      "title": "宝强"
+    }
+  },
+  "highlight": {
+    "fields": {
+      "title": {}
+    }
+  }
+}
+```
+
+
+
+
+
+##### 多字段高亮
+
+```json
+GET hightlight_index/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "宝强",
+      "type": "most_fields",
+      "fields": [
+        "title",
+        "content"
+      ]
+    }
+  },
+  "highlight": {
+    "fields": {
+      "title": {},
+      "content": {}
+    },
+    "pre_tags": ["<b>"],
+    "post_tags": ["</b>"]
+  }
+}
+```
+
+
+
+##### Unified Highlighter
+
+对于大多数常规的文本高亮需求，既可以处理倒排索引中的词项，也可以处理存储在 `term vectors` 中的词项，具有较好的通用性和灵活性。
+
+```json
+{
+    "query": {
+        "match": {
+            "content": "Elasticsearch"
+        }
+    },
+    "highlight": {
+        "fields": {
+            "content": {
+                "type": "unified"
+            }
+        }
+    }
+}
+```
+
+
+
+##### Plain Highlighter
+
+`plain highlighter` 是一种基于倒排索引的高亮器。它通过在倒排索引中查找匹配的词项，并根据文档的原始文本进行高亮处理。这种高亮器不需要预先存储 `term vectors` 信息，适用于大多数情况。
+
+```json
+{
+    "query": {
+        "match": {
+            "content": "Elasticsearch"
+        }
+    },
+    "highlight": {
+        "fields": {
+            "content": {
+                "type": "plain"
+            }
+        }
+    }
+}
+```
+
+
+
+##### Fast Vector Highlighter
+
+`fast vector highlighter` 是一种基于 `term vectors` 的高亮器。它需要在索引时预先存储文档的 `term vectors` 信息，包括词项的位置、偏移量等。通过这些信息，`fast vector highlighter` 可以更快速、准确地进行高亮处理。
+
+```json
+{
+    "query": {
+        "match": {
+            "content": "Elasticsearch"
+        }
+    },
+    "highlight": {
+        "fields": {
+            "content": {
+                "type": "fvh"
+            }
+        }
+    }
+}
+```
+
+#### 地理位置搜索
+
+##### geo_point
+
+**概念**：经纬度坐标，只支持WGS84坐标系，坐标范围Lat值为[-90,90]，Lon为[-180,180]
+
+- latitude：维度 缩写：lat
+- longitude：经度 缩写：lon
+- ignore_malformed：则忽略格式错误的地理位置。如果 `false`（默认）
+
+###### 几何检索
+
+- 矩形查询（geo_bounding box）
+- 半径查询（geo_distance）
+- 多边形（geo_polygon）
+
+
+
+##### geo_shape
+
+**概念**：ES的特殊类型之一，用来描述复杂的几何图形的类型，比如点、线、面，多边形等二维几何模型。
+
+- GeoJSON：GeoJSON是一种用于编码各种地理数据结构的格式，支持以下几种几何类型：
+  - Point：点
+  - LineString：线段
+  - Polygon：多边形
+  - MultiPoint：多点
+  - MultiLineString：多线段
+  - MultiPolygon：多边形集合
+  - Feature：具有其他属性的对象
+- WKT（Well-Known Text）：POINT(125.6 10.1)
+
+**GeoJSON（OGC）和WKT到Elasticsearch类型的映射关系**
+
+| GeoJSON类型            | WKT类型            | Elasticsearch类型  | 描述                                                         |
+| ---------------------- | ------------------ | ------------------ | ------------------------------------------------------------ |
+| **Point**              | POINT              | point              | 单个地理坐标。注意：Elasticsearch仅使用WGS-84坐标。          |
+| **LineString**         | LINESTRING         | linestring         | 给定两个或两个以上点的任意线。                               |
+| **Polygon**            | POLYGON            | polygon            | 一个封闭的多边形，其第一个点和最后一个点必须匹配，因此需要n + 1顶点创建一个带n边的多边形和一个最小的4顶点。 |
+| **MultiPoint**         | MULTIPOINT         | multipoint         | 一组未连接但可能相关的点。                                   |
+| **MultiLineString**    | MULTILINESTRING    | multilinestring    | 单独的线串数组。                                             |
+| **MultiPolygon**       | MULTIPOLYGON       | multipolygon       | 一组单独的多边形。                                           |
+| **GeometryCollection** | GEOMETRYCOLLECTION | geometrycollection | 与JSON形状相似的GeoJSON形状， multi*但可以同时存在多种类型（例如，Point和LineString）。 |
+| **N/A**                | BBOX               | envelope           | 通过仅指定左上和右下点指定的边界矩形。                       |
+| **N/A**                | N/A                | circle             | 由中心点和半径指定的圆，单位为，默认为METERS。               |
+
+
+
+###### 地理几何分类（geo_shape type）
+
+- 点（point）
+- 矩形（envelope）
+- 多边形 （polygon）
+- 圆形（circle）
+
+###### 地理几何检索
+
+- Inline Shape Definition：内联形状
+
+- Pre-Indexed Shape：预定义形状
+
+  `id`- 包含预索引形状的文档ID。
+
+  `index`- 索引的名称，其中预索引形状为：默认形状。
+
+  routing- 非必须。
+
+  `ath`- 包含预索引形状的指定路径，默认形状。
+
+- Spatial Relations：空间关系
+
+  INTERSECTS- (default) Return all documents whose `shape` field intersects the query geometry。
+
+  DISJOINT - Return all documents whose `shape` field has nothing in common with the query geometry
+
+  WITHIN - Return all documents whose `shape` field is within the query geometry。
+
+  CONTAINS- Return all documents whose `shape` field contains the query geometry。
+
+**圆形处理精度解释**
+
+表示圆的多边形的精度定义为error_distance。这种差异越小，多边形越接近理想圆。下表是旨在帮助捕获在给定不同输入的情况下圆的半径如何影响多边形的边数的表格。最小边数为4，最大为1000。
+
+| **error_distance** | **半径（米）** | **多边形的边数** |
+| ------------------ | -------------- | ---------------- |
+| 1                  | 1              | 4                |
+| 1                  | 10             | 14               |
+| 1                  | 100            | 45               |
+| 1                  | 1,000          | 141              |
+| 1                  | 10,000         | 445              |
+| 1                  | 100,000        | 1000             |
+
+### 高级聚合
+
+#### 正排索引
+
+**概念**：从广义来说，doc values 本质上是一个序列化的 列式存储 。列式存储 适用于聚合、排序、脚本等操作，所有的数字、地理坐标、日期、IP 和不分词（ not_analyzed ）字符类型都会默认开启，**不支持 `text`和 `annotated_text`类型**
+
+**区别：**
+
+- 倒排：倒排索引的优势是可以快速查找包含某个词项的文档有哪些。
+- 正排：正排索引的优势在于可以快速的查找某个文档里包含哪些词项。
+
+倒排索引和正排索引均是在index-time时创建，保存在 Lucene文件中（序列化到磁盘）。
+
+##### 数据结构
+
+###### doc values
+
+**doc values**是正排索引的基本数据结构之一，其存在是为了提升排序和聚合效率，默认true，如果确定不需要对字段进行排序或聚合，也不需要通过脚本访问字段值，则可以禁用doc values值以节省磁盘空间。
+
+###### fielddata
+
+**概念：\**查询时\**内存**数据结构，在首次用当前字段聚合、排序或者在脚本中使用时，需要字段为fielddata数据结构，并且创建倒排索引保存到堆中。与 doc value 不同，当没有doc value的字段需要聚合时，需要打开fielddata，然后临时在内存中建立正排索引，fielddata 的构建和管理发生在 JVM Heap中。Fielddata默认是不启用的，因为text字段比较长，一般只做关键字分词和搜索，很少拿它来进行全文匹配和聚合还有排序。
+
+**语法：**
+
+```json
+PUT /<index>/_mapping
+{
+  "properties": {
+    "tags": {
+      "type": "text",
+      "fielddata": true  //true：开启fielddata;		false：关闭fielddata
+    }
+  }
+}
+```
+
+#### 基数聚合：Cardinality
+
+Cardinality用于统计某个字段中不重复的数量，得到的是一个非精确值
+
+```json
+{
+    "size": 0,
+    "aggs": {
+        "unique_products": {
+            "cardinality": {
+                "field": "product_id"
+            }
+        }
+    }
+}    
+```
+
+
+
+##### 易并行算法和不易并行算法
+
+- 易并行算法
+
+  如：Max、Min、Avg、Sum等指标函数，通常只需要在多个分片中计算一个值进行汇总计算，因此不必消耗过多内存资源。
+
+- 不易并行算法
+
+  如：Cardinality函数，由于无法在不同分片中保证数据是否重合，因此将消耗更多的内存用于数据汇总进行基数聚合，尤其是高基聚合。
+
+
+
+##### precision_threshold
+
+当`precision_threshold`设置得较高时，算法会使用更多的内存来存储中间结果，从而提高估算的准确性。相反，较低的`precision_threshold`会减少内存使用，但可能会降低估算的精度。
+
+默认3000，最大值40000，设置再大的值，实际也最高只能是4W，当唯一值的实际数量小于precision_threshold设置的时候，精度接近100%，当大于此设置的时候，即使数据量有几百万，误差也只是1-6％。
+
+注意：`precision_threshold`设置较高阈值对 `低基数`聚合时有显著效果，而对高基数聚合是并无显著效果，反而会占用大量的资源，适得其反。
+
+```json
+{
+    "size": 0,
+    "aggs": {
+        "unique_products": {
+            "cardinality": {
+                "field": "product_id",
+                "precision_threshold": 2000
+            }
+        }
+    }
+}
+```
+
+##### HyperLogLog++
+
+HyperLogLog++（HLL）算法是依赖于field value计算hash，在做cardinality运算的时候，ES会动态为每一个field value计算hash用于提升聚合性能。
+
+##### maper-murmur3
+
+maper-murmur3提升低基聚合的原理就是通过预先为字段值计算hash，在做cardinality计算的时候，使用提前准备好的hash值参与计算，避免了动态运算从而节省性能，建议在字段基数较大并且可能会有大量重复值得时候使用，这样可能会产生显著的性能提升，不然可能不但不会带来显著的性能提升，而且会徒增磁盘消耗，得不偿失。
+
+#### 深度优先（DFS）和广度优先（BFS）
+
+Terms 桶基于我们的数据动态构建桶；它并不知道到底生成了多少桶。 大多数时候对单个字段的聚合查询还是非常快的， 但是当需要同时聚合多个字段时，就可能会产生大量的分组，最终结果就是占用 es 大量内存，从而导致 OOM 的情况发生。
+
+- breadth_first：广度优先模式属于最上层桶的一组文档被缓存以备后续重播，因此执行此操作时内存开销与匹配文档的数量成线性关系。即：先做第一层聚合，逐层修剪。
+- depth_first：即：先构建完整的树，然后修剪无用节点。
+
+```json
+GET actor_films/_search
+{
+  "size": 0,
+  "aggs": {
+    "actors_agg": {
+      "terms": {
+        "field": "name.keyword",
+        "size": 10, // 这里跳过了计算过程，假设默认排序就是票房排序倒序排列
+        "collect_mode": "breadth_first" // 使用广度优先搜索
+      },
+      "aggs": {
+        "movies_agg": {
+          "terms": {
+            "field": "movies.name.keyword",
+            "size": 5 // 假设默认就是票房排序
+          }
+        }
+      }
+    }
+  }
+}
+
+```
+
+
+
+### 相关度评分
+
+#### 相关性概念
+
+相关性指的是召回结果和用户搜索关键词的匹配程度，也就是和用户搜索的预期值的匹配程度，
+
+#### 搜索和检索
+
+搜索和检索的区别在于查询条件边界的界定上面。
+
+**搜索**：有明确的搜索边界条件，结果数量是确定的。如 eq、lte、gte 均属于搜索行为
+
+**检索**：讲究相关度、没有明确的查询条件边界。比如搜索召回的结果有可能是因为拼音、谐音、热梗、别名、同义词等等而被匹配，但不同原因匹配到的结果权重不同。
+
+#### 相关度评分
+
+相关度评分用于对搜索结果排序，评分越高则认为其结果和搜索的预期值相关度越高，即越符合搜索预期值。在7.x之前相关度评分默认使用**TF/IDF**算法计算而来，7.x之后默认为**BM25**。
+
+默认情况下，Elasticsearch 按相关性分数对匹配的搜索结果进行排序，**相关性分数**衡量每个文档与查询的匹配程度。
+
+相关性分数是一个正浮点数， 在响应上下文对象中 `_score`元数据字段中返回。分数越高 ，文档越相关。虽然每种查询类型可以不同地计算相关性分数，但分数计算还取决于查询子句是在**查询**还是**过滤**上下文中运行。
+
+#### 基本排序规则
+
+主动排序时不计算相关度评分，如果没有指定排序字段，则默认按照评分高低排序，相关度评分为搜索结果的排序依据，默认情况下评分越高，则结果越靠前。
+
+
+
+#### 基本评分规则
+
+##### 词频（TF term frequency ）
+
+也叫**检索词频率**，关键词在每个doc中当前字段出现的次数，词频越高，评分越高。
+
+##### 逆文档频率（ IDF inverse doc frequency）
+
+关键词在整个索引中出现的次数，文档频率越高，权重越低，评分越低
+
+##### 文档长度规约（field-length norm）
+
+字段长度越短，字段搜索权重越高，相关度评分越高。
+
+#### BM25算法
+
+给定一个查询$Q$，包含关键词 $ (q_1,q_2,\cdots,q_n) $，对于文档D的 BM25 分数为计算公式：
+
+```math
+\mathrm{score}(D, Q) = \sum_{i = 1}^{n} \mathrm{IDF}(q_i) \cdot S(q_i, D)
+```
+
+- $\mathrm{score}(D, Q)$：表示查询Q对文档D的最终评分
+- $\mathrm{IDF}(q_i)$：表示查询词的 IDF 权重
+- $S(q_i, D)$：表示词频相关性
+- $q_i$：表示查询Q中第i个 term
+- $D$：表示当前计算评分的文档
+
+##### 逆文档频率 $IDF(qi)$
+
+逆文档频率（Inverse Document Frequency，IDF）是信息检索与文本挖掘中常用的一种加权技术。其核心思想是，一个词项在文档集合中出现的文档数越少（即越 “罕见” ），它的区分度就越高，在计算文档相关性等场景下应该赋予更高的权重。
+$$
+\mathrm{IDF}(q_i)=\ln\left(\frac{N - n(q_i)+ 0.5}{n(q_i)+ 0.5}+1\right)
+$$
+
+
+- $N$：指的是索引中的文档总数
+- $n(q_i)$：表示包含词项\(q_i\)的文档个数 。
+
+
+
+##### 词频相关性函数: $S(q_i, D)$
+
+$$
+S(q_i, D)=\frac{f(q_i, D)\cdot(k_1 + 1)}{f(q_i, D)+K}
+$$
+
+
+
+- $f(q_i, D)$：表示词项\(q_i\)在文档D中的词频，即该词在文档D中出现的次数 。
+- $K$：表示与文档长度相关的值，这里文档长度以词项个数衡量 。它综合考虑文档自身长度对词频的影响，一般会根据文档平均长度等因素计算得出 。
+- $k_1$：用于控制非线性项频率归一化（饱和度），默认值为 1.2 。它起到调节词频对相关性影响程度的作用，避免词频对相关性的影响过度或不足 。
+
+##### 文档长度相关性:$K$
+
+$$
+K = k_1\cdot(1 - b + b\cdot\frac{|D|}{\text{avgdl}})
+$$
+
+
+
+- $k_1$：控制非线性项频率归一化（饱和度），默认值为 1.2 。它用于调节词频对相关性计算的影响程度，避免词频影响过度或不足。
+- $b$：控制文档长度标准化 tf 值（词频 - Term Frequency）的程度，默认值为 0.75 。b决定了文档长度在计算中所占的权重，值越大，文档长度对计算的影响越大。
+- $|D|$：表示文档D的词项长度，即文档中 term（词项）的数量 。反映了文档自身的规模大小。
+- $\text{avgdl}$：表示所有文档的平均长度，这里的长度同样指词项的数量 。用于作为衡量单个文档长度相对情况的参照基准。
+
+
+
+##### 最终公式
+
+```math
+
+\mathrm{score}(D, Q)=\sum_{i = 1}^{n}\ln\left(\frac{N - n(q_i)+ 0.5}{n(q_i)+ 0.5}+1\right)\cdot\frac{f(q_i, D)\cdot(k_1 + 1)}{f(q_i, D)+K}
+
+```
+
+- 当逆文档频率越大，分数越大
+- 当词频越大，分数越大
+- 当文档字段长度越短，分数越大
+
+
+
+
+
+
+
+
+
+#### Explain API
+
+```json
+GET /<index>/_search
+{
+  "explain": true,
+  "query": {
+    ...
+  }
+}
+
+GET <index>/_doc/1/_explain
+{
+  "query":{
+    .
+  }
+}
+# 或者 注意：下面方法不适用于 ES 7.x 之前版本
+GET product/_explain/1
+{
+  "query":{
+    ...
+  }
+}
+
+```
+
+#### Shard Local IDF
+
+当进行评分计算时，各个分片使用的是本地分配的所有文档计算 逆文档频率和平均文档长度，所以可能会造成分数计算不准确的问题。
+
+##### 解决方案
+
+###### 开发和灰度环境或数据量不大的情况
+
+`search_type`
+
+- `dfs_query_then_fetch`：使用从运行搜索的所有分片收集的信息，全局计算分布式词频。虽然此选项提高了评分的准确性，但它增加了每个分片的往返行程，这可能会导致搜索速度变慢。
+- `query_then_fetch`：（默认）为每个运行搜索的分片本地计算分布式词频。我们建议使用此选项进行更快的搜索，但评分可能不太准确。
+
+测试环境设置：`search_type` = `dfs_query_then_fetch` 即表示在计算 *i**d**f* 的分值的时候，对全局进行计算，而不是 local_shard 。会牺牲一部分性能，换取准确性。这种方式适合于本地开发环境或者测试环境，或者生产环境中数据不对的情况下。
+
+###### 对于生产环境
+
+对于生产环境，一般分布式数据库数据都不会太少，既然设计了多个分片，必然要考虑海量数据的情况。一般来说用 `query_then_fetch` 不太合适，会影响检索速度，牺牲用户体验。
+
+生产环境真正的做法是避免分片不均衡，包括分片的大小、节点分片的分配数量、文档的均衡分配等。
+
+#### 控制评分
+
+##### boost
+
+此方式仅适用于 `term query` 不适用于 `prefix, range `和 ` fuzzy queries`
+
+```json
+PUT test_index
+{
+  "mappings": {
+    "properties": {
+      "title": {
+        "type": "text",
+        "boost": 2 
+      },
+      "content": {
+        "type": "text"
+      }
+    }
+  }
+}
+GET test_index/_search
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "match": {
+            "title": {
+              "query": "abc",
+              "boost": 2
+            }
+          }
+        },
+        {
+          "match": {
+            "content": "abc"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+
+
+##### boosting query
+
+有些时候，我们需要将某些搜索结果降级，但又不想完全从搜索结果中剔除它们。 在这种情况下，可以对其降低权重，可以使用 `boosting query`
+
+```json
+//下面搜索表示从 title 匹配 abc efg 的搜索结果中，对 content 包含 456 的结果权重降低为原来的 0.1 倍
+GET test_index/_search
+{
+  "query": {
+    "boosting": {
+      "positive": {
+        "match": {
+          "title": "abc efg"
+        }
+      },
+      "negative": {
+        "match": {
+          "content": "456"
+        }
+      },
+      "negative_boost": 0.1
+    }
+  }
+}
+
+```
+
+- `positive`（必需，查询对象）：必须满足的查询条件
+- `negative`（必填，查询对象）：需要降低评分权重的过滤器
+- `negative_boost`（必填，float）：权重降低因子，值设置多少，`negative` 中匹配的文档权重就是原来的多少倍
+
+##### function_score
+
+和 `boosting query` 相反，有些时候希望提升某些查询的权重，就需要用到 `function_score`
+
+```json
+GET test_index/_search
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "match": {
+          "title": "abc efg"
+        }
+      },
+      "functions": [
+        {
+          "filter": {
+            "match": {
+              "content": "efg"
+            }
+          },
+          "weight": 10
+        }
+      ]
+    }
+  }
+}
+
+```
+
+##### constant_score
+
+如果需要直接指定某些查询结果的评分为具体数值而不是设置其权重，可通过 `constant_score` 来实现
+
+```json
+//以下代码表示 title 字段中匹配 abc 的结果，其评分值为 1.3
+GET test_index/_search
+{
+  "query": {
+    "constant_score": {
+      "filter": {
+        "match": { "title": "abc" }
+      },
+      "boost": 1.3
+    }
+  }
+}
+```
+
+### es读写过程
 
 
 

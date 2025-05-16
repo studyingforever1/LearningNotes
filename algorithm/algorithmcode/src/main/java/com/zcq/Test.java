@@ -1,9 +1,5 @@
 package com.zcq;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-
 public class Test {
     public static void main(String[] args) {
         Solution solution = new Solution();
@@ -11,29 +7,18 @@ public class Test {
 }
 
 class Solution {
-
-    List<TreeNode> res = new LinkedList<>();
-    HashMap<String, Integer> map = new HashMap<>();
-
-    public List<TreeNode> findDuplicateSubtrees(TreeNode root) {
-        res.clear();
-        map.clear();
-        getTreeString(root);
-        return res;
-    }
-
-    public String getTreeString(TreeNode root) {
-        if (root == null) {
-            return "#";
+    public final TreeNode getTargetCopy(final TreeNode original, final TreeNode cloned, final TreeNode target) {
+        if (cloned == null){
+            return null;
         }
-        String left = getTreeString(root.left);
-        String right = getTreeString(root.right);
-        String curTreeString = left + "," + right + "," + root.val;
-        if (map.getOrDefault(curTreeString, 0) == 1) {
-            res.add(root);
+        if (target.val == cloned.val){
+            return cloned;
         }
-        map.merge(curTreeString, 1, Integer::sum);
-        return curTreeString;
+        TreeNode left = getTargetCopy(original, cloned.left, target);
+        if (left != null){
+            return left;
+        }
+        return getTargetCopy(original, cloned.right, target);
     }
 }
 //class Solution {

@@ -3,22 +3,42 @@ package com.zcq;
 public class Test {
     public static void main(String[] args) {
         Solution solution = new Solution();
+        System.out.println(Long.MAX_VALUE);
     }
 }
 
 class Solution {
-    public final TreeNode getTargetCopy(final TreeNode original, final TreeNode cloned, final TreeNode target) {
-        if (cloned == null){
-            return null;
+    public int maxProduct(TreeNode root) {
+        sum = sum0(root);
+        sum(root);
+        return (int) (maxProduct % (1e9+7));
+    }
+
+    long maxProduct = Integer.MIN_VALUE;
+    int sum = 0;
+
+    public int sum(TreeNode root) {
+        if (root == null) {
+            return 0;
         }
-        if (target.val == cloned.val){
-            return cloned;
+        int left = sum(root.left);
+        int right = sum(root.right);
+
+        maxProduct = max(maxProduct, (long) (sum - right) * right, (long) (sum - left) * left);
+        return left + right + root.val;
+    }
+
+    public int sum0(TreeNode root) {
+        if (root == null) {
+            return 0;
         }
-        TreeNode left = getTargetCopy(original, cloned.left, target);
-        if (left != null){
-            return left;
-        }
-        return getTargetCopy(original, cloned.right, target);
+        int left = sum0(root.left);
+        int right = sum0(root.right);
+        return left + right + root.val;
+    }
+
+    public long max(long a, long b, long c) {
+        return Math.max(a, Math.max(b, c));
     }
 }
 //class Solution {

@@ -2332,7 +2332,7 @@ CREATE TABLE single_table (
 SELECT * FROM single_table WHERE id = 1438;
 ```
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\mysql\images\10-01.png" style="zoom:80%;" />
+<img src="./images/10-01.png" style="zoom:80%;" />
 
 
 
@@ -2343,7 +2343,7 @@ SELECT * FROM single_table WHERE id = 1438;
 SELECT * FROM single_table WHERE key2 = 3841;
 ```
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\mysql\images\10-02.png" style="zoom:80%;" />
+<img src="./images/10-02.png" style="zoom:80%;" />
 
 对于唯一二级索引来说，查询该列为`NULL`值的情况比较特殊，因为唯一二级索引列允许有多个 NULL 值，所以实际上使用的是`ref`
 
@@ -2367,7 +2367,7 @@ SELECT * FROM single_table WHERE key2 IS NULL;
 SELECT * FROM single_table WHERE key1 = 'abc';
 ```
 
-![](D:\doc\my\studymd\LearningNotes\framework\mysql\images\10-03.png)
+![](./images/10-03.png)
 
 **二级索引列值为`NULL`的情况**
 
@@ -2404,7 +2404,7 @@ SELECT * FROM single_table WHERE key_part1 = 'god like' AND key_part2 > 'legenda
 SELECT * FROM single_demo WHERE key1 = 'abc' OR key1 IS NULL;
 ```
 
-![](D:\doc\my\studymd\LearningNotes\framework\mysql\images\10-04.png)
+![](./images/10-04.png)
 
 
 
@@ -2424,7 +2424,7 @@ SELECT * FROM single_demo WHERE key1 = 'abc' OR key1 IS NULL;
 SELECT * FROM single_table WHERE key2 IN (1438, 6328) OR (key2 >= 38 AND key2 <= 79);
 ```
 
-![](D:\doc\my\studymd\LearningNotes\framework\mysql\images\10-05.png)
+![](./images/10-05.png)
 
 #### index
 
@@ -2669,7 +2669,7 @@ Records: 3  Duplicates: 0  Warnings: 0
 
 连接查询的结果集中包含一个表中的每一条记录与另一个表中的每一条记录相互匹配的组合，像这样的结果集就可以称之为`笛卡尔积`。
 
-![](D:\doc\my\studymd\LearningNotes\framework\mysql\images\11-01.png)
+![](./images/11-01.png)
 
 ##### 连接过程
 
@@ -2679,7 +2679,7 @@ SELECT * FROM t1, t2 WHERE t1.m1 > 1 AND t1.m1 = t2.m2 AND t2.n2 < 'd';
 
 - 首先确定第一个需要查询的表，这个表称之为`驱动表`。只需要选取代价最小的那种访问方法去执行单表查询语句就好了（就是说从const、ref、ref_or_null、range、index、all这些执行方法中选取代价最小的去执行查询）。
 
-  ![](D:\doc\my\studymd\LearningNotes\framework\mysql\images\11-02.png)
+  ![](./images/11-02.png)
 
 - 针对上一步骤中从驱动表产生的结果集中的每一条记录，分别需要到`t2`表中查找匹配的记录。因为是根据`t1`表中的记录去找`t2`表中的记录，所以`t2`表也可以被称之为`被驱动表`。上一步骤从驱动表中得到了2条记录，所以需要查询2次`t2`表。
 
@@ -2689,7 +2689,7 @@ SELECT * FROM t1, t2 WHERE t1.m1 > 1 AND t1.m1 = t2.m2 AND t2.n2 < 'd';
 
   - 当`t1.m1 = 3`时，过滤条件`t1.m1 = t2.m2`就相当于`t2.m2 = 3`，所以此时`t2`表相当于有了`t2.m2 = 3`、`t2.n2 < 'd'`这两个过滤条件，然后到`t2`表中执行单表查询。
 
-    ![](D:\doc\my\studymd\LearningNotes\framework\mysql\images\11-03.png)
+    ![](./images/11-03.png)
 
 - 每查询到一条完整的记录包括驱动表和被驱动表，就会直接返回给用户，并不会在内存中保存结果集。
 
@@ -2734,7 +2734,7 @@ SELECT * FROM t1, t2 WHERE t1.m1 > 1 AND t1.m1 = t2.m2 AND t2.n2 < 'd';
 - 步骤1：选取驱动表，使用与驱动表相关的过滤条件，选取代价最低的单表访问方法来执行对驱动表的单表查询。
 - 步骤2：对上一步骤中查询驱动表得到的结果集中每一条记录，都分别到被驱动表中查找匹配的记录。
 
-![](D:\doc\my\studymd\LearningNotes\framework\mysql\images\11-04.png)
+![](./images/11-04.png)
 
 
 
@@ -2761,7 +2761,7 @@ SELECT * FROM t1, t2 WHERE t1.m1 > 1 AND t1.m1 = t2.m2 AND t2.n2 < 'd';
 
 `join buffer`就是执行连接查询前申请的一块固定大小的内存，把若干条驱动表结果集中的记录装进去，每一条被驱动表的记录一次性和`join buffer`中的多条驱动表记录做匹配。
 
-![](D:\doc\my\studymd\LearningNotes\framework\mysql\images\11-06.png)
+![](./images/11-06.png)
 
 `join buffer`的大小是可以通过启动参数或者系统变量`join_buffer_size`进行配置，默认大小为`262144字节`（也就是`256KB`），驱动表的记录并不是所有列都会被放到`join buffer`中，只有查询列表中的列和过滤条件中的列才会被放到`join buffer`中，精确查询条件和查询字段可以使`join buffer`中存放更多驱动表记录，一次比对的数量更多，速度更快。
 
@@ -2876,7 +2876,7 @@ CPU成本：`9693 x 0.2 + 1.0 = 1939.6` 其中1.0是微调数字
 
   `idx_key2`对应的搜索条件是：`key2 > 10 AND key2 < 1000`，也就是说对应的范围区间就是：`(10, 1000)`
 
-<img src="D:\doc\my\studymd\LearningNotes\framework\mysql\images\12-01.png" style="zoom:80%;" />
+<img src="./images/12-01.png" style="zoom:80%;" />
 
 对于使用`二级索引 + 回表`方式的查询，查询的成本依赖两个方面的数据：
 
@@ -2896,7 +2896,7 @@ CPU成本：`9693 x 0.2 + 1.0 = 1939.6` 其中1.0是微调数字
 
   - 相差较大的时候，沿着最左记录往右读10个页面计算每个页面的平均记录数量，再通过叶子节点的上一层节点来统计两条记录间的页面数量，平均数量*页面数量 = 记录数
 
-    <img src="D:\doc\my\studymd\LearningNotes\framework\mysql\images\12-02.png" style="zoom:80%;" />
+    <img src="./images/12-02.png" style="zoom:80%;" />
 
     ```mysql
     #95条记录 0.01是微调
@@ -3700,7 +3700,7 @@ IN子查询优化的核心就是针对子查询利用半连接来将子查询转
   #对于子查询中查询列表和查询条件都在索引中的情况，在转换成半连接后，只取值相同的记录的第一条去做匹配操作
   ```
   
-  <img src="D:\doc\my\studymd\LearningNotes\framework\mysql\images\14-03.png" style="zoom:80%;" />
+  <img src="./images/14-03.png" style="zoom:80%;" />
   
 - Semi-join Materialization execution strategy (半连接物化策略)
 
@@ -3832,11 +3832,11 @@ SELECT * FROM s1
 
 - 从表`s1`的角度来看待：对于`s1`表中的每条记录来说，如果该记录的`key1`列的值在子查询对应的物化表中，则该记录会被加入最终的结果集。
 
-  <img src="D:\doc\my\studymd\LearningNotes\framework\mysql\images\14-01.png" style="zoom: 80%;" />
+  <img src="./images/14-01.png" style="zoom: 80%;" />
 
 - 从子查询物化表的角度来看待：对于子查询物化表的每个值来说，如果能在`s1`表中找到对应的`key1`列的值与该值相等的记录，那么就把这些记录加入到最终的结果集。
 
-  <img src="D:\doc\my\studymd\LearningNotes\framework\mysql\images\14-02.png" style="zoom:80%;" />
+  <img src="./images/14-02.png" style="zoom:80%;" />
 
 也就是说其实上面的查询就相当于表`s1`和子查询物化表`materialized_table`进行内连接：
 
@@ -5192,21 +5192,245 @@ INSUFFICIENT_PRIVILEGES: 0
 
 ### InnoDB的Buffer Pool
 
+在`MySQL`服务器启动的时候向操作系统申请了一片连续的内存，这片内存叫做`Buffer Pool`（中文名是`缓冲池`）。默认情况下`Buffer Pool`只有`128M`大小，配置`innodb_buffer_pool_size`参数的值来改变大小。
+
+```mysql
+[server]
+innodb_buffer_pool_size = 268435456
+```
+
+#### Buffer Pool内部组成
+
+`Buffer Pool`中默认的缓存页大小和在磁盘上默认的页大小是一样的，都是`16KB`，每一个缓存页都创建了一些所谓的`控制信息`，这些控制信息包括该页所属的表空间编号、页号、缓存页在`Buffer Pool`中的地址、链表节点信息、一些锁信息以及`LSN`信息，每个缓存页对应的控制信息占用的内存大小是相同的，我们就把每个页对应的控制信息占用的一块内存称为一个`控制块`，控制块和缓存页是一一对应的，它们都被存放到 Buffer Pool 中，其中控制块被存放到 Buffer Pool 的前面，缓存页被存放到 Buffer Pool 后边
+
+<img src="./images/18-01.png" style="zoom: 80%;" />
 
 
 
+在分配足够多的控制块和缓存页后，可能剩余的那点儿空间不够一对控制块和缓存页的大小就会产生碎片
 
 
 
+#### free链表的管理
+
+把所有空闲的缓存页对应的控制块作为一个节点放到一个链表中，这个链表也可以被称作`free链表`（或者说空闲链表）。刚刚完成初始化的`Buffer Pool`中所有的缓存页都是空闲的，所以每一个缓存页对应的控制块都会被加入到`free链表`中，`free链表`的基节点包含头尾指针和节点数量等信息，`free链表`不在`Buffer Pool`申请的一大片连续内存空间之内，而是单独申请的一块内存空间。
+
+<img src="./images/18-02.png" style="zoom:67%;" />
+
+每当需要从磁盘中加载一个页到`Buffer Pool`中时，就从`free链表`中取一个空闲的缓存页，并且把该缓存页对应的`控制块`的信息填上（就是该页所在的表空间、页号之类的信息），然后把该缓存页对应的`free链表`节点从链表中移除，表示该缓存页已经被使用了
+
+#### 缓存页的哈希处理
+
+利用hash表来快速确定页在不在`buffer pool`中，`表空间号 + 页号`作为`key`，`缓存页`作为`value`，在需要访问某个页的数据时，先从哈希表中根据`表空间号 + 页号`看看有没有对应的缓存页，如果有，直接使用该缓存页就好，如果没有，那就从`free链表`中选一个空闲的缓存页，然后把磁盘中对应的页加载到该缓存页的位置。
+
+#### flush链表的管理
+
+如果我们修改了`Buffer Pool`中某个缓存页的数据，那它就和磁盘上的页不一致了，这样的缓存页也被称为`脏页`（英文名：`dirty page`），利用一个存储脏页的链表，凡是修改过的缓存页对应的控制块都会作为一个节点加入到一个链表中，因为这个链表节点对应的缓存页都是需要被刷新到磁盘上的，所以也叫`flush链表`
+
+<img src="./images/18-03.png" style="zoom:67%;" />
 
 
 
+#### LRU链表的管理
+
+常见的LRU链表淘汰最近不频繁使用的页，将最近频繁使用的页放在链表头部，最近不频繁使用的页放在链表尾部，当访问新的页需要加入到`buffer pool`中时，从链表尾部淘汰一个最近不频繁使用的页，把这个页加入到链表头部
+
+由于存在下面两种情况，需要对LRU链表做改进：
+
+- `InnoDB`提供了一个服务—`预读`（英文名：`read ahead`）。所谓`预读`，就是`InnoDB`认为执行当前的请求可能之后会读取某些页面，就预先把它们加载到`Buffer Pool`中。根据触发方式的不同，`预读`又可以细分为下面两种：
+
+  - 线性预读
+
+    `InnoDB`的提供了一个系统变量`innodb_read_ahead_threshold`，如果顺序访问了某个区（`extent`）的页面超过这个系统变量的值，就会触发一次`异步`读取下一个区中全部的页面到`Buffer Pool`的请求
+
+  - 随机预读
+
+    如果`Buffer Pool`中已经缓存了某个区的13个连续的页面，不论这些页面是不是顺序读取的，都会触发一次`异步`读取本区中所有其的页面到`Buffer Pool`的请求。`innodb_random_read_ahead`系统变量，它的默认值为`OFF`，也就意味着`InnoDB`并不会默认开启随机预读的功能
+
+- 扫描全表的查询语句
+
+  如果这个表中记录非常多的话，那该表会占用特别多的`页`，当需要访问这些页时，会把它们统统都加载到`Buffer Pool`中，会将整个LRU的链表全部更换
 
 
 
+以上情况的问题：
+
+- 加载到`Buffer Pool`中的页不一定被用到。
+- 如果非常多的使用频率偏低的页被同时加载到`Buffer Pool`时，可能会把那些使用频率非常高的页从`Buffer Pool`中淘汰掉。
 
 
 
+为了解决上述问题，`LRU链表`按照一定比例分成两截
+
+- 一部分存储使用频率非常高的缓存页，所以这一部分链表也叫做`热数据`，或者称`young区域`。
+
+- 另一部分存储使用频率不是很高的缓存页，所以这一部分链表也叫做`冷数据`，或者称`old区域`。
+
+  ```mysql
+  mysql> SHOW VARIABLES LIKE 'innodb_old_blocks_pct';
+  +-----------------------+-------+
+  | Variable_name         | Value |
+  +-----------------------+-------+
+  | innodb_old_blocks_pct | 37    |
+  +-----------------------+-------+
+  1 row in set (0.01 sec)
+  #默认old区域在LRU链表中所占的比例为37%
+  ```
+
+<img src="./images/18-04.png" style="zoom:67%;" />
+
+- 针对预读的页面可能不进行后续访情况的优化
+
+  当磁盘上的某个页面在初次加载到Buffer Pool中的某个缓存页时，该缓存页对应的控制块会被放到old区域的头部。这样针对预读到`Buffer Pool`却不进行后续访问的页面就会被逐渐从`old`区域逐出，而不会影响`young`区域中被使用比较频繁的缓存页。
+
+- 针对全表扫描时，短时间内访问大量使用频率非常低的页面情况的优化
+
+  在进行全表扫描时，虽然首次被加载到`Buffer Pool`的页被放到了`old`区域的头部，但是后续会被马上访问到，还是会放到`young`区域的头部去，所以在对某个处在`old`区域的缓存页进行第一次访问时就在它对应的控制块中记录下来这个访问时间，如果后续的访问时间与第一次访问的时间在某个时间间隔内，那么该页面就不会被从old区域移动到young区域的头部，否则将它移动到young区域的头部。
+
+  ```mysql
+  mysql> SHOW VARIABLES LIKE 'innodb_old_blocks_time';
+  +------------------------+-------+
+  | Variable_name          | Value |
+  +------------------------+-------+
+  | innodb_old_blocks_time | 1000  |
+  +------------------------+-------+
+  1 row in set (0.01 sec)
+  #默认是1000ms 也就是说在1000ms之内间隔的访问不会移动到young区域，在1000ms之外再访问那就要移动到young区域了
+  ```
+
+**更进一步优化LRU链表**
+
+每次访问一个缓存页就要把它移动到`LRU链表`的头部，这样开销太大，毕竟在`young`区域的缓存页都是热点数据，也就是可能被经常访问的，这样频繁的对`LRU链表`进行节点移动操作不太好，为了解决这个问题其实我们还可以提出一些优化策略，比如只有被访问的缓存页位于`young`区域的`1/4`的后边，才会被移动到`LRU链表`头部，这样就可以降低调整`LRU链表`的频率，从而提升性能（也就是说如果某个缓存页对应的节点在`young`区域的`1/4`中，再次访问该缓存页时也不会将其移动到`LRU`链表头部）。
+
+
+
+#### 刷新脏页到磁盘
+
+- 异步：
+
+  后台有专门的线程每隔一段时间负责把脏页刷新到磁盘，这样可以不影响用户线程处理正常的请求。主要有两种刷新路径：
+
+  - 从`LRU链表`的冷数据中刷新一部分页面到磁盘。
+
+      后台线程会定时从`LRU链表`尾部开始扫描一些页面，扫描的页面数量可以通过系统变量`innodb_lru_scan_depth`来指定，如果从里边儿发现脏页，会把它们刷新到磁盘。这种刷新页面的方式被称之为`BUF_FLUSH_LRU`。
+
+  - 从`flush链表`中刷新一部分页面到磁盘。
+
+      后台线程也会定时从`flush链表`中刷新一部分页面到磁盘，刷新的速率取决于当时系统是不是很繁忙。这种刷新页面的方式被称之为`BUF_FLUSH_LIST`。
+
+- 同步：
+
+  有时候后台线程刷新脏页的进度比较慢，导致用户线程在准备加载一个磁盘页到`Buffer Pool`时没有可用的缓存页，这时就会尝试看看`LRU链表`尾部有没有可以直接释放掉的未修改页面，如果没有的话会不得不将`LRU链表`尾部的一个脏页同步刷新到磁盘（和磁盘交互是很慢的，这会降低处理用户请求的速度）。这种刷新单个页面到磁盘中的刷新方式被称之为`BUF_FLUSH_SINGLE_PAGE`。
+
+#### 多个Buffer Pool实例
+
+`Buffer Pool`本质是`InnoDB`向操作系统申请的一块连续的内存空间，在多线程环境下，访问`Buffer Pool`中的各种链表都需要加锁处理什么的，在`Buffer Pool`特别大而且多线程并发访问特别高的情况下，单一的`Buffer Pool`可能会影响请求的处理速度。多个`Buffer Pool`多线程并发访问时并不会相互影响，提高并发处理能力。
+
+通过设置`innodb_buffer_pool_instances`的值来修改`Buffer Pool`实例的个数
+
+```mysql
+[server]
+innodb_buffer_pool_instances = 2
+# 每个Buffer Pool实例实际占多少内存空间 = innodb_buffer_pool_size/innodb_buffer_pool_instances
+#当innodb_buffer_pool_size的值小于1G的时候设置多个实例是无效的，InnoDB会默认把innodb_buffer_pool_instances 的值修改为1
+```
+
+![](./images/18-05.png)
+
+#### innodb_buffer_pool_chunk_size
+
+`MySQL`在`5.7.5`以及之后的版本中支持了在服务器运行过程中调整`Buffer Pool`大小的功能，但是有一个问题，就是每次当我们要重新调整`Buffer Pool`大小时，都需要重新向操作系统申请一块连续的内存空间，然后将旧的`Buffer Pool`中的内容复制到这一块新空间，这是极其耗时的。
+
+所以`MySQL`决定不再一次性为某个`Buffer Pool`实例向操作系统申请一大片连续的内存空间，而是以一个所谓的`chunk`为单位向操作系统申请空间。也就是说一个`Buffer Pool`实例其实是由若干个`chunk`组成的，一个`chunk`就代表一片连续的内存空间，里边儿包含了若干缓存页与其对应的控制块
+
+![](./images/18-06.png)
+
+通过`innodb_buffer_pool_chunk_size`启动参数设置chunk的大小，它的默认值是`134217728`，也就是`128M`
+
+#### 查看Buffer Pool的状态信息
+
+```mysql
+mysql> SHOW ENGINE INNODB STATUS\G
+
+(...省略前面的许多状态)
+----------------------
+BUFFER POOL AND MEMORY
+----------------------
+Total memory allocated 13218349056;
+Dictionary memory allocated 4014231
+Buffer pool size   786432
+Free buffers       8174
+Database pages     710576
+Old database pages 262143
+Modified db pages  124941
+Pending reads 0
+Pending writes: LRU 0, flush list 0, single page 0
+Pages made young 6195930012, not young 78247510485
+108.18 youngs/s, 226.15 non-youngs/s
+Pages read 2748866728, created 29217873, written 4845680877
+160.77 reads/s, 3.80 creates/s, 190.16 writes/s
+Buffer pool hit rate 956 / 1000, young-making rate 30 / 1000 not 605 / 1000
+Pages read ahead 0.00/s, evicted without access 0.00/s, Random read ahead 0.00/s
+LRU len: 710576, unzip_LRU len: 118
+I/O sum[134264]:cur[144], unzip sum[16]:cur[0]
+--------------
+(...省略后边的许多状态)
+
+mysql>
+
+```
+
+- `Total memory allocated`：代表`Buffer Pool`向操作系统申请的连续内存空间大小，包括全部控制块、缓存页、以及碎片的大小。
+
+- `Dictionary memory allocated`：为数据字典信息分配的内存空间大小，注意这个内存空间和`Buffer Pool`没什么关系，不包括在`Total memory allocated`中。
+
+- `Buffer pool size`：代表该`Buffer Pool`可以容纳多少缓存`页`，注意，单位是`页`！
+
+- `Free buffers`：代表当前`Buffer Pool`还有多少空闲缓存页，也就是`free链表`中还有多少个节点。
+
+- `Database pages`：代表`LRU`链表中的页的数量，包含`young`和`old`两个区域的节点数量。
+
+- `Old database pages`：代表`LRU`链表`old`区域的节点数量。
+
+- `Modified db pages`：代表脏页数量，也就是`flush链表`中节点的数量。
+
+- `Pending reads`：正在等待从磁盘上加载到`Buffer Pool`中的页面数量。
+
+    当准备从磁盘中加载某个页面时，会先为这个页面在`Buffer Pool`中分配一个缓存页以及它对应的控制块，然后把这个控制块添加到`LRU`的`old`区域的头部，但是这个时候真正的磁盘页并没有被加载进来，`Pending reads`的值会跟着加1。
+
+- `Pending writes LRU`：即将从`LRU`链表中刷新到磁盘中的页面数量。
+
+- `Pending writes flush list`：即将从`flush`链表中刷新到磁盘中的页面数量。
+
+- `Pending writes single page`：即将以单个页面的形式刷新到磁盘中的页面数量。
+
+- `Pages made young`：代表`LRU`链表中曾经从`old`区域移动到`young`区域头部的节点数量。
+
+- `Page made not young`：在将`innodb_old_blocks_time`设置的值大于0时，首次访问或者后续访问某个处在`old`区域的节点时由于不符合时间间隔的限制而不能将其移动到`young`区域头部时，`Page made not young`的值会加1。
+
+- `youngs/s`：代表每秒从`old`区域被移动到`young`区域头部的节点数量。
+
+- `non-youngs/s`：代表每秒由于不满足时间限制而不能从`old`区域移动到`young`区域头部的节点数量。
+
+- `Pages read`、`created`、`written`：代表读取，创建，写入了多少页。后边跟着读取、创建、写入的速率。
+
+- `Buffer pool hit rate`：表示在过去某段时间，平均访问1000次页面，有多少次该页面已经被缓存到`Buffer Pool`了。
+
+- `young-making rate`：表示在过去某段时间，平均访问1000次页面，有多少次访问使页面移动到`young`区域的头部了。
+
+- `not (young-making rate)`：表示在过去某段时间，平均访问1000次页面，有多少次访问没有使页面移动到`young`区域的头部。
+
+- `LRU len`：代表`LRU链表`中节点的数量。
+
+- `unzip_LRU`：代表`unzip_LRU链表`中节点的数量（由于我们没有具体介绍过这个链表，现在可以忽略它的值）。
+
+- `I/O sum`：最近50s读取磁盘页的总数。
+
+- `I/O cur`：现在正在读取的磁盘页数量。
+
+- `I/O unzip sum`：最近50s解压的页面数量。
+
+- `I/O unzip cur`：正在解压的页面数量。
 
 
 
@@ -5217,6 +5441,625 @@ INSUFFICIENT_PRIVILEGES: 0
 
 
 ### 事务
+
+需要保证`原子性`、`隔离性`、`一致性`和`持久性`的一个或多个数据库操作称之为一个`事务`（英文名是：`transaction`）。
+
+
+
+#### 原子性
+
+ 现实世界中转账操作是一个不可分割的操作，也就是说要么压根儿就没转，要么转账成功，不能存在中间的状态，也就是转了一半的这种情况。设计数据库的大佬们把这种要么全做，要么全不做的规则称之为`原子性`。
+
+现实世界中的一个不可分割的操作却可能对应着数据库世界若干条不同的操作，数据库中的一条操作也可能被分解成若干个步骤，为了保证在数据库世界中某些操作的原子性，数据库需要来保证如果在执行操作的过程中发生了错误，把已经做了的操作恢复成没执行之前的样子
+
+
+
+#### 隔离性
+
+现实世界中的两次状态转换应该是互不影响的，不论T1先执行还是T2先执行都对最后的结果没有影响
+
+![](./images/19-01.png)
+
+但是真实的数据库中`T1`和`T2`的操作可能交替执行，比如这样：
+
+![](./images/19-02.png)
+
+所以对于现实世界中状态转换对应的某些数据库操作来说，不仅要保证这些操作以`原子性`的方式执行完成，而且要保证其它的状态转换不会影响到本次状态转换，这个规则被称之为`隔离性`。
+
+这时数据库就需要采取一些措施来让访问相同数据（上例中的A账户和B账户）的不同状态转换（上例中的`T1`和`T2`）对应的数据库操作的执行顺序有一定规律。
+
+
+
+
+
+
+
+#### 一致性
+
+原子性、隔离性和持久性都是为了确保一致性，一致性是指数据在状态变换的前后都是符合现实世界的逻辑正确。
+
+
+
+#### 持久性
+
+当现实世界的一个状态转换完成后，这个转换的结果将永久的保留，这个规则称为`持久性`。
+
+当把现实世界的状态转换映射到数据库世界时，`持久性`意味着该转换对应的数据库操作所修改的数据都应该在磁盘上保留下来，不论之后发生了什么事故，本次转换造成的影响都不应该被丢失掉。
+
+
+
+#### 事务状态
+
+- 活动的（active）
+
+    事务对应的数据库操作正在执行过程中时，我们就说该事务处在`活动的`状态。
+
+- 部分提交的（partially committed）
+
+    当事务中的最后一个操作执行完成，但由于操作都在内存中执行，所造成的影响并没有刷新到磁盘时，我们就说该事务处在`部分提交的`状态。
+
+- 失败的（failed）
+
+    当事务处在`活动的`或者`部分提交的`状态时，可能遇到了某些错误（数据库自身的错误、操作系统错误或者直接断电等）而无法继续执行，或者人为的停止当前事务的执行，我们就说该事务处在`失败的`状态。
+
+- 中止的（aborted）
+
+    如果事务执行了半截而变为`失败的`状态，比如我们前面介绍的狗哥向猫爷转账的事务，当狗哥账户的钱被扣除，但是猫爷账户的钱没有增加时遇到了错误，从而当前事务处在了`失败的`状态，那么就需要把已经修改的狗哥账户余额调整为未转账之前的金额，换句话说，就是要撤销失败事务对当前数据库造成的影响。书面一点的话，我们把这个撤销的过程称之为`回滚`。当`回滚`操作执行完毕时，也就是数据库恢复到了执行事务之前的状态，我们就说该事务处在了`中止的`状态。
+
+- 提交的（committed）
+
+    当一个处在`部分提交的`状态的事务将修改过的数据都同步到磁盘上之后，我们就可以说该事务处在了`提交的`状态。
+
+![](./images/19-03.png)
+
+#### MySQL中的事务语法
+
+##### 开启事务
+
+- BEGIN [WORK];
+
+  ```mysql
+  mysql> BEGIN;
+  Query OK, 0 rows affected (0.00 sec)
+  
+  mysql> 加入事务的语句...
+  ```
+
+- START TRANSACTION;
+
+  ```mysql
+  mysql> START TRANSACTION;
+  Query OK, 0 rows affected (0.00 sec)
+  
+  mysql> 加入事务的语句...
+  ```
+
+  后面可以跟多个修饰符：
+
+  ```MYSQL
+  START TRANSACTION READ WRITE, WITH CONSISTENT SNAPSHOT;
+  ```
+
+  - `READ ONLY`：标识当前事务是一个只读事务，也就是属于该事务的数据库操作只能读取数据，而不能修改数据。
+  - `READ WRITE`：标识当前事务是一个读写事务，也就是属于该事务的数据库操作既可以读取数据，也可以修改数据。
+  - `WITH CONSISTENT SNAPSHOT`：启动一致性读。
+
+##### 提交事务
+
+```mysql
+COMMIT [WORK]
+```
+
+
+
+##### 手动中止事务
+
+```mysql
+ROLLBACK [WORK]
+```
+
+##### 支持事务的存储引擎
+
+目前只有`InnoDB`和`NDB`存储引擎支持，对该使用不支持事务的存储引擎的表所做的修改将无法进行回滚
+
+##### 自动提交
+
+`MySQL`中有一个系统变量`autocommit`，默认情况下，如果我们不显式的使用`START TRANSACTION`或者`BEGIN`语句开启一个事务，那么每一条语句都算是一个独立的事务，这种特性称之为事务的`自动提交`。
+
+```mysql
+mysql> SHOW VARIABLES LIKE 'autocommit';
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| autocommit    | ON    |
++---------------+-------+
+1 row in set (0.01 sec)
+```
+
+关闭自动提交
+
+- 显式的的使用`START TRANSACTION`或者`BEGIN`语句开启一个事务。
+
+    这样在本次事务提交或者回滚前会暂时关闭掉自动提交的功能。
+
+- 把系统变量`autocommit`的值设置为`OFF`，就像这样：
+
+  ```mysql
+  SET autocommit = OFF;
+  ```
+
+
+
+##### 隐式提交
+
+因为某些特殊的语句而导致事务提交的情况称为`隐式提交`，这些会导致事务隐式提交的语句包括：
+
+- 定义或修改数据库对象的数据定义语言（Data definition language，缩写为：`DDL`）。
+
+   所谓的数据库对象，指的就是`数据库`、`表`、`视图`、`存储过程`等等这些东西。当我们使用`CREATE`、`ALTER`、`DROP`等语句去修改这些所谓的数据库对象时，就会隐式的提交前面语句所属于的事务
+
+  ```mysql
+  BEGIN;
+  
+  SELECT ... # 事务中的一条语句
+  UPDATE ... # 事务中的一条语句
+  ... # 事务中的其它语句
+  
+  CREATE TABLE ... # 此语句会隐式的提交前面语句所属于的事务
+  ```
+
+- 隐式使用或修改`mysql`数据库中的表
+
+  当我们使用`ALTER USER`、`CREATE USER`、`DROP USER`、`GRANT`、`RENAME USER`、`REVOKE`、`SET PASSWORD`等语句时也会隐式的提交前面语句所属于的事务。
+
+- 事务控制或关于锁定的语句
+
+  当我们在一个事务还没提交或者回滚时就又使用`START TRANSACTION`或者`BEGIN`语句开启了另一个事务时，会隐式的提交上一个事务
+
+  ```mysql
+  BEGIN;
+  
+  SELECT ... # 事务中的一条语句
+  UPDATE ... # 事务中的一条语句
+  ... # 事务中的其它语句
+  
+  BEGIN; # 此语句会隐式的提交前面语句所属于的事务
+  ```
+
+  或者当前的`autocommit`系统变量的值为`OFF`，我们手动把它调为`ON`时，也会隐式的提交前面语句所属的事务。
+
+  或者使用`LOCK TABLES`、`UNLOCK TABLES`等关于锁定的语句也会隐式的提交前面语句所属的事务。
+
+- 加载数据的语句
+
+  使用`LOAD DATA`语句来批量往数据库中导入数据时，也会隐式的提交前面语句所属的事务。
+
+- 关于`MySQL`复制的一些语句
+
+  使用`START SLAVE`、`STOP SLAVE`、`RESET SLAVE`、`CHANGE MASTER TO`等语句时也会隐式的提交前面语句所属的事务。
+
+- 其它的一些语句
+
+  使用`ANALYZE TABLE`、`CACHE INDEX`、`CHECK TABLE`、`FLUSH`、 `LOAD INDEX INTO CACHE`、`OPTIMIZE TABLE`、`REPAIR TABLE`、`RESET`等语句也会隐式的提交前面语句所属的事务。
+
+##### 保存点
+
+`保存点`（英文：`savepoint`）的概念，就是在事务对应的数据库语句中打几个点，我们在调用`ROLLBACK`语句时可以指定会滚到哪个点，而不是回到最初的原点。
+
+```mysql
+SAVEPOINT 保存点名称;
+
+#回滚到指定的保存点
+ROLLBACK [WORK] TO [SAVEPOINT] 保存点名称;
+#删除保存点
+RELEASE SAVEPOINT 保存点名称;
+```
+
+### redo日志
+
+redo日志为了保证数据库的持久性，对于一个已经提交的事务，在事务提交后即使系统发生了崩溃，这个事务对数据库中所做的更改也不能丢失。
+
+为了保证持久性，我们需要在事务提交完成之前把该事务所修改的所有页面都刷新到磁盘，但是这样会带来两个问题：
+
+- 刷新一个完整的数据页太浪费了
+
+  如果仅仅只对数据页中的几个字节进行修改，刷新整个数据页到磁盘中太浪费了
+
+- 随机IO刷起来比较慢
+
+  修改的页面并不连续，需要随机IO刷新到磁盘中，对于机械硬盘更加明显
+
+实际上没必要把全部修改的数据页刷新到磁盘，只需要将修改的内容记录下来，在系统崩溃后根据修改内容恢复数据即可，这个记录叫做`redo`日志。
+
+- `redo`日志占用的空间非常小
+
+    存储表空间ID、页号、偏移量以及需要更新的值所需的存储空间是很小的
+
+- `redo`日志是顺序写入磁盘的
+
+    在执行事务的过程中，每执行一条语句，就可能产生若干条`redo`日志，这些日志是按照产生的顺序写入磁盘的，也就是使用顺序IO。
+
+#### redo日志格式
+
+`redo`日志的通用结构
+
+![](./images/20-01.png)
+
+- `type`：该条`redo`日志的类型。
+
+    在`MySQL 5.7.21`版本中，`redo`日志有53种不同的类型
+
+- `space ID`：表空间ID。
+
+- `page number`：页号。
+
+- `data`：该条`redo`日志的具体内容。
+
+##### 简单的redo日志
+
+`redo`日志中只需要记录一下在某个页面的某个偏移量处修改了几个字节的值，具体被修改的内容是什么，这种极其简单的`redo`日志称之为`物理日志`
+
+- `MLOG_1BYTE`（`type`字段对应的十进制数字为`1`）：表示在页面的某个偏移量处写入1个字节的`redo`日志类型。
+- `MLOG_2BYTE`（`type`字段对应的十进制数字为`2`）：表示在页面的某个偏移量处写入2个字节的`redo`日志类型。
+- `MLOG_4BYTE`（`type`字段对应的十进制数字为`4`）：表示在页面的某个偏移量处写入4个字节的`redo`日志类型。
+- `MLOG_8BYTE`（`type`字段对应的十进制数字为`8`）：表示在页面的某个偏移量处写入8个字节的`redo`日志类型。
+- `MLOG_WRITE_STRING`（`type`字段对应的十进制数字为`30`）：表示在页面的某个偏移量处写入一串数据。
+
+在进行插入数据时，如果需要`row_id`的隐藏列，就需要从`Max Row ID`中获取当前自增量，在`Max Row ID`每自增256的倍数时，才会被写回到系统表空间的第7页号的`Max Row ID`中，产生的修改`Max Row ID`的`redo`记录就是`MLOG_8BYTE`类型
+
+![](./images/20-02.png)
+
+`MLOG_WRITE_STRING`类型
+
+![](./images/20-03.png)
+
+
+
+##### 复杂的redo日志
+
+执行一条sql语句会修改系统数据页面和用户数据页面
+
+插入一条数据时，对用户B+树的常见更新：
+
+- 表中包含多少个索引，一条`INSERT`语句就可能更新多少棵`B+`树。
+- 针对某一棵`B+`树来说，既可能更新叶子节点页面，也可能更新内节点页面，也可能创建新的页面（在该记录插入的叶子节点的剩余空间比较少，不足以存放该记录时，会进行页面的分裂，在内节点页面中添加`目录项记录`）。
+- 可能更新`Page Directory`中的槽信息。
+- `Page Header`中的各种页面统计信息，比如`PAGE_N_DIR_SLOTS`表示的槽数量可能会更改，`PAGE_HEAP_TOP`代表的还未使用的空间最小地址可能会更改，`PAGE_N_HEAP`代表的本页面中的记录数量可能会更改，等等，各种信息都可能会被修改。
+- 数据页里的记录是按照索引列从小到大的顺序组成一个单向链表的，每插入一条记录，还需要更新上一条记录的记录头信息中的`next_record`属性来维护这个单向链表。
+
+<img src="./images/20-04.png" style="zoom: 80%;" />
+
+复杂的日志类型：
+
+复杂日志类型仅靠存储的物理数据无法进行恢复，还需要依靠逻辑上的固定函数来恢复数据
+
+> Redundant是一种比较原始的行格式，它就是非紧凑的。而Compact、Dynamic以及Compressed行格式是较新的行格式，它们是紧凑的（占用更小的存储空间）。
+
+- `MLOG_REC_INSERT`（对应的十进制数字为`9`）：表示插入一条使用非紧凑行格式的记录时的`redo`日志类型。
+- `MLOG_COMP_REC_INSERT`（对应的十进制数字为`38`）：表示插入一条使用紧凑行格式的记录时的`redo`日志类型。
+- `MLOG_COMP_PAGE_CREATE`（`type`字段对应的十进制数字为`58`）：表示创建一个存储紧凑行格式记录的页面的`redo`日志类型。
+- `MLOG_COMP_REC_DELETE`（`type`字段对应的十进制数字为`42`）：表示删除一条使用紧凑行格式记录的`redo`日志类型。
+- `MLOG_COMP_LIST_START_DELETE`（`type`字段对应的十进制数字为`44`）：表示从某条给定记录开始删除页面中的一系列使用紧凑行格式记录的`redo`日志类型。
+- `MLOG_COMP_LIST_END_DELETE`（`type`字段对应的十进制数字为`43`）：与`MLOG_COMP_LIST_START_DELETE`类型的`redo`日志呼应，表示删除一系列记录直到`MLOG_COMP_LIST_END_DELETE`类型的`redo`日志对应的记录为止。`MLOG_ZIP_PAGE_COMPRESS`（`type`字段对应的十进制数字为`51`）：表示压缩一个数据页的`redo`日志类型。
+
+以`MLOG_COMP_REC_INSERT`类型为例子，插入一条紧凑行格式记录时
+
+![](./images/20-05.png)
+
+该`redo`记录没有记录完全对系统表空间数据、用户数据页中的`PAGE_N_DIR_SLOTS、PAGE_HEAP_TOP、PAGE_N_HEAP`等数据，当进行数据恢复时会调用某个插入函数，以`redo`记录作为参数来更新恢复数据。
+
+
+
+#### Mini-Transaction
+
+针对某些操作，必须是不可分割的原子操作，即多条redo记录以组的形式必须全部都执行或者都不执行。对底层页面中的一次原子访问的过程称之为一个`Mini-Transaction`，简称`mtr`。
+
+- 有的需要保证原子性的操作会生成多条`redo`日志，比如向某个索引对应的`B+`树中进行一次悲观插入就需要生成许多条`redo`日志。
+
+  在该组中的最后一条`redo`日志后边加上一条特殊类型的`redo`日志，该类型名称为`MLOG_MULTI_REC_END`
+
+  ![](./images/20-11.png)
+
+- 有的需要保证原子性的操作只生成一条`redo`日志，比如更新`Max Row ID`属性的操作就只会生成一条`redo`日志。
+
+  使用`redo`日志中的`type`类型字段的第一个bit位，如果`type`字段的第一个比特位为`1`，代表该需要保证原子性的操作只产生了单一的一条`redo`日志，否则表示该需要保证原子性的操作产生了一系列的`redo`日志。
+
+  ![](./images/20-12.png)
+
+
+
+一个事务可以包含若干条语句，每一条语句其实是由若干个`mtr`组成，每一个`mtr`又可以包含若干条`redo`日志
+
+![](./images/20-13.png)
+
+
+
+
+
+#### redo日志的写入过程
+
+##### redo log block
+
+`mtr`生成的`redo`日志都放在了大小为`512字节`的`页`中，这个用来存储`redo`日志的页称为`block`。
+
+![](./images/20-14.png)
+
+**log block header和log block trailer**
+
+![](./images/20-15.png)
+
+- `LOG_BLOCK_HDR_NO`：每一个block都有一个大于0的唯一标号，本属性就表示该标号值。
+- `LOG_BLOCK_HDR_DATA_LEN`：表示block中已经使用了多少字节，初始值为`12`（因为`log block body`从第12个字节处开始）。随着往block中写入的redo日志越来也多，本属性值也跟着增长。如果`log block body`已经被全部写满，那么本属性的值被设置为`512`。
+- `LOG_BLOCK_FIRST_REC_GROUP`：一条`redo`日志也可以称之为一条`redo`日志记录（`redo log record`），一个`mtr`会生产多条`redo`日志记录，这些`redo`日志记录被称之为一个`redo`日志记录组（`redo log record group`）。`LOG_BLOCK_FIRST_REC_GROUP`就代表该block中第一个`mtr`生成的`redo`日志记录组的偏移量（其实也就是这个block里第一个`mtr`生成的第一条`redo`日志的偏移量）。
+- `LOG_BLOCK_CHECKPOINT_NO`：表示`checkpoint`的序号。
+- `LOG_BLOCK_CHECKSUM`：表示block的校验值，用于正确性校验
+
+
+
+##### redo日志缓冲区
+
+类似`Buffer Pool`，为了解决`redo`日志写入磁盘缓慢的问题，服务器启动时申请了称之为`redo log buffer`的连续内存空间，翻译成中文就是`redo日志缓冲区`，也可以简称为`log buffer`。通过启动参数`innodb_log_buffer_size`设置`log buffer`的大小，默认是16MB
+
+![](./images/20-16.png)
+
+##### redo日志写入log buffer
+
+向`log buffer`中写入`redo`日志的过程是顺序的，也就是先往前面的block中写，当该block的空闲空间用完之后再往下一个block中写。MySQL中提供了`buf_free`的全局变量来指明后续的`redo`日志写到`log buffer`中的哪个位置
+
+![](./images/20-17.png)
+
+`redo`日志的写入以`mtr`形式，每个`mtr`运行时产生的`redo`日志先存放在其他地方，当该`mtr`结束时将一组`mtr`写入到`log buffer`中，不同事务之间的`mtr`写入没有规律，可能是交替写入`log buffer`中的
+
+![](./images/20-19.png)
+
+#### redo日志文件
+
+
+
+##### redo日志刷盘时机
+
+- `log buffer`空间不足时
+
+    `log buffer`的大小是有限的（通过系统变量`innodb_log_buffer_size`指定），如果当前写入`log buffer`的`redo`日志量已经占满了`log buffer`总容量的大约一半左右，就需要把这些日志刷新到磁盘上。
+
+- 事务提交时
+
+    之所以使用`redo`日志主要是因为它占用的空间少，还是顺序写，在事务提交时可以不把修改过的`Buffer Pool`页面刷新到磁盘，但是为了保证持久性，必须要把修改这些页面对应的`redo`日志刷新到磁盘。
+
+- 后台线程不停的刷刷刷
+
+    后台有一个线程，大约每秒都会刷新一次`log buffer`中的`redo`日志到磁盘。
+
+- 正常关闭服务器时
+
+- 做`checkpoint`时
+
+##### redo日志文件组
+
+`MySQL`的数据目录（使用`SHOW VARIABLES LIKE 'datadir'`查看）下默认有两个名为`ib_logfile0`和`ib_logfile1`的文件，`log buffer`中的日志默认情况下就是刷新到这两个磁盘文件中。
+
+- `innodb_log_group_home_dir`
+
+    该参数指定了`redo`日志文件所在的目录，默认值就是当前的数据目录。
+
+- `innodb_log_file_size`
+
+    该参数指定了每个`redo`日志文件的大小，在`MySQL 5.7.21`这个版本中的默认值为`48MB`，
+
+- `innodb_log_files_in_group`
+
+    该参数指定`redo`日志文件的个数，默认值为2，最大值为100。
+
+磁盘上的`redo`日志文件不只一个，而是以一个`日志文件组`的形式出现的。这些文件以`ib_logfile[数字]`（`数字`可以是`0`、`1`、`2`...）的形式进行命名。在将`redo`日志写入`日志文件组`时，是从`ib_logfile0`开始写，如果`ib_logfile0`写满了，就接着`ib_logfile1`写，依此类推。如果写到最后一个文件就重新转到`ib_logfile0`继续写，所以整个过程如下图所示：
+
+![](./images/21-01.png)
+
+
+
+##### redo日志文件格式
+
+将log buffer中的redo日志刷新到磁盘的本质就是把block的镜像写入日志文件中，所以`redo`日志文件其实也是由若干个`512`字节大小的block组成。
+
+`redo`日志文件组中的每个文件大小都一样，格式也一样，都是由两部分组成：
+
+- 前2048个字节，也就是前4个block是用来存储一些管理信息的。
+- 从第2048字节往后是用来存储`log buffer`中的block镜像的。
+
+![](./images/21-02.png)
+
+每个`redo`日志文件前2048个字节，也就是前4个特殊block的格式
+
+![](./images/21-03.png)
+
+
+
+**log file header**
+
+![](./images/21-04.png)
+
+| 属性名                 | 长度（单位：字节） | 描述                                                         |
+| ---------------------- | ------------------ | ------------------------------------------------------------ |
+| `LOG_HEADER_FORMAT`    | `4`                | `redo`日志的版本，在`MySQL 5.7.21`中该值永远为1              |
+| `LOG_HEADER_PAD1`      | `4`                | 做字节填充用的，没什么实际意义                               |
+| `LOG_HEADER_START_LSN` | `8`                | 标记本`redo`日志文件开始的LSN值，也就是文件偏移量为2048字节初对应的LSN值 |
+| `LOG_HEADER_CREATOR`   | `32`               | 一个字符串，标记本`redo`日志文件的创建者是谁。正常运行时该值为`MySQL`的版本号，比如：`"MySQL 5.7.21"`，使用`mysqlbackup`命令创建的`redo`日志文件的该值为`"ibbackup"`和创建时间。 |
+| `LOG_BLOCK_CHECKSUM`   | `4`                | 本block的校验值，所有block都有                               |
+
+
+
+**checkpoint1**
+
+![](./images/21-05.png)
+
+| 属性名                        | 长度（单位：字节） | 描述                                                         |
+| ----------------------------- | ------------------ | ------------------------------------------------------------ |
+| `LOG_CHECKPOINT_NO`           | `8`                | 服务器做`checkpoint`的编号，每做一次`checkpoint`，该值就加1。 |
+| `LOG_CHECKPOINT_LSN`          | `8`                | 服务器做`checkpoint`结束时对应的`LSN`值，系统奔溃恢复时将从该值开始。 |
+| `LOG_CHECKPOINT_OFFSET`       | `8`                | 上个属性中的`LSN`值在`redo`日志文件组中的偏移量              |
+| `LOG_CHECKPOINT_LOG_BUF_SIZE` | `8`                | 服务器在做`checkpoint`操作时对应的`log buffer`的大小         |
+| `LOG_BLOCK_CHECKSUM`          | `4`                | 本block的校验值，所有block都有                               |
+
+
+
+#### Log Sequeue Number
+
+自系统开始运行，就不断的在修改页面，也就意味着会不断的生成`redo`日志，为了记录已经写入的`redo`日志量，`MySQL`设计了日志序列号(Log Sequeue Number)，初始值为8704。
+
+- 系统第一次启动后初始化`log buffer`时，`buf_free`（就是标记下一条`redo`日志应该写入到`log buffer`的位置的变量）就会指向第一个`block`的偏移量为12字节（`log block header`的大小）的地方，那么`lsn`值也会跟着增加12：
+
+  ![](./images/21-06.png)
+
+- 如果某个`mtr`产生的一组`redo`日志占用的存储空间比较小，也就是待插入的block剩余空闲空间能容纳这个`mtr`提交的日志时，`lsn`增长的量就是该`mtr`生成的`redo`日志占用的字节数，就像这样：
+
+  ![](./images/21-07.png)
+
+- 如果某个`mtr`产生的一组`redo`日志占用的存储空间比较大，也就是待插入的block剩余空闲空间不足以容纳这个`mtr`提交的日志时，`lsn`增长的量就是该`mtr`生成的`redo`日志占用的字节数加上额外占用的`log block header`和`log block trailer`的字节数，就像这样：
+
+  ![](./images/21-08.png)
+
+每一组由mtr生成的redo日志都有一个唯一的LSN值与其对应，LSN值越小，说明redo日志产生的越早。
+
+
+
+##### flushed_to_disk_lsn
+
+`redo`日志是首先写到`log buffer`中，之后才会被刷新到磁盘上的`redo`日志文件。所以MySQL提出了一个称之为`buf_next_to_write`的全局变量，标记当前`log buffer`中已经有哪些日志被刷新到磁盘中了。相应的，设计`InnoDB`的大佬提出了一个表示刷新到磁盘中的`redo`日志量的全局变量，称之为`flushed_to_disk_lsn`。
+
+![](./images/21-09.png)
+
+当有新的`redo`日志写入到`log buffer`时，首先`lsn`的值会增长，但`flushed_to_disk_lsn`不变，随后随着不断有`log buffer`中的日志被刷新到磁盘上，`flushed_to_disk_lsn`的值也跟着增长。如果两者的值相同时，说明log buffer中的所有redo日志都已经刷新到磁盘中了。
+
+##### lsn值和redo日志文件偏移量的对应关系
+
+![](./images/21-12.png)
+
+初始时的`LSN`值是`8704`，对应文件偏移量`2048`，之后每个`mtr`向磁盘中写入多少字节日志，`lsn`的值就增长多少。
+
+##### flush链表中的LSN
+
+一个`mtr`代表一次对底层页面的原子访问，在访问过程中可能会产生一组不可分割的`redo`日志，在`mtr`结束时，会把这一组`redo`日志写入到`log buffer`中。除此之外，在`mtr`结束时还要把在mtr执行过程中可能修改过的页面加入到Buffer Pool的flush链表。
+
+![](./images/21-13.png)
+
+当第一次修改某个缓存在`Buffer Pool`中的页面时，就会把这个页面对应的控制块插入到`flush链表`的头部，之后再修改该页面时由于它已经在`flush`链表中了，就不再次插入了。也就是说flush链表中的脏页是按照页面的第一次修改时间从大到小进行排序的。在这个过程中会在缓存页对应的控制块中记录两个关于页面何时修改的属性：
+
+- `oldest_modification`：如果某个页面被加载到`Buffer Pool`后进行第一次修改，那么就将修改该页面的`mtr`开始时对应的`lsn`值写入这个属性。
+- `newest_modification`：每修改一次页面，都会将修改该页面的`mtr`结束时对应的`lsn`值写入这个属性。也就是说该属性表示页面最近一次修改后对应的系统`lsn`值。
+
+![](./images/21-16.png)
+
+flush链表中的脏页按照修改发生的时间顺序进行排序，也就是按照oldest_modification代表的LSN值进行排序，被多次更新的页面不会重复插入到flush链表中，但是会更新newest_modification属性的值。
+
+##### checkpoint
+
+redo日志只是为了系统奔溃后恢复脏页用的，如果对应的脏页已经刷新到了磁盘，也就是说即使现在系统奔溃，那么在重启后也用不着使用redo日志恢复该页面了，所以该redo日志也就没有存在的必要了，那么它占用的磁盘空间就可以被后续的redo日志所重用。也就是说：判断某些redo日志占用的磁盘空间是否可以覆盖的依据就是它对应的脏页是否已经刷新到磁盘
+
+![](./images/21-17.png)
+
+
+
+如图，虽然`mtr_1`和`mtr_2`生成的`redo`日志都已经被写到了磁盘上，但是它们修改的脏页仍然留在`Buffer Pool`中，所以它们生成的`redo`日志在磁盘上的空间是不可以被覆盖的。之后随着系统的运行，如果`页a`被刷新到了磁盘，那么它对应的控制块就会从`flush链表`中移除
+
+![](./images/21-18.png)
+
+ 这样`mtr_1`生成的`redo`日志就没有用了，它们占用的磁盘空间就可以被覆盖掉了。设计`InnoDB`的大佬提出了一个全局变量`checkpoint_lsn`来代表当前系统中可以被覆盖的`redo`日志总量是多少，这个变量初始值也是`8704`。
+
+  比方说现在`页a`被刷新到了磁盘，`mtr_1`生成的`redo`日志就可以被覆盖了，所以我们可以进行一个增加`checkpoint_lsn`的操作，我们把这个过程称之为做一次`checkpoint`。做一次`checkpoint`其实可以分为两个步骤：
+
+- 计算一下当前系统中可以被覆盖的`redo`日志对应的`lsn`值最大是多少。
+
+  `redo`日志可以被覆盖，意味着它对应的脏页被刷到了磁盘，只要我们计算出当前系统中被最早修改的脏页对应的`oldest_modification`值，那凡是在系统lsn值小于该节点的oldest_modification值时产生的redo日志都是可以被覆盖掉的，我们就把该脏页的`oldest_modification`赋值给`checkpoint_lsn`。
+
+- 将`checkpoint_lsn`和对应的`redo`日志文件组偏移量以及此次`checkpint`的编号写到日志文件的管理信息（就是`checkpoint1`或者`checkpoint2`）中。
+
+  关于checkpoint的信息只会被写到日志文件组的第一个日志文件的管理信息中。
+
+一般情况下都是后台的线程在对`LRU链表`和`flush链表`进行刷脏操作，这主要因为刷脏操作比较慢。但是如果当前系统修改页面的操作十分频繁，这样就导致写日志操作十分频繁，系统`lsn`值增长过快。如果后台的刷脏操作不能将脏页刷出，那么系统无法及时做`checkpoint`，可能就需要用户线程同步的从`flush链表`中把那些最早修改的脏页（`oldest_modification`最小的脏页）刷新到磁盘，这样这些脏页对应的`redo`日志就没用了，然后就可以去做`checkpoint`了。
+
+##### 查看系统中的各种LSN值
+
+`SHOW ENGINE INNODB STATUS`
+
+```mysql
+mysql> SHOW ENGINE INNODB STATUS\G
+
+(...省略前面的许多状态)
+LOG
+---
+Log sequence number 124476971
+Log flushed up to   124099769
+Pages flushed up to 124052503
+Last checkpoint at  124052494
+0 pending log flushes, 0 pending chkp writes
+24 log i/o's done, 2.00 log i/o's/second
+----------------------
+(...省略后边的许多状态)
+```
+
+- `Log sequence number`：代表系统中的`lsn`值，也就是当前系统已经写入的`redo`日志量，包括写入`log buffer`中的日志。
+- `Log flushed up to`：代表`flushed_to_disk_lsn`的值，也就是当前系统已经写入磁盘的`redo`日志量。
+- `Pages flushed up to`：代表`flush链表`中被最早修改的那个页面对应的`oldest_modification`属性值。
+- `Last checkpoint at`：当前系统的`checkpoint_lsn`值。
+
+##### innodb_flush_log_at_trx_commit的用法
+
+为了保证事务的`持久性`，用户线程在事务提交时需要将该事务执行过程中产生的所有`redo`日志都刷新到磁盘上。会很明显的降低数据库性能。如果对事务的`持久性`要求不是那么强烈的话，可以选择修改一个称为`innodb_flush_log_at_trx_commit`的系统变量的值，该变量有3个可选的值：
+
+- `0`：当该系统变量值为0时，表示在事务提交时不立即向磁盘中同步`redo`日志，这个任务是交给后台线程做的。
+
+    这样很明显会加快请求处理速度，但是如果事务提交后服务器挂了，后台线程没有及时将`redo`日志刷新到磁盘，那么该事务对页面的修改会丢失。
+
+- `1`：当该系统变量值为1时，表示在事务提交时需要将`redo`日志同步到磁盘，可以保证事务的`持久性`。`1`也是`innodb_flush_log_at_trx_commit`的默认值。
+
+- `2`：当该系统变量值为2时，表示在事务提交时需要将`redo`日志写到操作系统的缓冲区中，但并不需要保证将日志真正的刷新到磁盘。
+
+    这种情况下如果数据库挂了，操作系统没挂的话，事务的`持久性`还是可以保证的，但是操作系统也挂了的话，那就不能保证`持久性`了。
+
+#### 崩溃恢复
+
+在服务器不挂的情况下，`redo`日志是性能的拖累，但是数据库崩溃时，MySQL就可以在重启时根据`redo`日志中的记录就可以将页面恢复到系统奔溃前的状态。
+
+##### 确定恢复的起点
+
+`checkpoint_lsn`之前的`redo`日志都可以被覆盖，也就是说这些`redo`日志对应的脏页都已经被刷新到磁盘中了，既然它们已经被刷盘，我们就没必要恢复它们了。对于`checkpoint_lsn`之后的`redo`日志，它们对应的脏页可能没被刷盘，也可能被刷盘了，我们不能确定，所以需要从`checkpoint_lsn`开始读取`redo`日志来恢复页面。
+
+  当然，`redo`日志文件组的第一个文件的管理信息中有两个block都存储了`checkpoint_lsn`的信息，我们当然是要选取最近发生的那次checkpoint的信息。衡量`checkpoint`发生时间早晚的信息就是所谓的`checkpoint_no`，我们只要把`checkpoint1`和`checkpoint2`这两个block中的`checkpoint_no`值读出来比一下大小，哪个的`checkpoint_no`值更大，说明哪个block存储的就是最近的一次`checkpoint`信息。这样我们就能拿到最近发生的`checkpoint`对应的`checkpoint_lsn`值以及它在`redo`日志文件组中的偏移量`checkpoint_offset`。
+
+##### 确定恢复的终点
+
+普通block的`log block header`部分有一个称之为`LOG_BLOCK_HDR_DATA_LEN`的属性，该属性值记录了当前block里使用了多少字节的空间。对于被填满的block来说，该值永远为`512`。如果该属性的值不为`512`，它就是此次奔溃恢复中需要扫描的最后一个block。
+
+![](./images/21-20.png)
+
+##### 怎么恢复
+
+- 使用哈希表
+
+  根据`redo`日志的`space ID`和`page number`属性计算出散列值，把`space ID`和`page number`相同的`redo`日志放到哈希表的同一个槽里，如果有多个`space ID`和`page number`都相同的`redo`日志，那么它们之间使用链表连接起来，按照生成的先后顺序链接起来的，之后就可以遍历哈希表，因为对同一个页面进行修改的`redo`日志都放在了一个槽里，所以可以一次性将一个页面修复好（避免了很多读取页面的随机IO），这样可以加快恢复速度。
+
+  ![](./images/21-22.png)
+
+- 跳过已经刷新到磁盘的页面
+
+  `checkpoint_lsn`之前的`redo`日志对应的脏页确定都已经刷到磁盘了，但是`checkpoint_lsn`之后的`redo`日志我们不能确定是否已经刷到磁盘，主要是因为在最近做的一次`checkpoint`后，可能后台线程又不断的从`LRU链表`和`flush链表`中将一些脏页刷出`Buffer Pool`。
+
+  每个页面都有一个称之为`File Header`的部分，在`File Header`里有一个称之为`FIL_PAGE_LSN`的属性，该属性记载了最近一次修改页面时对应的`lsn`值（其实就是页面控制块中的`newest_modification`值）。如果在做了某次`checkpoint`之后有脏页被刷新到磁盘中，那么该页对应的`FIL_PAGE_LSN`代表的`lsn`值肯定大于`checkpoint_lsn`的值，凡是符合这种情况的页面就不需要重复执行lsn值小于`FIL_PAGE_LSN`的redo日志了，所以更进一步提升了奔溃恢复的速度。
+
+
+
+
+
+
+
+
+
+### undo日志
+
+
+
+
+
+
 
 
 

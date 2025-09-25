@@ -5,16 +5,14 @@ import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
-import org.apache.rocketmq.client.producer.DefaultMQProducer;
-import org.apache.rocketmq.client.producer.SendCallback;
-import org.apache.rocketmq.client.producer.SendResult;
-import org.apache.rocketmq.client.producer.SendStatus;
+import org.apache.rocketmq.client.producer.*;
 import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 
-import java.net.URL;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MQTest {
     private static final DefaultMQProducer producer = new DefaultMQProducer("DemoProducerGroup");
@@ -33,20 +31,21 @@ public class MQTest {
 
     public static void main(String[] args) throws Exception {
 //        sendMessage();
-        sendMessageOneWay();
+//        sendMessageOneWay();
 //        sendMessageAsync();
+//        sendOrderMessage();
+//        sendDelayedMessage();
+        sendBatchMessage();
         ackMessage();
 
-        String decode = URLDecoder.decode("https://oss-dataoper-repo.oss-cn-hangzhou.aliyuncs.com/sales/contract/997ED9E0C07049E4B667B68CF125F2E2.pdf?Expires=1758784463&OSSAccessKeyId=LTAI4Fo68Hmv3cCMPMWr6zKD&Signature=GxPpfVxvLvY2Nc7UIcR8%2FTtkdWw%3D&response-content-disposition=attachment%3Bfilename%3D%E6%97%A0%E5%90%8D%E7%A7%B0", StandardCharsets.UTF_8);
-        System.out.println(decode);
-
+        producer.shutdown();
     }
 
     private static void ackMessage() throws MQClientException {
 
-        consumer.subscribe("TestTopic", "TagA");
+        consumer.subscribe("TestTopic", "*");
         consumer.registerMessageListener((MessageListenerConcurrently) (msgs, context) -> {
-            System.out.println(msgs);
+            System.out.println("消费消息" + msgs);
             return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
         });
         consumer.start();
@@ -61,9 +60,6 @@ public class MQTest {
         // 发送消息
         SendResult sendResult = producer.send(msg);
         System.out.println("发送结果: " + sendResult);
-
-        // 关闭生产者
-        producer.shutdown();
     }
 
     private static void sendMessageAsync() throws Exception {
@@ -86,7 +82,6 @@ public class MQTest {
             });
         }
         Thread.sleep(5000);
-        producer.shutdown();
     }
 
     private static void sendMessageOneWay() throws Exception {
@@ -95,5 +90,52 @@ public class MQTest {
             producer.sendOneway(msg);
             System.out.println("发送成功");
         }
+    }
+
+
+    private static void sendOrderMessage() throws Exception {
+        String[] tags = new String[]{"TagA", "TagB", "TagC", "TagD", "TagE"};
+        for (int i = 0; i < 100; i++) {
+            int orderId = i % 10;
+            Message msg =
+                    new Message("TestTopic", tags[i % tags.length], "KEY" + i,
+                            ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET));
+            SendResult sendResult = producer.send(msg, new MessageQueueSelector() {
+                @Override
+                public MessageQueue select(List<MessageQueue> mqs, Message msg, Object arg) {
+                    System.out.println("mqs: " + mqs);
+                    Integer id = (Integer) arg;
+                    int index = id % mqs.size();
+                    return mqs.get(1);
+                }
+            }, orderId);
+
+            System.out.printf("%s%n", sendResult);
+        }
+    }
+
+
+    private static void sendDelayedMessage() throws Exception {
+        int totalMessagesToSend = 100;
+        for (int i = 0; i < totalMessagesToSend; i++) {
+            Message message = new Message("TestTopic", ("Hello scheduled message " + i).getBytes());
+            // This message will be delivered to consumer 10 seconds later.
+            message.setDelayTimeLevel(3);
+            // Send the message
+            producer.send(message);
+        }
+
+    }
+
+    private static void sendBatchMessage() throws Exception {
+        //If you just send messages of no more than 1MiB at a time, it is easy to use batch
+        //Messages of the same batch should have: same topic, same waitStoreMsgOK and no schedule support
+        String topic = "TestTopic";
+        List<Message> messages = new ArrayList<>();
+        messages.add(new Message(topic, "Tag", "OrderID001", "Hello world 0".getBytes()));
+        messages.add(new Message(topic, "Tag", "OrderID002", "Hello world 1".getBytes()));
+        messages.add(new Message(topic, "Tag", "OrderID003", "Hello world 2".getBytes()));
+
+        producer.send(messages);
     }
 }

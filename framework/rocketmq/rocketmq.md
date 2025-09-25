@@ -4,7 +4,7 @@
 
 ## 部署模型
 
-![image-20250925101401381](.\images\image-20250925101401381.png)
+![image-20250925101401381](./images/image-20250925101401381.png)
 
 ### 生产者 Producer
 
@@ -51,7 +51,7 @@ NameServer几乎无状态节点，因此可集群部署，节点之间无任何�
 
 ## 消息模型
 
-![image-20250925101728480](.\images\image-20250925101728480.png)
+![image-20250925101728480](./images/image-20250925101728480.png)
 
 - 为了消息写入能力的**水平扩展**，RocketMQ 对 Topic进行了分区，这种操作被称为**队列**（MessageQueue）。
 - 为了消费能力的**水平扩展**，ConsumerGroup的概念应运而生。
@@ -86,7 +86,7 @@ NameServer几乎无状态节点，因此可集群部署，节点之间无任何�
 
 Topic 与 Tag 都是业务上用来归类的标识，区别在于 Topic 是一级分类，而 Tag 可以理解为是二级分类。使用 Tag 可以实现对 Topic 中的消息进行过滤。
 
-![image-20250925143022059](.\images\image-20250925143022059.png)
+![image-20250925143022059](./images/image-20250925143022059.png)
 
 针对消息分类，可以选择创建多个 Topic，或者在同一个 Topic 下创建多个 Tag。但通常情况下，不同的 Topic 之间的消息没有必然的联系，而 Tag 则用来区分同一个 Topic 下相互关联的消息，例如全集和子集的关系、流程先后的关系。
 
@@ -104,7 +104,7 @@ Apache RocketMQ 每个消息可以在业务层面的设置唯一标识码 keys �
 
 为了支持高并发和水平扩展，需要对 Topic 进行分区，在 RocketMQ 中这被称为队列，一个 Topic 可能有多个队列，并且可能分布在不同的 Broker 上。
 
-<img src=".\images\image-20250925143633020.png" alt="image-20250925143633020" style="zoom: 33%;" />
+<img src="./images/image-20250925143633020.png" alt="image-20250925143633020" style="zoom: 33%;" />
 
 
 
@@ -118,7 +118,7 @@ Apache RocketMQ可用于以三种方式发送消息：**同步、异步和单向
 
 同步发送是最常用的方式，是指消息发送方发出一条消息后，会在收到服务端同步响应之后才发下一条消息的通讯方式，可靠的同步传输被广泛应用于各种场景，如重要的通知消息、短消息通知等。
 
-<img src=".\images\image-20250925160618372.png" alt="image-20250925160618372" style="zoom:50%;" />
+<img src="./images/image-20250925160618372.png" alt="image-20250925160618372" style="zoom:50%;" />
 
 ```java
 public class SyncProducer {
@@ -149,7 +149,7 @@ public class SyncProducer {
 
 异步发送是指发送方发出一条消息后，不等服务端返回响应，接着发送下一条消息的通讯方式。
 
-<img src=".\images\image-20250925160719135.png" alt="image-20250925160719135" style="zoom:50%;" />
+<img src="./images/image-20250925160719135.png" alt="image-20250925160719135" style="zoom:50%;" />
 
 ```java
 public class AsyncProducer {
@@ -202,7 +202,7 @@ public class AsyncProducer {
 
 发送方只负责发送消息，不等待服务端返回响应且没有回调函数触发，即只发送请求不等待应答。此方式发送消息的过程耗时非常短，一般在微秒级别。适用于某些耗时非常短，但对可靠性要求并不高的场景，例如日志收集。
 
-<img src=".\images\image-20250925160828197.png" alt="image-20250925160828197" style="zoom:50%;" />
+<img src="./images/image-20250925160828197.png" alt="image-20250925160828197" style="zoom:50%;" />
 
 ```java
 public class OnewayProducer {

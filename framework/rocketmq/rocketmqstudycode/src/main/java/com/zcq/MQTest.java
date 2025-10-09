@@ -3,6 +3,7 @@ package com.zcq;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
+import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueAveragely;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.*;
@@ -15,8 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MQTest {
-    private static final DefaultMQProducer producer = new DefaultMQProducer("DemoProducerGroup");
-    private static final DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("DemoConsumerGroup");
+    private static final DefaultMQProducer producer = new DefaultMQProducer("DemoProducerGroup",true);
+    private static final DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("DemoConsumerGroup",true);
 
     static {
         producer.setNamesrvAddr("10.1.24.136:9876");
@@ -25,8 +26,8 @@ public class MQTest {
         } catch (MQClientException e) {
             throw new RuntimeException(e);
         }
-
         consumer.setNamesrvAddr("10.1.24.136:9876");
+        consumer.setAllocateMessageQueueStrategy(new AllocateMessageQueueAveragely());
     }
 
     public static void main(String[] args) throws Exception {
@@ -38,7 +39,8 @@ public class MQTest {
         sendBatchMessage();
         ackMessage();
 
-        producer.shutdown();
+//        producer.shutdown();
+//        consumer.shutdown();
     }
 
     private static void ackMessage() throws MQClientException {

@@ -9,50 +9,21 @@ public class Test {
 
 
 class Solution {
-    HashMap<Integer, TreeNode> parentMap = new HashMap<>();
-
-    public List<Integer> distanceK(TreeNode root, TreeNode target, int k) {
-        traverse(root, null);
-        List<Integer> ans = new ArrayList<>();
-
-        Queue<TreeNode> queue = new LinkedList<>();
-        Set<Integer> set = new HashSet<>();
-        queue.offer(target);
-        set.add(target.val);
-        int distance = 0;
-        while (!queue.isEmpty()) {
-            int size = queue.size();
-            for (int i = 0; i < size; i++) {
-                TreeNode node = queue.poll();
-                if (distance == k) {
-                    ans.add(node.val);
-                }
-                if (node.left != null && !set.contains(node.left.val)) {
-                    set.add(node.left.val);
-                    queue.offer(node.left);
-                }
-                if (node.right != null && !set.contains(node.right.val)) {
-                    set.add(node.right.val);
-                    queue.offer(node.right);
-                }
-                TreeNode parent = parentMap.get(node.val);
-                if (parent != null && !set.contains(parent.val)) {
-                    set.add(parent.val);
-                    queue.offer(parent);
-                }
-            }
-            distance++;
+    public int countNodes(TreeNode root) {
+        TreeNode l = root, r = root;
+        int hl = 0, hr = 0;
+        while (l != null){
+            l = l.left;
+            hl++;
         }
-        return ans;
-    }
-
-    private void traverse(TreeNode root, TreeNode parent) {
-        if (root == null) {
-            return;
+        while (r != null){
+            r = r.right;
+            hr++;
         }
-        parentMap.put(root.val, parent);
-        traverse(root.left, root);
-        traverse(root.right, root);
+        if (hl == hr) {
+            return (int) Math.pow(2, hl) - 1;
+        }
+        return 1 + countNodes(root.left) + countNodes(root.right);
     }
 }
 //class Solution {

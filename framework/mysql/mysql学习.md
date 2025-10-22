@@ -6055,7 +6055,726 @@ Last checkpoint at  124052494
 
 ### undo日志
 
+#### 事务id
 
+- 我们可以通过`START TRANSACTION READ ONLY`语句开启一个只读事务。
+  - 在只读事务中不可以对普通的表（其他事务也能访问到的表）进行增、删、改操作，但可以对临时表做增、删、改操作。
+  - 对于只读事务来说，只有在它第一次对某个用户创建的临时表执行增、删、改操作时才会为这个事务分配一个`事务id`，否则的话是不分配`事务id`的。
+- 我们可以通过`START TRANSACTION READ WRITE`语句开启一个读写事务，或者使用`BEGIN`、`START TRANSACTION`语句开启的事务默认也算是读写事务。
+  - 在读写事务中可以对表执行增删改查操作。
+  - 对于读写事务来说，只有在它第一次对某个表（包括用户创建的临时表）执行增、删、改操作时才会为这个事务分配一个`事务id`，否则的话也是不分配`事务id`的。
+  - 有的时候虽然我们开启了一个读写事务，但是在这个事务中全是查询语句，并没有执行增、删、改的语句，那也就意味着这个事务并不会被分配一个`事务id`。
+
+##### 事务id的生成
+
+这个`事务id`本质上就是一个数字，它的分配策略和我们前面提到的对隐藏列`row_id`（当用户没有为表创建主键和`UNIQUE`键时`InnoDB`自动创建的列）的分配策略大抵相同，具体策略如下：
+
+- 服务器会在内存中维护一个全局变量，每当需要为某个事务分配一个`事务id`时，就会把该变量的值当作`事务id`分配给该事务，并且把该变量自增1。
+- 每当这个变量的值为`256`的倍数时，就会将该变量的值刷新到系统表空间的页号为`5`的页面中一个称之为`Max Trx ID`的属性处，这个属性占用`8`个字节的存储空间。
+- 当系统下一次重新启动时，会将上面提到的`Max Trx ID`属性加载到内存中，将该值加上256之后赋值给我们前面提到的全局变量（因为在上次关机时该全局变量的值可能大于`Max Trx ID`属性值）。
+
+  这样就可以保证整个系统中分配的`事务id`值是一个递增的数字。先被分配`id`的事务得到的是较小的`事务id`，后被分配`id`的事务得到的是较大的`事务id`。
+
+##### trx_id隐藏列
+
+聚簇索引的记录除了会保存完整的用户数据以外，而且还会自动添加名为trx_id、roll_pointer的隐藏列，如果用户没有在表中定义主键以及UNIQUE键，还会自动添加一个名为row_id的隐藏列。
+
+![image-20251011103133623](./images/image-20251011103133623.png)
+
+其中的`trx_id`列就是某个对这个聚簇索引记录做改动的语句所在的事务对应的`事务id`
+
+
+
+#### undo日志的格式
+
+为了实现事务的`原子性`，`InnoDB`存储引擎在实际进行增、删、改一条记录时，都需要先把对应的`undo日志`记下来。这些`undo日志`会被从`0`开始编号，这个编号也被称之为`undo no`。
+
+这些`undo日志`是被记录到类型为`FIL_PAGE_UNDO_LOG`（对应的十六进制是`0x0002`）的页面中。这些页面可以从系统表空间中分配，也可以从一种专门存放`undo日志`的表空间，也就是所谓的`undo tablespace`中分配。
+
+
+
+##### INSERT操作对应的undo日志
+
+类型为`TRX_UNDO_INSERT_REC`的`undo日志`，用于在插入数据后的回滚。将该条数据删除掉。
+
+<img src="./images/image-20251020093807259.png" alt="image-20251020093807259" style="zoom:50%;" />
+
+- `undo no`在一个事务中是从`0`开始递增的，也就是说只要事务没提交，每生成一条`undo日志`，那么该条日志的`undo no`就增1。
+- 如果记录中的主键只包含一个列，那么在类型为`TRX_UNDO_INSERT_REC`的`undo日志`中只需要把该列占用的存储空间大小和真实值记录下来，如果记录中的主键包含多个列，那么每个列占用的存储空间大小和对应的真实值都需要记录下来（图中的`len`就代表列占用的存储空间大小，`value`就代表列的真实值）。
+
+```mysql
+BEGIN;  # 显式开启一个事务，假设该事务的id为100
+
+# 插入两条记录
+INSERT INTO undo_demo(id, key1, col) 
+    VALUES (1, 'AWM', '狙击枪'), (2, 'M416', '步枪');
+```
+
+第一条`undo日志`的`undo no`为`0`，记录主键占用的存储空间长度为`4`，真实值为`1`。
+
+<img src="./images/image-20251020094652557.png" alt="image-20251020094652557" style="zoom:50%;" />
+
+
+
+##### DELETE操作对应的undo日志
+
+我们知道插入到页面中的记录会根据记录头信息中的`next_record`属性组成一个单向链表，我们把这个链表称之为`正常记录链表`；被删除的记录其实也会根据记录头信息中的`next_record`属性组成一个链表，这个链表中的记录占用的存储空间可以被重新利用，所以也称这个链表为`垃圾链表`。`Page Header`部分有一个称之为`PAGE_FREE`的属性，它指向由被删除记录组成的垃圾链表中的头节点。
+
+<img src="./images/image-20251020102803453.png" alt="image-20251020102803453" style="zoom:50%;" />
+
+假设现在我们准备使用`DELETE`语句把`正常记录链表`中的最后一条记录给删除掉，其实这个删除的过程需要经历两个阶段：
+
+- 阶段一：仅仅将记录的`delete_mask`标识位设置为`1`，其他的不做修改（其实会修改记录的`trx_id`、`roll_pointer`这些隐藏列的值）。设计`InnoDB`的大佬把这个阶段称之为`delete mark`。
+
+  `正常记录链表`中的最后一条记录的`delete_mask`值被设置为`1`，但是并没有被加入到`垃圾链表`。也就是此时记录处于一个`中间状态`，在删除语句所在的事务提交之前，被删除的记录一直都处于这种所谓的`中间状态`。（为了MVCC）
+
+<img src="./images/image-20251020103020469.png" alt="image-20251020103020469" style="zoom:50%;" />
+
+- 阶段二：当该删除语句所在的事务提交之后，会有专门的线程（purge）后来真正的把记录删除掉。所谓真正的删除就是把该记录从`正常记录链表`中移除，并且加入到`垃圾链表`中，然后还要调整一些页面的其他信息，比如页面中的用户记录数量`PAGE_N_RECS`、上次插入记录的位置`PAGE_LAST_INSERT`、垃圾链表头节点的指针`PAGE_FREE`、页面中可重用的字节数量`PAGE_GARBAGE`、还有页目录的一些信息等等。设计`InnoDB`的大佬把这个阶段称之为`purge`。
+
+  把`阶段二`执行完了，这条记录就算是真正的被删除掉了。这条已删除记录占用的存储空间也可以被重新利用了。
+
+<img src="./images/image-20251020103259981.png" alt="image-20251020103259981" style="zoom:50%;" />
+
+> 小贴士：页面的Page Header部分有一个PAGE_GARBAGE属性，该属性记录着当前页面中可重用存储空间占用的总字节数。每当有已删除记录被加入到垃圾链表后，都会把这个PAGE_GARBAGE属性的值加上该已删除记录占用的存储空间大小。PAGE_FREE指向垃圾链表的头节点，之后每当新插入记录时，首先判断PAGE_FREE指向的头节点代表的已删除记录占用的存储空间是否足够容纳这条新插入的记录，如果不可以容纳，就直接向页面中申请新的空间来存储这条记录（是的，你没看错，并不会尝试遍历整个垃圾链表，找到一个可以容纳新记录的节点）。如果可以容纳，那么直接重用这条已删除记录的存储空间，并且把PAGE_FREE指向垃圾链表中的下一条已删除记录。但是这里有一个问题，如果新插入的那条记录占用的存储空间大小小于垃圾链表的头节点占用的存储空间大小，那就意味头节点对应的记录占用的存储空间里有一部分空间用不到，这部分空间就被称之为碎片空间。那这些碎片空间岂不是永远都用不到了么？其实也不是，这些碎片空间占用的存储空间大小会被统计到PAGE_GARBAGE属性中，这些碎片空间在整个页面快使用完前并不会被重新利用，不过当页面快满时，如果再插入一条记录，此时页面中并不能分配一条完整记录的空间，这时候会首先看一看PAGE_GARBAGE的空间和剩余可利用的空间加起来是不是可以容纳下这条记录，如果可以的话，InnoDB会尝试重新组织页内的记录，重新组织的过程就是先开辟一个临时页面，把页面内的记录依次插入一遍，因为依次插入时并不会产生碎片，之后再把临时页面的内容复制到本页面，这样就可以把那些碎片空间都解放出来（很显然重新组织页面内的记录比较耗费性能）。
+
+
+
+在删除语句所在的事务提交之前，只会经历`阶段一`，也就是`delete mark`阶段，所以只需考虑对删除操作的`阶段一`做的影响进行回滚。TRX_UNDO_DEL_MARK_REC`类型的`undo日志
+
+<img src="./images/image-20251020103716085.png" alt="image-20251020103716085" style="zoom:50%;" />
+
+- 在对一条记录进行`delete mark`操作前，需要把该记录的旧的`trx_id`和`roll_pointer`隐藏列的值都给记到对应的`undo日志`中来，就是我们图中显示的`old trx_id`和`old roll_pointer`属性。这样有一个好处，那就是可以通过`undo日志`的`old roll_pointer`找到记录在修改之前对应的`undo`日志。比方说在一个事务中，我们先插入了一条记录，然后又执行对该记录的删除操作，这个过程的示意图就是这样：
+
+<img src="./images/image-20251020105524414.png" alt="image-20251020105524414" style="zoom:50%;" />
+
+- 与类型为`TRX_UNDO_INSERT_REC`的`undo日志`不同，类型为`TRX_UNDO_DEL_MARK_REC`的`undo`日志还多了一个`索引列各列信息`的内容，也就是说如果某个列被包含在某个索引中，那么它的相关信息就应该被记录到这个`索引列各列信息`部分，所谓的相关信息包括该列在记录中的位置（用`pos`表示），该列占用的存储空间大小（用`len`表示），该列实际值（用`value`表示）。所以`索引列各列信息`存储的内容实质上就是`<pos, len, value>`的一个列表。这部分信息主要是用在事务提交后，对该`中间状态记录`做真正删除的阶段二，也就是`purge`阶段中使用的
+
+```mysql
+BEGIN;  # 显式开启一个事务，假设该事务的id为100
+
+# 插入两条记录
+INSERT INTO undo_demo(id, key1, col) 
+    VALUES (1, 'AWM', '狙击枪'), (2, 'M416', '步枪');
+    
+# 删除一条记录    
+DELETE FROM undo_demo WHERE id = 1; 
+
+```
+
+<img src="./images/image-20251020105650700.png" alt="image-20251020105650700" style="zoom:50%;" />
+
+- 因为这条`undo`日志是`id`为`100`的事务中产生的第3条`undo`日志，所以它对应的`undo no`就是`2`。
+
+- 在对记录做`delete mark`操作时，记录的`trx_id`隐藏列的值是`100`（也就是说对该记录最近的一次修改就发生在本事务中），所以把`100`填入`old trx_id`属性中。然后把记录的`roll_pointer`隐藏列的值取出来，填入`old roll_pointer`属性中，这样就可以通过`old roll_pointer`属性值找到最近一次对该记录做改动时产生的`undo日志`。
+
+- 由于`undo_demo`表中有2个索引：一个是聚簇索引，一个是二级索引`idx_key1`。只要是包含在索引中的列，那么这个列在记录中的位置（`pos`），占用存储空间大小（`len`）和实际值（`value`）就需要存储到`undo日志`中。
+
+  对于主键来说，只包含一个`id`列，存储到`undo日志`中的相关信息分别是：
+
+  - `pos`：`id`列是主键，也就是在记录的第一个列，它对应的`pos`值为`0`。`pos`占用1个字节来存储。
+  - `len`：`id`列的类型为`INT`，占用4个字节，所以`len`的值为`4`。`len`占用1个字节来存储。
+  - `value`：在被删除的记录中`id`列的值为`1`，也就是`value`的值为`1`。`value`占用4个字节来存储。
+
+  对于`idx_key1`来说，只包含一个`key1`列，存储到`undo日志`中的相关信息分别是：
+
+  - `pos`：`key1`列是排在`id`列、`trx_id`列、`roll_pointer`列之后的，它对应的`pos`值为`3`。`pos`占用1个字节来存储。
+  - `len`：`key1`列的类型为`VARCHAR(100)`，使用`utf8`字符集，被删除的记录实际存储的内容是`AWM`，所以一共占用3个字节，也就是所以`len`的值为`3`。`len`占用1个字节来存储。
+  - `value`：在被删除的记录中`key1`列的值为`AWM`，也就是`value`的值为`AWM`。`value`占用3个字节来存储。
+
+##### UPDATE操作对应的undo日志
+
+###### 不更新主键的情况
+
+**就地更新（in-place update）**
+
+更新记录时，对于被更新的每个列来说，如果更新后的列和更新前的列占用的存储空间都一样大，那么就可以进行`就地更新`，也就是直接在原记录的基础上修改对应列的值。再次强调一边，是每个列在更新前后占用的存储空间一样大，有任何一个被更新的列更新前比更新后占用的存储空间大，或者更新前比更新后占用的存储空间小都不能进行`就地更新`。
+
+```mysql
+UPDATE undo_demo 
+    SET key1 = 'M249', col = '机枪' 
+    WHERE id = 2;
+```
+
+由于各个被更新的列在更新前后占用的存储空间是一样大的，所以这样的语句可以执行`就地更新`。
+
+**先删除掉旧记录，再插入新记录**
+
+在不更新主键的情况下，如果有任何一个被更新的列更新前和更新后占用的存储空间大小不一致，那么就需要先把这条旧的记录从聚簇索引页面中删除掉，然后再根据更新后列的值创建一条新的记录插入到页面中。
+
+> 请注意一下，我们这里所说的`删除`并不是`delete mark`操作，而是真正的删除掉，也就是把这条记录从`正常记录链表`中移除并加入到`垃圾链表`中，并且修改页面中相应的统计信息（比如`PAGE_FREE`、`PAGE_GARBAGE`等这些信息）。不过这里做真正删除操作的线程并不是在介绍`DELETE`语句中做`purge`操作时使用的另外专门的线程，而是由用户线程同步执行真正的删除操作，真正删除之后紧接着就要根据各个列更新后的值创建的新记录插入。
+>
+>  这里如果新创建的记录占用的存储空间大小不超过旧记录占用的空间，那么可以直接重用被加入到`垃圾链表`中的旧记录所占用的存储空间，否则的话需要在页面中新申请一段空间以供新记录使用，如果本页面内已经没有可用的空间的话，那就需要进行页面分裂操作，然后再插入新记录。
+
+ 针对`UPDATE`不更新主键的情况（包括上面所说的就地更新和先删除旧记录再插入新记录），设计`InnoDB`的大佬们设计了一种类型为`TRX_UNDO_UPD_EXIST_REC`的`undo日志`，它的完整结构如下：
+
+<img src="./images/image-20251020112032282.png" alt="image-20251020112032282" style="zoom:50%;" />
+
+- `n_updated`属性表示本条`UPDATE`语句执行后将有几个列被更新，后边跟着的`<pos, old_len, old_value>`分别表示被更新列在记录中的位置、更新前该列占用的存储空间大小、更新前该列的真实值。
+- 如果在`UPDATE`语句中更新的列包含索引列，那么也会添加`索引列各列信息`这个部分，否则的话是不会添加这个部分的。
+
+```mysql
+BEGIN;  # 显式开启一个事务，假设该事务的id为100
+
+# 插入两条记录
+INSERT INTO undo_demo(id, key1, col) 
+    VALUES (1, 'AWM', '狙击枪'), (2, 'M416', '步枪');
+    
+# 删除一条记录    
+DELETE FROM undo_demo WHERE id = 1; 
+
+# 更新一条记录
+UPDATE undo_demo
+    SET key1 = 'M249', col = '机枪'
+    WHERE id = 2;
+
+```
+
+<img src="./images/image-20251020112800060.png" alt="image-20251020112800060" style="zoom:50%;" />
+
+- 因为这条`undo日志`是`id`为`100`的事务中产生的第4条`undo日志`，所以它对应的`undo no`就是3。
+- 这条日志的`roll_pointer`指向`undo no`为`1`的那条日志，也就是插入主键值为`2`的记录时产生的那条`undo日志`，也就是最近一次对该记录做改动时产生的`undo日志`。
+- 由于本条`UPDATE`语句中更新了索引列`key1`的值，所以需要记录一下`索引列各列信息`部分，也就是把主键和`key1`列更新前的信息填入。
+
+
+
+###### 更新主键的情况
+
+针对`UPDATE`语句中更新了记录主键值的这种情况，`InnoDB`在聚簇索引中分了两步处理：
+
+- 将旧记录进行`delete mark`操作
+
+  这里是delete mark操作！也就是说在`UPDATE`语句所在的事务提交前，对旧记录只做一个`delete mark`操作，在事务提交后才由专门的线程做purge操作，把它加入到垃圾链表中。
+
+- 根据更新后各列的值创建一条新记录，并将其插入到聚簇索引中（需重新定位插入的位置）。
+
+  由于更新后的记录主键值发生了改变，所以需要重新从聚簇索引中定位这条记录所在的位置，然后把它插进去。
+
+针对`UPDATE`语句更新记录主键值的这种情况，在对该记录进行`delete mark`操作前，会记录一条类型为`TRX_UNDO_DEL_MARK_REC`的`undo日志`；之后插入新记录时，会记录一条类型为`TRX_UNDO_INSERT_REC`的`undo日志`，也就是说每对一条记录的主键值做改动时，会记录2条`undo日志`。
+
+
+
+
+
+#### undo日志存储与写入
+
+##### 通用链表结构
+
+ 在某个表空间内，我们可以通过一个页的页号和在页内的偏移量来唯一定位一个节点的位置，这两个信息也就相当于指向这个节点的一个指针。所以：
+
+- `Pre Node Page Number`和`Pre Node Offset`的组合就是指向前一个节点的指针
+- `Next Node Page Number`和`Next Node Offset`的组合就是指向后一个节点的指针。
+
+<img src="./images/image-20251020114708889.png" alt="image-20251020114708889" style="zoom:50%;" />
+
+为了更好的管理链表，还提出了一个基节点的结构，里边存储了这个链表的`头节点`、`尾节点`以及链表长度信息，基节点的结构示意图如下：
+
+<img src="./images/image-20251020114755618.png" alt="image-20251020114755618" style="zoom:50%;" />
+
+- `List Length`表明该链表一共有多少节点。
+- `First Node Page Number`和`First Node Offset`的组合就是指向链表头节点的指针。
+- `Last Node Page Number`和`Last Node Offset`的组合就是指向链表尾节点的指针。
+
+<img src="./images/image-20251020114842588.png" alt="image-20251020114842588" style="zoom:50%;" />
+
+##### FIL_PAGE_UNDO_LOG页面
+
+`FIL_PAGE_UNDO_LOG`类型的页面是专门用来存储`undo日志`的，这种类型的页面的通用结构如下图所示（以默认的`16KB`大小为例）：
+
+<img src="./images/image-20251020115356835.png" alt="image-20251020115356835" style="zoom:50%;" />
+
+`File Header`和`File Trailer`是各种页面都有的通用结构，`Undo Page Header`是`Undo页面`所特有的
+
+<img src="./images/image-20251020115504702.png" alt="image-20251020115504702" style="zoom:50%;" />
+
+- `TRX_UNDO_PAGE_TYPE`：本页面准备存储什么种类的`undo日志`。
+
+  我们前面介绍了好几种类型的`undo日志`，它们可以被分为两个大类：
+
+  - `TRX_UNDO_INSERT`（使用十进制`1`表示）：类型为`TRX_UNDO_INSERT_REC`的`undo日志`属于此大类，一般由`INSERT`语句产生，或者在`UPDATE`语句中有更新主键的情况也会产生此类型的`undo日志`。
+
+  - `TRX_UNDO_UPDATE`（使用十进制`2`表示），除了类型为`TRX_UNDO_INSERT_REC`的`undo日志`，其他类型的`undo日志`都属于这个大类，比如我们前面说的`TRX_UNDO_DEL_MARK_REC`、`TRX_UNDO_UPD_EXIST_REC`什么的，一般由`DELETE`、`UPDATE`语句产生的`undo日志`属于这个大类。
+
+    这个`TRX_UNDO_PAGE_TYPE`属性可选的值就是上面的两个，用来标记本页面用于存储哪个大类的`undo日志`，不同大类的`undo日志`不能混着存储，比如一个`Undo页面`的`TRX_UNDO_PAGE_TYPE`属性值为`TRX_UNDO_INSERT`，那么这个页面就只能存储类型为`TRX_UNDO_INSERT_REC`的`undo日志`，其他类型的`undo日志`就不能放到这个页面中了。
+
+- `TRX_UNDO_PAGE_START`：表示在当前页面中是从什么位置开始存储`undo日志`的，或者说表示第一条`undo日志`在本页面中的起始偏移量。
+- `TRX_UNDO_PAGE_FREE`：与上面的`TRX_UNDO_PAGE_START`对应，表示当前页面中存储的最后一条`undo`日志结束时的偏移量，或者说从这个位置开始，可以继续写入新的`undo日志`。
+- `TRX_UNDO_PAGE_NODE`：代表一个`List Node`结构
+
+
+
+##### Undo页面链表
+
+###### 单个事务中的Undo页面链表
+
+在一个事务执行过程中可能产生很多`undo日志`，这些日志可能一个页面放不下，需要放到多个页面中，这些页面就通过我们上面介绍的`TRX_UNDO_PAGE_NODE`属性连成了链表：
+
+<img src="./images/image-20251020135746833.png" alt="image-20251020135746833" style="zoom:50%;" />
+
+同一个`Undo页面`要么只存储`TRX_UNDO_INSERT`大类的`undo日志`，要么只存储`TRX_UNDO_UPDATE`大类的`undo日志`，不能混着存，所以在一个事务执行过程中就可能需要2个`Undo页面`的链表，一个称之为`insert undo链表`，另一个称之为`update undo链表`，画个示意图就是这样：
+
+<img src="./images/image-20251020140000437.png" alt="image-20251020140000437" style="zoom:50%;" />
+
+另外，设计`InnoDB`的大佬规定对普通表和临时表的记录改动时产生的`undo日志`要分别记录，所以在一个事务中最多有4个以`Undo页面`为节点组成的链表：
+
+<img src="./images/image-20251020140141742.png" alt="image-20251020140141742" style="zoom:50%;" />
+
+当然，并不是在事务一开始就会为这个事务分配这4个链表，具体分配策略如下：
+
+- 刚刚开启事务时，一个`Undo页面`链表也不分配。
+- 当事务执行过程中向普通表中插入记录或者执行更新记录主键的操作之后，就会为其分配一个`普通表的insert undo链表`。
+- 当事务执行过程中删除或者更新了普通表中的记录之后，就会为其分配一个`普通表的update undo链表`。
+- 当事务执行过程中向临时表中插入记录或者执行更新记录主键的操作之后，就会为其分配一个`临时表的insert undo链表`。
+- 当事务执行过程中删除或者更新了临时表中的记录之后，就会为其分配一个`临时表的update undo链表`。
+
+
+
+###### 多个事务中的Undo页面链表
+
+为了尽可能提高`undo日志`的写入效率，不同事务执行过程中产生的undo日志需要被写入到不同的Undo页面链表中。
+
+比方说现在有事务`id`分别为`1`、`2`的两个事务，我们分别称之为`trx 1`和`trx 2`，假设在这两个事务执行过程中：
+
+- `trx 1`对普通表做了`DELETE`操作，对临时表做了`INSERT`和`UPDATE`操作。
+
+  `InnoDB`会为`trx 1`分配3个链表，分别是：
+
+  - 针对普通表的`update undo链表`
+  - 针对临时表的`insert undo链表`
+  - 针对临时表的`update undo链表`。
+
+- `trx 2`对普通表做了`INSERT`、`UPDATE`和`DELETE`操作，没有对临时表做改动。
+
+  `InnoDB`会为`trx 2`分配2个链表，分别是：
+
+  - 针对普通表的`insert undo链表`
+  - 针对普通表的`update undo链表`。
+
+  综上所述，在`trx 1`和`trx 2`执行过程中，`InnoDB`共需为这两个事务分配5个`Undo页面`链表，画个图就是这样：
+
+<img src="./images/image-20251020140440473.png" alt="image-20251020140440473" style="zoom:50%;" />
+
+
+
+##### undo日志具体写入过程
+
+###### 段（Segment）的概念
+
+`段`是一个逻辑上的概念，本质上是由若干个零散页面和若干个完整的区组成的。每一个段对应一个`INODE Entry`结构，这个`INODE Entry`结构描述了这个段的各种信息，比如段的`ID`，段内的各种链表基节点，零散页面的页号有哪些等信息，为了定位一个`INODE Entry`，设计`InnoDB`的大佬设计了一个`Segment Header`的结构：
+
+<img src="./images/image-20251020140858932.png" alt="image-20251020140858932" style="zoom:50%;" />
+
+  整个`Segment Header`占用10个字节大小，各个属性的意思如下：
+
+- `Space ID of the INODE Entry`：`INODE Entry`结构所在的表空间ID。
+- `Page Number of the INODE Entry`：`INODE Entry`结构所在的页面页号。
+- `Byte Offset of the INODE Ent`：`INODE Entry`结构在该页面中的偏移量
+
+
+
+###### Undo Log Segment Header
+
+每一个`Undo页面`链表都对应着一个`段`，称之为`Undo Log Segment`。也就是说链表中的页面都是从这个段里边申请的，所以他们在`Undo页面`链表的第一个页面，也就是上面提到的`first undo page`中设计了一个称之为`Undo Log Segment Header`的部分，这个部分中包含了该链表对应的段的`segment header`信息以及其他的一些关于这个段的信息，所以`Undo`页面链表的第一个页面其实长这样：
+
+<img src="./images/image-20251020142632571.png" alt="image-20251020142632571" style="zoom: 33%;" />
+
+<img src="./images/image-20251020141936899.png" alt="image-20251020141936899" style="zoom: 33%;" />
+
+- `TRX_UNDO_STATE`：本`Undo页面`链表处在什么状态。
+
+  一个`Undo Log Segment`可能处在的状态包括：
+
+  - `TRX_UNDO_ACTIVE`：活跃状态，也就是一个活跃的事务正在往这个段里边写入`undo日志`。
+  - `TRX_UNDO_CACHED`：被缓存的状态。处在该状态的`Undo页面`链表等待着之后被其他事务重用。
+  - `TRX_UNDO_TO_FREE`：对于`insert undo`链表来说，如果在它对应的事务提交之后，该链表不能被重用，那么就会处于这种状态。
+  - `TRX_UNDO_TO_PURGE`：对于`update undo`链表来说，如果在它对应的事务提交之后，该链表不能被重用，那么就会处于这种状态。
+  - `TRX_UNDO_PREPARED`：包含处于`PREPARE`阶段的事务产生的`undo日志`。
+
+- `TRX_UNDO_LAST_LOG`：本`Undo页面`链表中最后一个`Undo Log Header`的位置。
+
+- `TRX_UNDO_FSEG_HEADER`：本`Undo页面`链表对应的段的`Segment Header`信息
+
+- `TRX_UNDO_PAGE_LIST`：`Undo页面`链表的基节点。
+
+
+
+###### Undo Log Header
+
+<img src="./images/image-20251020142829785.png" alt="image-20251020142829785" style="zoom: 33%;" />
+
+- `TRX_UNDO_TRX_ID`：生成本组`undo日志`的事务`id`。
+- `TRX_UNDO_TRX_NO`：事务提交后生成的一个需要序号，使用此序号来标记事务的提交顺序（先提交的此序号小，后提交的此序号大）。
+- `TRX_UNDO_DEL_MARKS`：标记本组`undo`日志中是否包含由于`Delete mark`操作产生的`undo日志`。
+- `TRX_UNDO_LOG_START`：表示本组`undo`日志中第一条`undo日志`的在页面中的偏移量。
+- `TRX_UNDO_XID_EXISTS`：本组`undo日志`是否包含XID信息。
+- `TRX_UNDO_DICT_TRANS`：标记本组`undo日志`是不是由DDL语句产生的。
+- `TRX_UNDO_TABLE_ID`：如果`TRX_UNDO_DICT_TRANS`为真，那么本属性表示DDL语句操作的表的`table id`。
+- `TRX_UNDO_NEXT_LOG`：下一组的`undo日志`在页面中开始的偏移量。
+- `TRX_UNDO_PREV_LOG`：上一组的`undo日志`在页面中开始的偏移量。
+- `TRX_UNDO_HISTORY_NODE`：一个12字节的`List Node`结构，代表一个称之为`History`链表的节点。
+
+<img src="./images/image-20251020143112740.png" alt="image-20251020143112740" style="zoom:33%;" />
+
+
+
+###### 重用Undo页面
+
+我们前面说为了能提高并发执行的多个事务写入`undo日志`的性能，设计`InnoDB`的大佬决定为每个事务单独分配相应的`Undo页面`链表（最多可能单独分配4个链表）。但是这样也造成了一些问题，比如其实大部分事务执行过程中可能只修改了一条或几条记录，针对某个`Undo页面`链表只产生了非常少的`undo日志`，这些`undo日志`可能只占用一丢丢存储空间，每开启一个事务就新创建一个`Undo页面`链表（虽然这个链表中只有一个页面）来存储这么一丢丢`undo日志`岂不是太浪费了，于是设计`InnoDB`的大佬本着勤俭节约的优良传统，决定在事务提交后在某些情况下重用该事务的`Undo页面`链表。一个`Undo页面`链表是否可以被重用的条件很简单：
+
+- 该链表中只包含一个`Undo页面`。
+
+    如果一个事务执行过程中产生了非常多的`undo日志`，那么它可能申请非常多的页面加入到`Undo页面`链表中。在该事物提交后，如果将整个链表中的页面都重用，那就意味着即使新的事务并没有向该`Undo页面`链表中写入很多`undo日志`，那该链表中也得维护非常多的页面，那些用不到的页面也不能被别的事务所使用，这样就造成了另一种浪费。所以设计`InnoDB`的大佬们规定，只有在`Undo页面`链表中只包含一个`Undo页面`时，该链表才可以被下一个事务所重用。
+
+- 该`Undo页面`已经使用的空间小于整个页面空间的3/4。
+
+  `Undo页面`链表按照存储的`undo日志`所属的大类可以被分为`insert undo链表`和`update undo链表`两种，这两种链表在被重用时的策略也是不同的
+
+  - insert undo链表
+
+    `insert undo链表`中只存储类型为`TRX_UNDO_INSERT_REC`的`undo日志`，这种类型的`undo日志`在事务提交之后就没用了，就可以被清除掉。所以在某个事务提交后，重用这个事务的`insert undo链表`（这个链表中只有一个页面）时，可以直接把之前事务写入的一组`undo日志`覆盖掉，从头开始写入新事务的一组`undo日志`，如下图所示：
+
+    <img src="./images/image-20251020143816525.png" alt="image-20251020143816525" style="zoom:33%;" />
+
+  - update undo链表
+
+      在一个事务提交后，它的`update undo链表`中的`undo日志`也不能立即删除掉（这些日志用于MVCC）。所以如果之后的事务想重用`update undo链表`时，就不能覆盖之前事务写入的`undo日志`。这样就相当于在同一个`Undo页面`中写入了多组的`undo日志`，效果看起来就是这样：
+
+    <img src="./images/image-20251020144144522.png" alt="image-20251020144144522" style="zoom: 33%;" />
+
+
+
+##### 回滚段
+
+我们现在知道一个事务在执行过程中最多可以分配4个`Undo页面`链表，在同一时刻不同事务拥有的`Undo页面`链表是不一样的，所以在同一时刻系统里其实可以有许许多多个`Undo页面`链表存在。为了更好的管理这些链表，设计`InnoDB`的大佬又设计了一个称之为`Rollback Segment Header`的页面，在这个页面中存放了各个`Undo页面`链表的`frist undo page`的`页号`，他们把这些`页号`称之为`undo slot`。
+
+`Rollback Segment Header`的页面
+
+<img src="./images/image-20251020150227864.png" alt="image-20251020150227864" style="zoom:50%;" />
+
+每一个`Rollback Segment Header`页面都对应着一个段，这个段就称为`Rollback Segment`，翻译过来就是`回滚段`。与我们之前介绍的各种段不同的是，这个`Rollback Segment`里其实只有一个页面
+
+- `TRX_RSEG_MAX_SIZE`：本`Rollback Segment`中所有`Undo页面`链表中的`Undo页面`数量之和不能超过`TRX_RSEG_MAX_SIZE`代表的值。
+
+- `TRX_RSEG_HISTORY_SIZE`：`History`链表占用的页面数量。
+
+- `TRX_RSEG_HISTORY`：`History`链表的基节点。
+
+- `TRX_RSEG_FSEG_HEADER`：本`Rollback Segment`对应的10字节大小的`Segment Header`结构，通过它可以找到本段对应的`INODE Entry`。
+
+- `TRX_RSEG_UNDO_SLOTS`：各个`Undo页面`链表的`first undo page`的`页号`集合，也就是`undo slot`集合。
+
+  一个页号占用`4`个字节，对于`16KB`大小的页面来说，这个`TRX_RSEG_UNDO_SLOTS`部分共存储了`1024`个`undo slot`，所以共需`1024 × 4 = 4096`个字节。
+
+###### 从回滚段中申请Undo页面链表
+
+初始情况下，由于未向任何事务分配任何`Undo页面`链表，所以对于一个`Rollback Segment Header`页面来说，它的各个`undo slot`都被设置成了一个特殊的值：`FIL_NULL`（对应的十六进制就是`0xFFFFFFFF`），表示该`undo slot`不指向任何页面。
+
+  随着时间的流逝，开始有事务需要分配`Undo页面`链表了，就从回滚段的第一个`undo slot`开始，看看该`undo slot`的值是不是`FIL_NULL`：
+
+- 如果是`FIL_NULL`，那么在表空间中新创建一个段（也就是`Undo Log Segment`），然后从段里申请一个页面作为`Undo页面`链表的`first undo page`，然后把该`undo slot`的值设置为刚刚申请的这个页面的地址，这样也就意味着这个`undo slot`被分配给了这个事务。
+- 如果不是`FIL_NULL`，说明该`undo slot`已经指向了一个`undo链表`，也就是说这个`undo slot`已经被别的事务占用了，那就跳到下一个`undo slot`，判断该`undo slot`的值是不是`FIL_NULL`，重复上面的步骤。
+
+  一个`Rollback Segment Header`页面中包含`1024`个`undo slot`，如果这`1024`个`undo slot`的值都不为`FIL_NULL`，这就意味着这`1024`个`undo slot`被分配给了某个事务，此时由于新事务无法再获得新的`Undo页面`链表，就会回滚这个事务并且给用户报错：
+
+```mysql
+Too many active concurrent transactions
+```
+
+当一个事务提交时，它所占用的`undo slot`有两种命运：
+
+- 如果该`undo slot`指向的`Undo页面`链表符合被重用的条件（就是上面说的`Undo页面`链表只占用一个页面并且已使用空间小于整个页面的3/4）。
+
+    该`undo slot`就处于被缓存的状态，设计`InnoDB`的大佬规定这时该`Undo页面`链表的`TRX_UNDO_STATE`属性（该属性在`first undo page`的`Undo Log Segment Header`部分）会被设置为`TRX_UNDO_CACHED`。
+
+      被缓存的`undo slot`都会被加入到一个链表，根据对应的`Undo页面`链表的类型不同，也会被加入到不同的链表：
+
+  - 如果对应的`Undo页面`链表是`insert undo链表`，则该`undo slot`会被加入`insert undo cached链表`。
+
+  - 如果对应的`Undo页面`链表是`update undo链表`，则该`undo slot`会被加入`update undo cached链表`。
+
+      一个回滚段就对应着上述两个`cached链表`，如果有新事务要分配`undo slot`时，先从对应的`cached链表`中找。如果没有被缓存的`undo slot`，才会到回滚段的`Rollback Segment Header`页面中再去找。
+
+- 如果该`undo slot`指向的`Undo页面`链表不符合被重用的条件，那么针对该`undo slot`对应的`Undo页面`链表类型不同，也会有不同的处理：
+
+  - 如果对应的`Undo页面`链表是`insert undo链表`，则该`Undo页面`链表的`TRX_UNDO_STATE`属性会被设置为`TRX_UNDO_TO_FREE`，之后该`Undo页面`链表对应的段会被释放掉（也就意味着段中的页面可以被挪作他用），然后把该`undo slot`的值设置为`FIL_NULL`。
+  - 如果对应的`Undo页面`链表是`update undo链表`，则该`Undo页面`链表的`TRX_UNDO_STATE`属性会被设置为`TRX_UNDO_TO_PRUGE`，则会将该`undo slot`的值设置为`FIL_NULL`，然后将本次事务写入的一组`undo`日志放到所谓的`History链表`中
+
+###### 多个回滚段
+
+我们说一个事务执行过程中最多分配`4`个`Undo页面`链表，而一个回滚段里只有`1024`个`undo slot`。我们即使假设一个读写事务执行过程中只分配`1`个`Undo页面`链表，那`1024`个`undo slot`也只能支持`1024`个读写事务同时执行，所以设计`InnoDB`的大佬一口气定义了`128`个回滚段，也就相当于有了`128 × 1024 = 131072`个`undo slot`。
+
+每个回滚段都对应着一个`Rollback Segment Header`页面，有128个回滚段，自然就要有128个`Rollback Segment Header`页面，在系统表空间的第`5`号页面的某个区域包含了128个8字节大小的格子：
+
+<img src="./images/image-20251020151429146.png" alt="image-20251020151429146" style="zoom:33%;" />
+
+每个8字节的格子的构造就像这样：
+
+<img src="./images/image-20251020151544163.png" alt="image-20251020151544163" style="zoom:50%;" />
+
+- 4字节大小的`Space ID`，代表一个表空间的ID。不同的回滚段可能分布在不同的表空间中。
+- 4字节大小的`Page number`，代表一个页号。也就是说每个8字节大小的`格子`相当于一个指针，指向某个表空间中的某个页面，这些页面就是`Rollback Segment Header`。
+
+
+
+在系统表空间的第`5`号页面中存储了128个`Rollback Segment Header`页面地址，每个`Rollback Segment Header`就相当于一个回滚段。在`Rollback Segment Header`页面中，又包含`1024`个`undo slot`，每个`undo slot`都对应一个`Undo页面`链表。我们画个示意图：
+
+<img src="./images/image-20251020151742252.png" alt="image-20251020151742252" style="zoom:50%;" />
+
+###### 回滚段的分类
+
+我们把这128个回滚段给编一下号，最开始的回滚段称之为`第0号回滚段`，之后依次递增，最后一个回滚段就称之为`第127号回滚段`。这128个回滚段可以被分成两大类：
+
+- 第`0`号、第`33～127`号回滚段属于一类。其中第`0`号回滚段必须在系统表空间中（就是说第`0`号回滚段对应的`Rollback Segment Header`页面必须在系统表空间中），第`33～127`号回滚段既可以在系统表空间中，也可以在自己配置的`undo`表空间中。
+
+    如果一个事务在执行过程中由于对普通表的记录做了改动需要分配`Undo页面`链表时，必须从这一类的段中分配相应的`undo slot`。
+
+- 第`1～32`号回滚段属于一类。这些回滚段必须在临时表空间（对应着数据目录中的`ibtmp1`文件）中。
+
+    如果一个事务在执行过程中由于对临时表的记录做了改动需要分配`Undo页面`链表时，必须从这一类的段中分配相应的`undo slot`。
+
+ 也就是说如果一个事务在执行过程中既对普通表的记录做了改动，又对临时表的记录做了改动，那么需要为这个记录分配2个回滚段，再分别到这两个回滚段中分配对应的`undo slot`。
+
+>  不知道大家有没有疑惑，为什么要把针对普通表和临时表来划分不同种类的`回滚段`呢？这个还得从`Undo页面`本身说起，我们说`Undo页面`其实是类型为`FIL_PAGE_UNDO_LOG`的页面的简称，说到底它也是一个普通的页面。我们前面说过，在修改页面之前一定要先把对应的`redo日志`写上，这样在系统奔溃重启时才能恢复到奔溃前的状态。我们向`Undo页面`写入`undo日志`本身也是一个写页面的过程，设计`InnoDB`的大佬为此还设计了许多种`redo日志`的类型，比方说`MLOG_UNDO_HDR_CREATE`、`MLOG_UNDO_INSERT`、`MLOG_UNDO_INIT`等等等等，也就是说我们对`Undo页面`做的任何改动都会记录相应类型的`redo日志`。但是对于临时表来说，因为修改临时表而产生的`undo日志`只需要在系统运行过程中有效，如果系统奔溃了，那么在重启时也不需要恢复这些`undo`日志所在的页面，所以在写针对临时表的`Undo页面`时，并不需要记录相应的`redo日志`。总结一下针对普通表和临时表划分不同种类的`回滚段`的原因：在修改针对普通表的回滚段中的Undo页面时，需要记录对应的redo日志，而修改针对临时表的回滚段中的Undo页面时，不需要记录对应的redo日志。
+
+##### 为事务分配Undo页面链表详细过程
+
+- 事务在执行过程中对普通表的记录首次做改动之前，首先会到系统表空间的第`5`号页面中分配一个回滚段（其实就是获取一个`Rollback Segment Header`页面的地址）。一旦某个回滚段被分配给了这个事务，那么之后该事务中再对普通表的记录做改动时，就不会重复分配了。
+
+    使用传说中的`round-robin`（循环使用）方式来分配回滚段。比如当前事务分配了第`0`号回滚段，那么下一个事务就要分配第`33`号回滚段，下下个事务就要分配第`34`号回滚段，简单一点的说就是这些回滚段被轮着分配给不同的事务（就是这么简单粗暴，没什么好说的）。
+
+- 在分配到回滚段后，首先看一下这个回滚段的两个`cached链表`有没有已经缓存了的`undo slot`，比如如果事务做的是`INSERT`操作，就去回滚段对应的`insert undo cached链表`中看看有没有缓存的`undo slot`；如果事务做的是`DELETE`操作，就去回滚段对应的`update undo cached链表`中看看有没有缓存的`undo slot`。如果有缓存的`undo slot`，那么就把这个缓存的`undo slot`分配给该事务。
+
+- 如果没有缓存的`undo slot`可供分配，那么就要到`Rollback Segment Header`页面中找一个可用的`undo slot`分配给当前事务。
+
+    从`Rollback Segment Header`页面中分配可用的`undo slot`的方式我们上面也说过了，就是从第`0`个`undo slot`开始，如果该`undo slot`的值为`FIL_NULL`，意味着这个`undo slot`是空闲的，就把这个`undo slot`分配给当前事务，否则查看第`1`个`undo slot`是否满足条件，依次类推，直到最后一个`undo slot`。如果这`1024`个`undo slot`都没有值为`FIL_NULL`的情况，就直接报错喽（一般不会出现这种情况）～
+
+- 找到可用的`undo slot`后，如果该`undo slot`是从`cached链表`中获取的，那么它对应的`Undo Log Segment`已经分配了，否则的话需要重新分配一个`Undo Log Segment`，然后从该`Undo Log Segment`中申请一个页面作为`Undo页面`链表的`first undo page`。
+
+- 然后事务就可以把`undo日志`写入到上面申请的`Undo页面`链表了！
+
+如果一个事务在执行过程中既对普通表的记录做了改动，又对临时表的记录做了改动，那么需要为这个记录分配2个回滚段。并发执行的不同事务其实也可以被分配相同的回滚段，只要分配不同的undo slot就可以了。
+
+
+
+#### roll_pointer隐藏列的含义
+
+本质上就是一个指向记录对应的`undo日志`的一个指针。比方说我们上面向`undo_demo`表里插入了2条记录，每条记录都有与其对应的一条`undo日志`。记录被存储到了类型为`FIL_PAGE_INDEX`的页面中（就是我们前面一直所说的`数据页`），`undo日志`被存放到了类型为`FIL_PAGE_UNDO_LOG`的页面中。效果如图所示：
+
+<img src="./images/image-20251020094842185.png" alt="image-20251020094842185" style="zoom:50%;" />
+
+
+
+#### 回滚段相关配置
+
+**配置回滚段数量**
+
+我们前面说系统中一共有`128`个回滚段，其实这只是默认值，我们可以通过启动参数`innodb_rollback_segments`来配置回滚段的数量，可配置的范围是`1~128`。但是这个参数并不会影响针对临时表的回滚段数量，针对临时表的回滚段数量一直是`32`，也就是说：
+
+- 如果我们把`innodb_rollback_segments`的值设置为`1`，那么只会有1个针对普通表的可用回滚段，但是仍然有32个针对临时表的可用回滚段。
+- 如果我们把`innodb_rollback_segments`的值设置为`2～33`之间的数，效果和将其设置为`1`是一样的。
+- 如果我们把`innodb_rollback_segments`设置为大于`33`的数，那么针对普通表的可用回滚段数量就是该值减去32。
+
+**配置undo表空间**
+
+默认情况下，针对普通表设立的回滚段（第`0`号以及第`33~127`号回滚段）都是被分配到系统表空间的。其中的第第`0`号回滚段是一直在系统表空间的，但是第`33~127`号回滚段可以通过配置放到自定义的`undo表空间`中。但是这种配置只能在系统初始化（创建数据目录时）的时候使用，一旦初始化完成，之后就不能再次更改了。我们看一下相关启动参数：
+
+- 通过`innodb_undo_directory`指定`undo表空间`所在的目录，如果没有指定该参数，则默认`undo表空间`所在的目录就是数据目录。
+
+- 通过`innodb_undo_tablespaces`定义`undo表空间`的数量。该参数的默认值为`0`，表明不创建任何`undo表空间`。
+
+    第`33~127`号回滚段可以平均分布到不同的`undo表空间`中。
+
+  比如我们在系统初始化时指定的`innodb_rollback_segments`为`35`，`innodb_undo_tablespaces`为`2`，这样就会将第`33`、`34`号回滚段分别分布到一个`undo表空间`中。
+
+  设立`undo表空间`的一个好处就是在`undo表空间`中的文件大到一定程度时，可以自动的将该`undo表空间`截断（truncate）成一个小文件。而系统表空间的大小只能不断的增大，却不能截断。
+
+
+
+
+
+### 事务的隔离级别与MVCC
+
+#### 事务隔离级别
+
+##### 事务并发执行遇到的问题
+
+- 脏写（`Dirty Write`）
+
+  如果一个事务修改了另一个未提交事务修改过的数据，那就意味着发生了`脏写`
+
+  <img src="./images/image-20251022085422875.png" alt="image-20251022085422875" style="zoom: 33%;" />
+
+- 脏读（`Dirty Read`）
+
+  如果一个事务读到了另一个未提交事务修改过的数据，那就意味着发生了`脏读`
+
+  <img src="./images/image-20251022085522534.png" alt="image-20251022085522534" style="zoom:33%;" />
+
+- 不可重复读（Non-Repeatable Read）
+
+  如果一个事务只能读到另一个已经提交的事务修改过的数据，并且其他事务每对该数据进行一次修改并提交后，该事务都能查询得到最新值，那就意味着发生了`不可重复读`
+
+  <img src="./images/image-20251022085607717.png" alt="image-20251022085607717" style="zoom:33%;" />
+
+- 幻读（Phantom）
+
+  如果一个事务先根据某些条件查询出一些记录，之后另一个事务又向表中插入了符合这些条件的记录，原先的事务再次按照该条件查询时，能把另一个事务插入的记录也读出来，那就意味着发生了`幻读`
+
+<img src="./images/image-20251022085703087.png" alt="image-20251022085703087" style="zoom:33%;" />
+
+##### SQL标准中的四种隔离级别
+
+- `READ UNCOMMITTED`：未提交读。
+- `READ COMMITTED`：已提交读。
+- `REPEATABLE READ`：可重复读。
+- `SERIALIZABLE`：可串行化。
+
+| 隔离级别           | 脏读         | 不可重复读   | 幻读         |
+| ------------------ | ------------ | ------------ | ------------ |
+| `READ UNCOMMITTED` | Possible     | Possible     | Possible     |
+| `READ COMMITTED`   | Not Possible | Possible     | Possible     |
+| `REPEATABLE READ`  | Not Possible | Not Possible | Possible     |
+| `SERIALIZABLE`     | Not Possible | Not Possible | Not Possible |
+
+> `脏写`是怎么回事儿？怎么里边都没写呢？这是因为脏写这个问题太严重了，不论是哪种隔离级别，都不允许脏写的情况发生。
+
+##### MySQL中支持的四种隔离级别
+
+ 不同的数据库厂商对`SQL标准`中规定的四种隔离级别支持不一样，比方说`Oracle`就只支持`READ COMMITTED`和`SERIALIZABLE`隔离级别。本书中所讨论的`MySQL`虽然支持4种隔离级别，但与`SQL标准`中所规定的各级隔离级别允许发生的问题却有些出入，MySQL在REPEATABLE READ隔离级别下，是可以禁止幻读问题的发生的，`MySQL`的默认隔离级别为`REPEATABLE READ`
+
+```mysql
+SET [GLOBAL|SESSION] TRANSACTION ISOLATION LEVEL level;
+
+level: {
+     REPEATABLE READ
+   | READ COMMITTED
+   | READ UNCOMMITTED
+   | SERIALIZABLE
+}
+
+## 使用GLOBAL关键字（在全局范围影响）：
+SET GLOBAL TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+## 只对执行完该语句之后产生的会话起作用。
+## 当前已经存在的会话无效。
+
+## 使用SESSION关键字（在会话范围影响）：
+SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+## 对当前会话的所有后续的事务有效
+## 该语句可以在已经开启的事务中间执行，但不会影响当前正在执行的事务。
+## 如果在事务之间执行，则对后续的事务有效。
+
+## 上述两个关键字都不用（只对执行语句后的下一个事务产生影响）：
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+## 只对当前会话中下一个即将开启的事务有效。
+## 下一个事务执行完后，后续事务将恢复到之前的隔离级别。
+## 该语句不能在已经开启的事务中间执行，会报错的。
+
+
+mysql> SHOW VARIABLES LIKE 'transaction_isolation';
++-----------------------+-----------------+
+| Variable_name         | Value           |
++-----------------------+-----------------+
+| transaction_isolation | REPEATABLE-READ |
++-----------------------+-----------------+
+1 row in set (0.02 sec)
+
+```
+
+
+
+#### MVCC原理
+
+##### 版本链
+
+对于使用`InnoDB`存储引擎的表来说，它的聚簇索引记录中都包含两个必要的隐藏列
+
+- `trx_id`：每次一个事务对某条聚簇索引记录进行改动时，都会把该事务的`事务id`赋值给`trx_id`隐藏列。
+- `roll_pointer`：每次对某条聚簇索引记录进行改动时，都会把旧的版本写入到`undo日志`中，然后这个隐藏列就相当于一个指针，可以通过它来找到该记录修改前的信息。
+
+每次对记录进行改动，都会记录一条`undo日志`，每条`undo日志`也都有一个`roll_pointer`属性（`INSERT`操作对应的`undo日志`没有该属性，因为该记录并没有更早的版本），可以将这些`undo日志`都连起来，串成一个链表，所以现在的情况就像下图一样：
+
+<img src="./images/image-20251022093215530.png" alt="image-20251022093215530" style="zoom:33%;" />
+
+对该记录每次更新后，都会将旧值放到一条`undo日志`中，就算是该记录的一个旧版本，随着更新次数的增多，所有的版本都会被`roll_pointer`属性连接成一个链表，我们把这个链表称之为`版本链`，版本链的头节点就是当前记录最新的值。另外，每个版本中还包含生成该版本时对应的`事务id`
+
+
+
+##### ReadView
+
+- 对于使用`READ UNCOMMITTED`隔离级别的事务来说，由于可以读到未提交事务修改过的记录，所以直接读取记录的最新版本就好了；
+- 对于使用`SERIALIZABLE`隔离级别的事务来说，设计`InnoDB`的大佬规定使用加锁的方式来访问记录；
+- 对于使用`READ COMMITTED`和`REPEATABLE READ`隔离级别的事务来说，都必须保证读到已经提交了的事务修改过的记录，也就是说假如另一个事务已经修改了记录但是尚未提交，是不能直接读取最新版本的记录的，核心问题就是：需要判断一下版本链中的哪个版本是当前事务可见的。
+
+`ReadView`中主要包含4个比较重要的内容：
+
+- `m_ids`：表示在生成`ReadView`时当前系统中活跃的读写事务的`事务id`列表。
+- `min_trx_id`：表示在生成`ReadView`时当前系统中活跃的读写事务中最小的`事务id`，也就是`m_ids`中的最小值。
+- `max_trx_id`：表示生成`ReadView`时系统中应该分配给下一个事务的`id`值。
+- `creator_trx_id`：表示生成该`ReadView`的事务的`事务id`。
+
+在访问某条记录时，只需要按照下面的步骤判断记录的某个版本是否可见：
+
+- 如果被访问版本的`trx_id`属性值与`ReadView`中的`creator_trx_id`值相同，意味着当前事务在访问它自己修改过的记录，所以该版本可以被当前事务访问。
+
+  ```
+  小贴士：只有在对表中的记录做改动时（执行INSERT、DELETE、UPDATE这些语句时）才会为事务分配事务id，否则在一个只读事务中的事务id值都默认为0。
+  ```
+
+- 如果被访问版本的`trx_id`属性值小于`ReadView`中的`min_trx_id`值，表明生成该版本的事务在当前事务生成`ReadView`前已经提交，所以该版本可以被当前事务访问。
+
+- 如果被访问版本的`trx_id`属性值大于`ReadView`中的`max_trx_id`值，表明生成该版本的事务在当前事务生成`ReadView`后才开启，所以该版本不可以被当前事务访问。
+
+- 如果被访问版本的`trx_id`属性值在`ReadView`的`min_trx_id`和`max_trx_id`之间，那就需要判断一下`trx_id`属性值是不是在`m_ids`列表中，如果在，说明创建`ReadView`时生成该版本的事务还是活跃的，该版本不可以被访问；如果不在，说明创建`ReadView`时生成该版本的事务已经被提交，该版本可以被访问。
+
+如果某个版本的数据对当前事务不可见的话，那就顺着版本链找到下一个版本的数据，继续按照上面的步骤判断可见性，依此类推，直到版本链中的最后一个版本。如果最后一个版本也不可见的话，那么就意味着该条记录对该事务完全不可见，查询结果就不包含该记录。
+
+
+
+在`MySQL`中，`READ COMMITTED`和`REPEATABLE READ`隔离级别的的一个非常大的区别就是它们生成ReadView的时机不同。
+
+- 使用READ COMMITTED隔离级别的事务在每次查询开始时都会生成一个独立的ReadView。
+- 使用REPEATABLE READ的事务只在第一次进行普通SELECT操作前生成一个ReadView，之后的查询操作都重复使用这个ReadView就好了。
+
+
+
+
+
+#### purge
+
+- `insert undo`在事务提交之后就可以被释放掉了，而`update undo`由于还需要支持`MVCC`，不能立即删除掉。
+  - undo页面中包括`Undo Log Header`，其中`TRX_UNDO_HISTORY_NODE`字段是`History`链表的节点，当一个事务提交以后，就会将这一组undo日志的链表节点加入到`History`链表的头节点去。
+  - 一个回滚段包含一个`Rollback Segment Header`页面，`History`链表的基节点在`Rollback Segment Header`中，也就是说一个回滚段对应一个`History`链表
+    - `TRX_RSEG_HISTORY_SIZE`：`History`链表占用的页面数量。
+    - `TRX_RSEG_HISTORY`：`History`链表的基节点。
+
+- 为了支持`MVCC`，对于`delete mark`操作来说，仅仅是在记录上打一个删除标记，并没有真正将它删除掉（加入垃圾链表）。
+
+  undo页面中包括`Undo Log Header`，其中`TRX_UNDO_DEL_MARKS`属性用于标记本组undo
+
+
+
+##### 删除时机
+
+update undo日志和被标记删除的记录都是为了MVCC而存在的，只要系统中最早产生的ReadView不再访问它们，这些记录也就没有用了。当系统中最早产生的ReadView对应的事务提交了，ReadView就不会再被使用了。
+
+- 在一个事务提交时，会给这个事务生成一个事务no的值（与事务id不同），用来表示事务提交的先后顺序，先提交的事务no小，后提交的事务no大。
+
+  undo页面中`Undo Log Header`中的`TRX_UNDO_TRX_NO`用于存储提交本组undo日志的事务no，`History`链表也是按照事务no值来排序各组undo日志。
+
+- ReadView中还包括一个事务no的属性值，ReadView创建时将当前系统最大的事务no+1赋值，整个系统中的ReadView按照事务no顺序串成一个链表
+
+purge线程执行时
+
+- 把系统中最早生成的ReadView取出来，如果不存在ReadView，就创建一个ReadView，新创建的ReadView的事务no一定比当前已经提交的事务no要大
+- 从`History`链表中取出事务no最小的一组undo日志，如果当前ReadView的事务no比undo日志的事务no要大，证明当前undo日志已经对所有事务可见，可以删除，从`History`链表移除，释放存储空间。
+- 如果当前undo日志中包含delete mark的记录，那么将对应的记录移动到索引页的垃圾链表。
+
+> 这里我们需要注意的一点，当前系统中系统最早生成的ReadView决定了purge操作中可以清理哪些update undo日志以及打了删除标记的记录。如果某个事物使用的`REPEATABLE READ`隔离级别，那么该事务一直复用最初产生的ReadView。假如这个事务运行了很久，一直没有提交，那么最早产生的ReadView会一直不释放。系统中updtae undo日志和打了删除标记的记录就会越来越多，表空间对应的文件也会越来越大，一条记录的版本链将越来越长，从而影响系统的性能。
+>
+
+
+
+### 锁
 
 
 
@@ -6089,6 +6808,36 @@ Last checkpoint at  124052494
 
 比如，性别的区分度就很小，不适合建立索引或不适合排在联合索引列的靠前的位置，而 UUID 这类字段就比较适合做索引或排在联合索引列的靠前的位置。但是也要看具体的场景，如果 4 个枚举值里面，有一个枚举值占总数据的 20%，然后有业务需求需要查询这个枚举值的记录，那么这种场景下还是适合添加索引的，因为数据占比小的枚举值是能用到索引的。
 
-**随机IO 顺序IO**
 
-@todo 放到操作系统里 磁盘读取 
+
+### 临时表
+
+`Using temporary` 是执行计划（Execution Plan）里的内部操作提示，不等于用户创建的临时表。
+
+> MySQL **在执行过程中自动创建了一个内部临时表** 来保存中间结果（例如排序、分组、去重等操作），以便继续处理查询。
+
+🔹 这些“临时表”是由 MySQL 引擎自己生成的，
+ 🔹 存在于**内存或磁盘的临时空间**中，
+ 🔹 **不会出现在 `SHOW TABLES` 里**，
+ 🔹 **会在查询结束后立即销毁**。
+
+用户创建的临时表（Temporary Table）
+
+```mysql
+CREATE TEMPORARY TABLE temp_data (...);
+```
+
+
+
+| 项目                     | “Using temporary”  | 用户创建的临时表 (`CREATE TEMPORARY TABLE`) |
+| ------------------------ | ------------------ | ------------------------------------------- |
+| 谁创建的                 | MySQL 自动创建     | 用户手动创建                                |
+| 是否可见                 | ❌ 不可见           | ✅ 可见（当前会话）                          |
+| 存在时间                 | 查询执行期间       | 会话结束前                                  |
+| 存储位置                 | 内存或磁盘临时空间 | 临时数据库目录（tmpdir）                    |
+| 用途                     | 执行计划中间结果   | 业务逻辑中存放中间数据                      |
+| 能否手动操作             | ❌ 不能             | ✅ 可以执行增删改查                          |
+| 是否出现在 `SHOW TABLES` | ❌ 不会             | ✅ 会（仅当前会话）                          |
+
+
+

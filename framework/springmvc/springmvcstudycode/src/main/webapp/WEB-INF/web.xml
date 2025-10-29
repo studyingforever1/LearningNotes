@@ -3,11 +3,14 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
          version="4.0">
+
+<!--    用于spring容器的文件配置-->
     <context-param>
         <param-name>contextConfigLocation</param-name>
         <param-value>classpath:spring-config.xml</param-value>
     </context-param>
 
+<!--   DispatcherServlet配置 启动springmvc的入口-->
     <servlet>
         <servlet-name>mvc-test</servlet-name>
         <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
@@ -29,6 +32,7 @@
         <url-pattern>/</url-pattern>
     </servlet-mapping>
 
+<!--    启动spring容器的入口-->
     <listener>
         <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
     </listener>

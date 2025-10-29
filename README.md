@@ -6,4 +6,8 @@
 - netty源码
 - mysql深入学习
 - Linux内核源码
+- es学习
+- rocketmq学习
+- kafka学习
+- dubbo学习
   

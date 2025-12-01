@@ -16,4 +16,7 @@
     <mvc:interceptors>
         <bean class="com.zcq.springmvcstudycode.controller.BeanInterceptor"></bean>
     </mvc:interceptors>
+
+    <mvc:annotation-driven/>
+
 </beans>

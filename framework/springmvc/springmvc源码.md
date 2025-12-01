@@ -2401,6 +2401,16 @@ public class DispatcherServlet extends FrameworkServlet {
 ```JAVA
 public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
 		implements BeanFactoryAware, InitializingBean {
+    
+   	//@InitBinder注解方法过滤
+	public static final MethodFilter INIT_BINDER_METHODS = method ->
+			AnnotatedElementUtils.hasAnnotation(method, InitBinder.class);
+
+	//@ModelAttribute注解方法过滤
+	public static final MethodFilter MODEL_ATTRIBUTE_METHODS = method ->
+			(!AnnotatedElementUtils.hasAnnotation(method, RequestMapping.class) &&
+					AnnotatedElementUtils.hasAnnotation(method, ModelAttribute.class));
+
 
     @Override
 	public void afterPropertiesSet() {
@@ -2449,7 +2459,7 @@ public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
 			if (beanType == null) {
 				throw new IllegalStateException("Unresolvable type for ControllerAdviceBean: " + adviceBean);
 			}
-             //找到所有的@
+             //找到所有的@ModelAttribute注解的方法 不带@RequestMapping注解的
 			Set<Method> attrMethods = MethodIntrospector.selectMethods(beanType, MODEL_ATTRIBUTE_METHODS);
 			if (!attrMethods.isEmpty()) {
 				this.modelAttributeAdviceCache.put(adviceBean, attrMethods);
@@ -2802,7 +2812,7 @@ public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
 			});
 			invocableMethod = invocableMethod.wrapConcurrentResult(result);
 		}
-		//
+		//调用方法 处理参数和返回值
 		invocableMethod.invokeAndHandle(webRequest, mavContainer);
 		if (asyncManager.isConcurrentHandlingStarted()) {
 			return null;
@@ -2859,12 +2869,105 @@ public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
 
 
 
-##### InvocableHandlerMethod
+##### ServletInvocableHandlerMethod
 
 ```java
-public class InvocableHandlerMethod extends HandlerMethod {
+public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
+
+    //调用controller方法 处理参数和返回值
+	public void invokeAndHandle(ServletWebRequest webRequest, ModelAndViewContainer mavContainer,
+			Object... providedArgs) throws Exception {
+
+        //调用controller方法 处理参数和返回值
+		Object returnValue = invokeForRequest(webRequest, mavContainer, providedArgs);
+		setResponseStatus(webRequest);
+
+		if (returnValue == null) {
+			if (isRequestNotModified(webRequest) || getResponseStatus() != null || mavContainer.isRequestHandled()) {
+				disableContentCachingIfNecessary(webRequest);
+				mavContainer.setRequestHandled(true);
+				return;
+			}
+		}
+		else if (StringUtils.hasText(getResponseStatusReason())) {
+			mavContainer.setRequestHandled(true);
+			return;
+		}
+
+		mavContainer.setRequestHandled(false);
+		Assert.state(this.returnValueHandlers != null, "No return value handlers");
+		try {
+			this.returnValueHandlers.handleReturnValue(
+					returnValue, getReturnValueType(returnValue), mavContainer, webRequest);
+		}
+		catch (Exception ex) {
+			if (logger.isTraceEnabled()) {
+				logger.trace(formatErrorForReturnValue(returnValue), ex);
+			}
+			throw ex;
+		}
+	}
 
 
+	@Nullable
+	public Object invokeForRequest(NativeWebRequest request, @Nullable ModelAndViewContainer mavContainer,
+			Object... providedArgs) throws Exception {
+		//绑定参数
+		Object[] args = getMethodArgumentValues(request, mavContainer, providedArgs);
+		if (logger.isTraceEnabled()) {
+			logger.trace("Arguments: " + Arrays.toString(args));
+		}
+
+		if (shouldValidateArguments() && this.methodValidator != null) {
+			this.methodValidator.applyArgumentValidation(
+					getBean(), getBridgedMethod(), getMethodParameters(), args, this.validationGroups);
+		}
+		//调用方法 处理返回值
+		Object returnValue = doInvoke(args);
+
+		if (shouldValidateReturnValue() && this.methodValidator != null) {
+			this.methodValidator.applyReturnValueValidation(
+					getBean(), getBridgedMethod(), getReturnType(), returnValue, this.validationGroups);
+		}
+
+		return returnValue;
+	}
+    
+    protected Object[] getMethodArgumentValues(NativeWebRequest request, @Nullable ModelAndViewContainer mavContainer,
+			Object... providedArgs) throws Exception {
+		//获取参数列表
+		MethodParameter[] parameters = getMethodParameters();
+		if (ObjectUtils.isEmpty(parameters)) {
+			return EMPTY_ARGS;
+		}
+		//对于每个参数 都进行参数解析和绑定
+		Object[] args = new Object[parameters.length];
+		for (int i = 0; i < parameters.length; i++) {
+			MethodParameter parameter = parameters[i];
+			parameter.initParameterNameDiscovery(this.parameterNameDiscoverer);
+			args[i] = findProvidedArgument(parameter, providedArgs);
+			if (args[i] != null) {
+				continue;
+			}
+			if (!this.resolvers.supportsParameter(parameter)) {
+				throw new IllegalStateException(formatArgumentError(parameter, "No suitable resolver"));
+			}
+			try {
+				args[i] = this.resolvers.resolveArgument(parameter, mavContainer, request, this.dataBinderFactory);
+			}
+			catch (Exception ex) {
+				// Leave stack trace for later, exception may actually be resolved and handled...
+				if (logger.isDebugEnabled()) {
+					String exMsg = ex.getMessage();
+					if (exMsg != null && !exMsg.contains(parameter.getExecutable().toGenericString())) {
+						logger.debug(formatArgumentError(parameter, exMsg));
+					}
+				}
+				throw ex;
+			}
+		}
+		return args;
+	}
 
 
 }
@@ -2908,6 +3011,2864 @@ public interface HandlerInterceptor {
 
 
 
+
+### 桥接方法
+
+在 **Java 泛型** 的实现机制中，“桥接方法”是一种 **编译器自动生成** 的方法，用来保证 **泛型擦除（type erasure）后仍然保持多态性**。
+
+Java 的泛型是通过 **类型擦除（Type Erasure）** 实现的，也就是说，编译后所有泛型类型参数（如 `<T>`）都会被擦除成 `Object` 或其上界类型。
+ 这样会导致 **子类重写泛型方法时，方法签名不同**，从而破坏多态性。
+
+```java
+class Parent<T> {
+    T getValue() {
+        return null;
+    }
+}
+
+class Child extends Parent<String> {
+    //编译后的实际情况（经过类型擦除）：
+    //Parent.getValue() 变成了 Object getValue()
+    //Child.getValue() 是 String getValue()
+    //Child 并没有真正“覆盖”父类的 Object getValue()
+    @Override
+    String getValue() {
+        return "hello";
+    }
+    //编译器会在 Child 类中自动生成一个 桥接方法（Bridge Method）：隐藏的
+    public Object getValue() {   // ← 编译器自动生成的桥接方法 ACC_SYNTHETIC ACC_BRIDGE
+    	return getValue();       // 调用实际的 String getValue()
+	}
+}
+
+//这样，即使在运行时通过父类引用调用，仍然能正确调用到子类的实现。
+Parent p = new Child();
+Object o = p.getValue();
+
+
+```
+
+
+
+
+
+### 参数解析器
+
+#### 继承关系
+
+<img src=".\images\image-20251126134316272.png" alt="image-20251126134316272" style="zoom:50%;" />
+
+#### HandlerMethodArgumentResolver
+
+```java
+//参数解析器的根接口
+public interface HandlerMethodArgumentResolver {
+
+    //判断这个解析器是否支持当前参数
+    boolean supportsParameter(MethodParameter parameter);
+
+    //执行实际解析逻辑，返回参数值
+    @Nullable
+    Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+          NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception;
+
+}
+```
+
+
+
+#### AbstractNamedValueMethodArgumentResolver
+
+从“命名值”（named value）解析控制器方法参数的抽象基类
+
+Named value 指 有名字的参数来源：
+
+- HTTP 请求参数（query params / form data）
+- 请求头（Request Header）
+- 路径变量（PathVariable）
+
+每个 named value 可以有三个属性：
+
+- name：参数名
+- required：是否必填
+- defaultValue：默认值
+
+```java
+
+public abstract class AbstractNamedValueMethodArgumentResolver implements HandlerMethodArgumentResolver {
+    @Nullable
+	private final ConfigurableBeanFactory configurableBeanFactory;
+
+	@Nullable
+	private final BeanExpressionContext expressionContext;
+
+	private final Map<MethodParameter, NamedValueInfo> namedValueInfoCache = new ConcurrentHashMap<>(256);
+
+    
+    //解析参数模板方法
+    @Override
+	@Nullable
+	public final Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+		//获取命名值信息（name、required、defaultValue）
+		NamedValueInfo namedValueInfo = getNamedValueInfo(parameter);
+         //获取方法参数
+		MethodParameter nestedParameter = parameter.nestedIfOptional();
+		boolean hasDefaultValue = KotlinDetector.isKotlinReflectPresent() &&
+				KotlinDetector.isKotlinType(parameter.getDeclaringClass()) &&
+				KotlinDelegate.hasDefaultValue(nestedParameter);
+		//通过 ${...} 占位符或 #{...} SpEL 表达式动态解析参数名
+		Object resolvedName = resolveEmbeddedValuesAndExpressions(namedValueInfo.name);
+		if (resolvedName == null) {
+			throw new IllegalArgumentException(
+					"Specified name must not resolve to null: [" + namedValueInfo.name + "]");
+		}
+
+		Object arg = resolveName(resolvedName.toString(), nestedParameter, webRequest);
+         //参数值为空时的处理
+		if (arg == null) {
+             //使用注解里提供的默认值
+			if (namedValueInfo.defaultValue != null) {
+				arg = resolveEmbeddedValuesAndExpressions(namedValueInfo.defaultValue);
+			}
+             //如果参数是必填且不是 Optional，则抛异常
+			else if (namedValueInfo.required && !nestedParameter.isOptional()) {
+				handleMissingValue(namedValueInfo.name, nestedParameter, webRequest);
+			}
+			if (!hasDefaultValue) {
+				arg = handleNullValue(namedValueInfo.name, arg, nestedParameter.getNestedParameterType());
+			}
+		}
+         //参数值为空字符串时使用默认值
+		else if ("".equals(arg) && namedValueInfo.defaultValue != null) {
+			arg = resolveEmbeddedValuesAndExpressions(namedValueInfo.defaultValue);
+		}
+		//类型转换
+		if (binderFactory != null && (arg != null || !hasDefaultValue)) {
+             //
+			arg = convertIfNecessary(parameter, webRequest, binderFactory, namedValueInfo, arg);
+			// Check for null value after conversion of incoming argument value
+             //转换后如果仍为 null
+			if (arg == null) {
+                 //尝试使用默认值
+				if (namedValueInfo.defaultValue != null) {
+					arg = resolveEmbeddedValuesAndExpressions(namedValueInfo.defaultValue);
+					arg = convertIfNecessary(parameter, webRequest, binderFactory, namedValueInfo, arg);
+				}
+                 //如果参数是必填且不是 Optional，则抛异常
+				else if (namedValueInfo.required && !nestedParameter.isOptional()) {
+					handleMissingValueAfterConversion(namedValueInfo.name, nestedParameter, webRequest);
+				}
+			}
+		}
+		//最终处理解析后的参数
+		handleResolvedValue(arg, namedValueInfo.name, parameter, mavContainer, webRequest);
+
+		return arg;
+	}
+
+    //获取命名值的信息
+    private NamedValueInfo getNamedValueInfo(MethodParameter parameter) {
+         //从缓存中取
+		NamedValueInfo namedValueInfo = this.namedValueInfoCache.get(parameter);
+		if (namedValueInfo == null) {
+             //创建namedValueInfo
+			namedValueInfo = createNamedValueInfo(parameter);
+             //更新namedValueInfo
+			namedValueInfo = updateNamedValueInfo(parameter, namedValueInfo);
+			this.namedValueInfoCache.put(parameter, namedValueInfo);
+		}
+		return namedValueInfo;
+	}
+    
+     //更新NamedValueInfo
+	private NamedValueInfo updateNamedValueInfo(MethodParameter parameter, NamedValueInfo info) {
+         //获取NamedValueInfo的name
+		String name = info.name;
+         //如果NamedValueInfo中的name未指定
+		if (info.name.isEmpty()) {
+             //使用MethodParameter中的参数名
+			name = parameter.getParameterName();
+             //如果参数名也为空 报错
+			if (name == null) {
+				throw new IllegalArgumentException("""
+						Name for argument of type [%s] not specified, and parameter name information not \
+						available via reflection. Ensure that the compiler uses the '-parameters' flag."""
+							.formatted(parameter.getNestedParameterType().getName()));
+			}
+		}
+         //默认值如果为空，使用null
+		String defaultValue = (ValueConstants.DEFAULT_NONE.equals(info.defaultValue) ? null : info.defaultValue);
+         //更新NamedValueInfo
+		return new NamedValueInfo(name, info.required, defaultValue);
+	}
+    
+    
+    @Nullable
+	private static Object convertIfNecessary(
+			MethodParameter parameter, NativeWebRequest webRequest, WebDataBinderFactory binderFactory,
+			NamedValueInfo namedValueInfo, @Nullable Object arg) throws Exception {
+		//创建WebDataBinder
+		WebDataBinder binder = binderFactory.createBinder(webRequest, null, namedValueInfo.name);
+		Class<?> parameterType = parameter.getParameterType();
+		if (KotlinDetector.isKotlinPresent() && KotlinDetector.isInlineClass(parameterType)) {
+			Constructor<?> ctor = BeanUtils.findPrimaryConstructor(parameterType);
+			if (ctor != null) {
+				parameterType = ctor.getParameterTypes()[0];
+			}
+		}
+		try {
+             //使用binder进行类型转换（Editor、ConversionService）
+			arg = binder.convertIfNecessary(arg, parameterType, parameter);
+		}
+		catch (ConversionNotSupportedException ex) {
+			throw new MethodArgumentConversionNotSupportedException(arg, ex.getRequiredType(),
+					namedValueInfo.name, parameter, ex.getCause());
+		}
+		catch (TypeMismatchException ex) {
+			throw new MethodArgumentTypeMismatchException(arg, ex.getRequiredType(),
+					namedValueInfo.name, parameter, ex.getCause());
+		}
+		return arg;
+	}
+}
+```
+
+
+
+**DefaultDataBinderFactory**
+
+```java
+public class DefaultDataBinderFactory implements WebDataBinderFactory {
+
+	@Nullable
+	private final WebBindingInitializer initializer;
+
+
+	@Override
+	public final WebDataBinder createBinder(
+			NativeWebRequest webRequest, @Nullable Object target, String objectName) throws Exception {
+
+		return createBinderInternal(webRequest, target, objectName, null);
+	}
+    
+    private WebDataBinder createBinderInternal(
+			NativeWebRequest webRequest, @Nullable Object target, String objectName,
+			@Nullable ResolvableType type) throws Exception {
+
+        //创建WebDataBinder
+		WebDataBinder dataBinder = createBinderInstance(target, objectName, webRequest);
+         //设置处理@BindParam的类
+		dataBinder.setNameResolver(new BindParamNameResolver());
+
+		if (target == null && type != null) {
+			dataBinder.setTargetType(type);
+		}
+		
+         //初始化dataBinder
+		if (this.initializer != null) {
+			this.initializer.initBinder(dataBinder);
+		}
+		//调用@InitBinder的方法
+		initBinder(dataBinder, webRequest);
+
+		if (this.methodValidationApplicable && type != null) {
+			if (type.getSource() instanceof MethodParameter parameter) {
+				MethodValidationInitializer.initBinder(dataBinder, parameter);
+			}
+		}
+
+		return dataBinder;
+	}
+    
+    //调用执行@InitBinder的方法
+	@Override
+	public void initBinder(WebDataBinder dataBinder, NativeWebRequest request) throws Exception {
+		for (InvocableHandlerMethod binderMethod : this.binderMethods) {
+             //如果当前参数的名字包含在@InitBinder中
+			if (isBinderMethodApplicable(binderMethod, dataBinder)) {
+				Object returnValue = binderMethod.invokeForRequest(request, null, dataBinder);
+				if (returnValue != null) {
+					throw new IllegalStateException(
+							"@InitBinder methods must not return a value (should be void): " + binderMethod);
+				}
+			}
+		}
+	}
+}
+```
+
+
+
+
+
+
+
+#### RequestParamMethodArgumentResolver（useDefaultResolution=false）
+
+负责处理@RequestParam标注的参数
+
+```java
+public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethodArgumentResolver
+		implements UriComponentsContributor {
+
+	private static final TypeDescriptor STRING_TYPE_DESCRIPTOR = TypeDescriptor.valueOf(String.class);
+
+	private final boolean useDefaultResolution;
+
+	@Override
+	public boolean supportsParameter(MethodParameter parameter) {
+         //如果带@RequestParam注解
+		if (parameter.hasParameterAnnotation(RequestParam.class)) {
+             //如果参数是 Map 类型
+			if (Map.class.isAssignableFrom(parameter.nestedIfOptional().getNestedParameterType())) {
+				RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
+                  //Map类型带@RequestParam注解，name值不为空
+				return (requestParam != null && StringUtils.hasText(requestParam.name()));
+			}
+			else {
+                  //普通 @RequestParam 直接返回 true
+				return true;
+			}
+		}
+         //参数没有 @RequestParam 时的情况
+		else {
+             //如果参数带 @RequestPart，则排除
+			if (parameter.hasParameterAnnotation(RequestPart.class)) {
+				return false;
+			}
+             //获取参数类型
+			parameter = parameter.nestedIfOptional();
+             //如果参数是MultipartFile类型或者Part类型的对象/数组/集合
+			if (MultipartResolutionDelegate.isMultipartArgument(parameter)) {
+				return true;
+			}
+             //如果开启了useDefaultResolution
+			else if (this.useDefaultResolution) {
+                  //如果参数类型是简单类型/简单类型数组
+				return BeanUtils.isSimpleProperty(parameter.getNestedParameterType());
+			}
+			else {
+				return false;
+			}
+		}
+	}
+    
+    //读取@RequestParam注解 创建RequestParamNamedValueInfo命名值信息
+	@Override
+	protected NamedValueInfo createNamedValueInfo(MethodParameter parameter) {
+		RequestParam ann = parameter.getParameterAnnotation(RequestParam.class);
+		return (ann != null ? new RequestParamNamedValueInfo(ann) : new RequestParamNamedValueInfo());
+	}
+    
+    
+	@Override
+	@Nullable
+	protected Object resolveName(String name, MethodParameter parameter, NativeWebRequest request) throws Exception {
+		HttpServletRequest servletRequest = request.getNativeRequest(HttpServletRequest.class);
+
+		if (servletRequest != null) {
+             //如果参数类型是MultipartFile和Part对象/数组/集合 获取并且封装成对应的参数类型
+			Object mpArg = MultipartResolutionDelegate.resolveMultipartArgument(name, parameter, servletRequest);
+			if (mpArg != MultipartResolutionDelegate.UNRESOLVABLE) {
+				return mpArg;
+			}
+		}
+		
+         //如果参数类型不对应MultipartFile和Part对象/数组/集合
+         //但是请求是一个multipart文件请求，直接获取文件参数
+		Object arg = null;
+		MultipartRequest multipartRequest = request.getNativeRequest(MultipartRequest.class);
+		if (multipartRequest != null) {
+			List<MultipartFile> files = multipartRequest.getFiles(name);
+			if (!files.isEmpty()) {
+				arg = (files.size() == 1 ? files.get(0) : files);
+			}
+		}
+         //如果没有文件
+		if (arg == null) {
+             //从请求参数（query params 或 form data）中获取值
+			String[] paramValues = request.getParameterValues(name);
+			if (paramValues == null) {
+                 //支持 数组参数名（如 name[]）
+				paramValues = request.getParameterValues(name + "[]");
+			}
+			if (paramValues != null) {
+				arg = (paramValues.length == 1 ? paramValues[0] : paramValues);
+			}
+		}
+		return arg;
+	}
+
+}
+```
+
+#### RequestParamMapMethodArgumentResolver
+
+负责处理`@RequestParam`注解中参数类型为`Map`但是没有`requestParam.name`的参数
+
+```java
+public class RequestParamMapMethodArgumentResolver implements HandlerMethodArgumentResolver {
+
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
+       //@RequestParam参数中name为空，参数类型为Map类型
+       return (requestParam != null && Map.class.isAssignableFrom(parameter.getParameterType()) &&
+             !StringUtils.hasText(requestParam.name()));
+    }
+
+    @Override
+    public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+          NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+       ResolvableType resolvableType = ResolvableType.forMethodParameter(parameter);
+		
+       //如果是MultiValueMap类型
+       if (MultiValueMap.class.isAssignableFrom(parameter.getParameterType())) {
+          // 获取MultiValueMap的value的类型
+          Class<?> valueType = resolvableType.as(MultiValueMap.class).getGeneric(1).resolve();
+          //如果value是MultipartFile类型
+          if (valueType == MultipartFile.class) {
+             //直接通过MultipartRequest获取MultiValueMap<String, MultipartFile>返回
+             MultipartRequest multipartRequest = MultipartResolutionDelegate.resolveMultipartRequest(webRequest);
+             return (multipartRequest != null ? multipartRequest.getMultiFileMap() : new LinkedMultiValueMap<>(0));
+          }
+          //如果value是Part类型
+          else if (valueType == Part.class) {
+             //获取包装LinkedMultiValueMap<String, Part>返回
+             HttpServletRequest servletRequest = webRequest.getNativeRequest(HttpServletRequest.class);
+             if (servletRequest != null && MultipartResolutionDelegate.isMultipartRequest(servletRequest)) {
+                Collection<Part> parts = servletRequest.getParts();
+                LinkedMultiValueMap<String, Part> result = new LinkedMultiValueMap<>(parts.size());
+                for (Part part : parts) {
+                   result.add(part.getName(), part);
+                }
+                return result;
+             }
+             return new LinkedMultiValueMap<>(0);
+          }
+           //如果value是其他类型
+          else {
+             //获取请求参数和值的map 包装成MultiValueMap<String,String>返回
+             Map<String, String[]> parameterMap = webRequest.getParameterMap();
+             MultiValueMap<String, String> result = new LinkedMultiValueMap<>(parameterMap.size());
+             parameterMap.forEach((key, values) -> {
+                for (String value : values) {
+                   result.add(key, value);
+                }
+             });
+             return result;
+          }
+       }
+		//如果是普通Map类型
+       else {
+          // Regular Map
+          // 获取Map中value的类型
+          Class<?> valueType = resolvableType.asMap().getGeneric(1).resolve();
+          //value如果是MultipartFile类型
+          if (valueType == MultipartFile.class) {
+             MultipartRequest multipartRequest = MultipartResolutionDelegate.resolveMultipartRequest(webRequest);
+             //直接返回Map<String, MultipartFile>类型
+             return (multipartRequest != null ? multipartRequest.getFileMap() : new LinkedHashMap<>(0));
+          }
+          //value如果是Part类型
+          else if (valueType == Part.class) {
+             HttpServletRequest servletRequest = webRequest.getNativeRequest(HttpServletRequest.class);
+             if (servletRequest != null && MultipartResolutionDelegate.isMultipartRequest(servletRequest)) {
+                Collection<Part> parts = servletRequest.getParts();
+                LinkedHashMap<String, Part> result = CollectionUtils.newLinkedHashMap(parts.size());
+                for (Part part : parts) {
+                   //返回LinkedHashMap<String, Part>，同名只取第一个
+                   if (!result.containsKey(part.getName())) {
+                      result.put(part.getName(), part);
+                   }
+                }
+                return result;
+             }
+             return new LinkedHashMap<>(0);
+          }
+          //value如果是其他类型
+          else {
+             //获取请求参数(url + 请求体)
+             Map<String, String[]> parameterMap = webRequest.getParameterMap();
+             Map<String, String> result = CollectionUtils.newLinkedHashMap(parameterMap.size());
+             //返回Map<String, String>
+             parameterMap.forEach((key, values) -> {
+                if (values.length > 0) {
+                   result.put(key, values[0]);
+                }
+             });
+             return result;
+          }
+       }
+    }
+
+}
+```
+
+#### PathVariableMethodArgumentResolver
+
+```java
+public class PathVariableMethodArgumentResolver extends AbstractNamedValueMethodArgumentResolver
+       implements UriComponentsContributor {
+
+	@Override
+	public boolean supportsParameter(MethodParameter parameter) {
+         //参数必须含有@PathVariable注解
+		if (!parameter.hasParameterAnnotation(PathVariable.class)) {
+			return false;
+		}
+         //如果是Map类型 @PathVariable注解的value值不能为空
+		if (Map.class.isAssignableFrom(parameter.nestedIfOptional().getNestedParameterType())) {
+			PathVariable pathVariable = parameter.getParameterAnnotation(PathVariable.class);
+			return (pathVariable != null && StringUtils.hasText(pathVariable.value()));
+		}
+		return true;
+	}
+
+    //创建NamedValueInfo
+	@Override
+	protected NamedValueInfo createNamedValueInfo(MethodParameter parameter) {
+		PathVariable ann = parameter.getParameterAnnotation(PathVariable.class);
+		Assert.state(ann != null, "No PathVariable annotation");
+		return new PathVariableNamedValueInfo(ann);
+	}
+    
+    
+    
+    @Override
+	@SuppressWarnings("unchecked")
+	@Nullable
+	protected Object resolveName(String name, MethodParameter parameter, NativeWebRequest request) throws Exception {
+         //从之前存到request中的uri参数map中取出name对应的参数值
+		Map<String, String> uriTemplateVars = (Map<String, String>) request.getAttribute(
+				HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
+		return (uriTemplateVars != null ? uriTemplateVars.get(name) : null);
+	}
+    
+    @Override
+	@SuppressWarnings("unchecked")
+	protected void handleResolvedValue(@Nullable Object arg, String name, MethodParameter parameter,
+			@Nullable ModelAndViewContainer mavContainer, NativeWebRequest request) {
+		
+         //将处理完的参数值存储到request中 
+		String key = View.PATH_VARIABLES;
+		int scope = RequestAttributes.SCOPE_REQUEST;
+		Map<String, Object> pathVars = (Map<String, Object>) request.getAttribute(key, scope);
+		if (pathVars == null) {
+			pathVars = new HashMap<>();
+			request.setAttribute(key, pathVars, scope);
+		}
+		pathVars.put(name, arg);
+	}
+    
+}
+```
+
+
+
+#### PathVariableMapMethodArgumentResolver
+
+负责处理有`@PathVariable`注解的`value`为空的`Map`类型参数
+
+```java
+public class PathVariableMapMethodArgumentResolver implements HandlerMethodArgumentResolver {
+
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       //有`@PathVariable`注解的`value`为空的`Map`类型参数
+       PathVariable ann = parameter.getParameterAnnotation(PathVariable.class);
+       return (ann != null && Map.class.isAssignableFrom(parameter.getParameterType()) &&
+             !StringUtils.hasText(ann.value()));
+    }
+
+    /**
+     * Return a Map with all URI template variables or an empty map.
+     */
+    @Override
+    public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+          NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+       //从request中取出解析好的uri中的参数对应map
+       @SuppressWarnings("unchecked")
+       Map<String, String> uriTemplateVars =
+             (Map<String, String>) webRequest.getAttribute(
+                   HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
+
+       //直接返回map
+       if (!CollectionUtils.isEmpty(uriTemplateVars)) {
+          return Collections.unmodifiableMap(uriTemplateVars);
+       }
+       else {
+          return Collections.emptyMap();
+       }
+    }
+
+}
+```
+
+
+
+
+
+#### MatrixVariableMethodArgumentResolver
+
+负责处理`@MatrixVariable`注解
+
+```java
+public class MatrixVariableMethodArgumentResolver extends AbstractNamedValueMethodArgumentResolver {
+
+    @Override
+	public boolean supportsParameter(MethodParameter parameter) {
+         //如果参数不含有@MatrixVariable注解 直接返回false
+		if (!parameter.hasParameterAnnotation(MatrixVariable.class)) {
+			return false;
+		}
+         //如果参数是Map类型，@MatrixVariable注解中的name不能为空
+		if (Map.class.isAssignableFrom(parameter.nestedIfOptional().getNestedParameterType())) {
+			MatrixVariable matrixVariable = parameter.getParameterAnnotation(MatrixVariable.class);
+			return (matrixVariable != null && StringUtils.hasText(matrixVariable.name()));
+		}
+         //其他类型返回true
+		return true;
+	}
+
+	@Override
+	protected NamedValueInfo createNamedValueInfo(MethodParameter parameter) {
+         //创建MatrixVariableNamedValueInfo
+		MatrixVariable ann = parameter.getParameterAnnotation(MatrixVariable.class);
+		Assert.state(ann != null, "No MatrixVariable annotation");
+		return new MatrixVariableNamedValueInfo(ann);
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	@Nullable
+	protected Object resolveName(String name, MethodParameter parameter, NativeWebRequest request) throws Exception {
+         //从request中取出已经解析好的MatrixVariable
+         // {
+  		//	"cars" : { "color": ["red","blue"], "year": ["2020"] },
+  		//	"owners" : { "name": ["Tom"] }
+		//	} 
+		Map<String, MultiValueMap<String, String>> pathParameters = (Map<String, MultiValueMap<String, String>>)
+				request.getAttribute(HandlerMapping.MATRIX_VARIABLES_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
+		if (CollectionUtils.isEmpty(pathParameters)) {
+			return null;
+		}
+		//获取参数的@MatrixVariable
+		MatrixVariable ann = parameter.getParameterAnnotation(MatrixVariable.class);
+		Assert.state(ann != null, "No MatrixVariable annotation");
+         //获取参数指定的uri段
+		String pathVar = ann.pathVar();
+		List<String> paramValues = null;
+         //如果参数指定了uri段
+		if (!pathVar.equals(ValueConstants.DEFAULT_NONE)) {
+             //直接从指定的uri段中取字段
+			if (pathParameters.containsKey(pathVar)) {
+				paramValues = pathParameters.get(pathVar).get(name);
+			}
+		}
+         //如果没指定uri段
+		else {
+			boolean found = false;
+			paramValues = new ArrayList<>();
+             //遍历所有的uri段取name字段
+			for (MultiValueMap<String, String> params : pathParameters.values()) {
+				if (params.containsKey(name)) {
+                      //如果多个段有相同参数名称 报错
+					if (found) {
+						String paramType = parameter.getNestedParameterType().getName();
+						throw new ServletRequestBindingException(
+								"Found more than one match for URI path parameter '" + name +
+								"' for parameter type [" + paramType + "]. Use 'pathVar' attribute to disambiguate.");
+					}
+					paramValues.addAll(params.get(name));
+					found = true;
+				}
+			}
+		}
+
+		if (CollectionUtils.isEmpty(paramValues)) {
+			return null;
+		}
+		else if (paramValues.size() == 1) {
+			return paramValues.get(0);
+		}
+		else {
+			return paramValues;
+		}
+	}
+
+
+}
+```
+
+#### MatrixVariableMapMethodArgumentResolver
+
+负责处理`@MatrixVariable`注解`name`为空的`Map`类型参数
+
+```java
+public class MatrixVariableMapMethodArgumentResolver implements HandlerMethodArgumentResolver {
+
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       //处理`@MatrixVariable`注解`name`为空的`Map`类型参数
+       MatrixVariable matrixVariable = parameter.getParameterAnnotation(MatrixVariable.class);
+       return (matrixVariable != null && Map.class.isAssignableFrom(parameter.getParameterType()) &&
+             !StringUtils.hasText(matrixVariable.name()));
+    }
+
+    @Override
+    @Nullable
+    public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+          NativeWebRequest request, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+       //获取解析好的matrixVariables
+       @SuppressWarnings("unchecked")
+       Map<String, MultiValueMap<String, String>> matrixVariables =
+             (Map<String, MultiValueMap<String, String>>) request.getAttribute(
+                   HandlerMapping.MATRIX_VARIABLES_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
+
+       MultiValueMap<String, String> map = mapMatrixVariables(parameter, matrixVariables);
+       return (isSingleValueMap(parameter) ? map.toSingleValueMap() : map);
+    }
+
+    private MultiValueMap<String,String> mapMatrixVariables(MethodParameter parameter,
+          @Nullable Map<String, MultiValueMap<String, String>> matrixVariables) {
+
+       MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+       if (CollectionUtils.isEmpty(matrixVariables)) {
+          return map;
+       }
+       //获取@MatrixVariable的指定的uri段
+       MatrixVariable ann = parameter.getParameterAnnotation(MatrixVariable.class);
+       Assert.state(ann != null, "No MatrixVariable annotation");
+       String pathVariable = ann.pathVar();
+	   //如果未指定uri段 全部map返回
+       if (!pathVariable.equals(ValueConstants.DEFAULT_NONE)) {
+          MultiValueMap<String, String> mapForPathVariable = matrixVariables.get(pathVariable);
+          if (mapForPathVariable == null) {
+             return map;
+          }
+          map.putAll(mapForPathVariable);
+       }
+       //如果指定了uri段，只返回指定段的全部name和value
+       else {
+          for (MultiValueMap<String, String> vars : matrixVariables.values()) {
+             vars.forEach((name, values) -> {
+                for (String value : values) {
+                   map.add(name, value);
+                }
+             });
+          }
+       }
+       return map;
+    }
+
+    private boolean isSingleValueMap(MethodParameter parameter) {
+       if (!MultiValueMap.class.isAssignableFrom(parameter.getParameterType())) {
+          ResolvableType[] genericTypes = ResolvableType.forMethodParameter(parameter).getGenerics();
+          if (genericTypes.length == 2) {
+             return !List.class.isAssignableFrom(genericTypes[1].toClass());
+          }
+       }
+       return false;
+    }
+
+}
+```
+
+#### ModelAttributeMethodProcessor(annotationNotRequired=false)
+
+负责`@ModelAttribute`注解的参数解析和返回值处理的基本类
+
+```java
+public class ModelAttributeMethodProcessor implements HandlerMethodArgumentResolver, HandlerMethodReturnValueHandler {
+
+    private final boolean annotationNotRequired;
+    
+    @Override
+	public boolean supportsParameter(MethodParameter parameter) {
+         //如果参数带有@ModelAttribute注解 或者在兜底模式为true的情况下非简单类型的参数
+		return (parameter.hasParameterAnnotation(ModelAttribute.class) ||
+				(this.annotationNotRequired && !BeanUtils.isSimpleProperty(parameter.getParameterType())));
+	}
+    
+    @Override
+	@Nullable
+	public final Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+		Assert.state(mavContainer != null, "ModelAttributeMethodProcessor requires ModelAndViewContainer");
+		Assert.state(binderFactory != null, "ModelAttributeMethodProcessor requires WebDataBinderFactory");
+		//获取参数名 优先使用@ModelAttribute的
+		String name = ModelFactory.getNameForParameter(parameter);
+		ModelAttribute ann = parameter.getParameterAnnotation(ModelAttribute.class);
+         //根据@ModelAttribute的binding属性进行设置
+		if (ann != null) {
+			mavContainer.setBinding(name, ann.binding());
+		}
+
+		Object attribute;
+		BindingResult bindingResult = null;
+		//如果model中含有当前参数
+		if (mavContainer.containsAttribute(name)) {
+             //从model中获取
+			attribute = mavContainer.getModel().get(name);
+			if (attribute == null || ObjectUtils.unwrapOptional(attribute) == null) {
+                  //如果没获取到 创建一个bindingResult
+				bindingResult = binderFactory.createBinder(webRequest, null, name).getBindingResult();
+				attribute = wrapAsOptionalIfNecessary(parameter, null);
+			}
+		}
+         //如果model中没有
+		else {
+			try {
+                 //就从uri路径/uri参数/请求体中获取 并且进行类型转换
+				// Mainly to allow subclasses alternative to create attribute
+				attribute = createAttribute(name, parameter, binderFactory, webRequest);
+			}
+			catch (MethodArgumentNotValidException ex) {
+				if (isBindExceptionRequired(parameter)) {
+					throw ex;
+				}
+				attribute = wrapAsOptionalIfNecessary(parameter, ex.getTarget());
+				bindingResult = ex.getBindingResult();
+			}
+		}
+		//没有BindingResult 进行绑定和校验
+		// No BindingResult yet, proceed with binding and validation
+		if (bindingResult == null) {
+			ResolvableType type = ResolvableType.forMethodParameter(parameter);
+			WebDataBinder binder = binderFactory.createBinder(webRequest, attribute, name, type);
+			if (attribute == null) {
+				constructAttribute(binder, webRequest);
+				attribute = wrapAsOptionalIfNecessary(parameter, binder.getTarget());
+			}
+             //如果@ModelAttribute的binding为true
+			if (!binder.getBindingResult().hasErrors()) {
+				if (!mavContainer.isBindingDisabled(name)) {
+                      //将请求参数绑定到参数中
+					bindRequestParameters(binder, webRequest);
+				}
+                  //处理@Validated的校验工作
+				validateIfApplicable(binder, parameter);
+			}
+			if (binder.getBindingResult().hasErrors() && isBindExceptionRequired(binder, parameter)) {
+				throw new MethodArgumentNotValidException(parameter, binder.getBindingResult());
+			}
+			// Value type adaptation, also covering java.util.Optional
+			if (!parameter.getParameterType().isInstance(attribute)) {
+				attribute = binder.convertIfNecessary(binder.getTarget(), parameter.getParameterType(), parameter);
+			}
+			bindingResult = binder.getBindingResult();
+		}
+
+        //将参数放入model中
+		// Add resolved attribute and BindingResult at the end of the model
+		Map<String, Object> bindingResultModel = bindingResult.getModel();
+		mavContainer.removeAttributes(bindingResultModel);
+		mavContainer.addAllAttributes(bindingResultModel);
+
+		return attribute;
+	}
+
+}
+```
+
+
+
+#### AbstractMessageConverterMethodProcessor
+
+**处理请求体和响应体的核心抽象类**，为 `@RequestBody` 参数解析和 `@ResponseBody` 返回值处理提供基础功能
+
+```java
+public abstract class AbstractMessageConverterMethodProcessor extends AbstractMessageConverterMethodArgumentResolver
+		implements HandlerMethodReturnValueHandler {
+
+    //读取请求体内容并转换成对应类型
+	@Nullable
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	protected <T> Object readWithMessageConverters(HttpInputMessage inputMessage, MethodParameter parameter,
+			Type targetType) throws IOException, HttpMediaTypeNotSupportedException, HttpMessageNotReadableException {
+		//获取目标参数类型
+		Class<?> contextClass = parameter.getContainingClass();
+		Class<T> targetClass = (targetType instanceof Class clazz ? clazz : null);
+		if (targetClass == null) {
+			ResolvableType resolvableType = ResolvableType.forMethodParameter(parameter);
+			targetClass = (Class<T>) resolvableType.resolve();
+		}
+
+        //获取contentType
+		MediaType contentType;
+		boolean noContentType = false;
+		try {
+			contentType = inputMessage.getHeaders().getContentType();
+		}
+		catch (InvalidMediaTypeException ex) {
+			throw new HttpMediaTypeNotSupportedException(
+					ex.getMessage(), getSupportedMediaTypes(targetClass != null ? targetClass : Object.class));
+		}
+         //没有contentType的设置默认为application/octet-stream
+		if (contentType == null) {
+			noContentType = true;
+			contentType = MediaType.APPLICATION_OCTET_STREAM;
+		}
+
+		HttpMethod httpMethod = (inputMessage instanceof HttpRequest httpRequest ? httpRequest.getMethod() : null);
+		Object body = NO_VALUE;
+
+         //遍历所有的messageConverters，找出能反序列化的messageConverter
+		EmptyBodyCheckingHttpInputMessage message = null;
+		try {
+			message = new EmptyBodyCheckingHttpInputMessage(inputMessage);
+             //遍历所有的messageConverters
+			for (HttpMessageConverter<?> converter : this.messageConverters) {
+				Class<HttpMessageConverter<?>> converterType = (Class<HttpMessageConverter<?>>) converter.getClass();
+				GenericHttpMessageConverter<?> genericConverter =
+						(converter instanceof GenericHttpMessageConverter ghmc ? ghmc : null);
+                  //判断当前converter是否支持反序列化成目标类，是否支持contentType
+				if (genericConverter != null ? genericConverter.canRead(targetType, contextClass, contentType) :
+						(targetClass != null && converter.canRead(targetClass, contentType))) {
+                      //如果请求体有数据流
+					if (message.hasBody()) {
+                          //RequestBodyAdvice前置处理
+						HttpInputMessage msgToUse =
+								getAdvice().beforeBodyRead(message, parameter, targetType, converterType);
+                          //converter反序列化
+						body = (genericConverter != null ? genericConverter.read(targetType, contextClass, msgToUse) :
+								((HttpMessageConverter<T>) converter).read(targetClass, msgToUse));
+                          //RequestBodyAdvice后置处理
+						body = getAdvice().afterBodyRead(body, msgToUse, parameter, targetType, converterType);
+					}
+					else {
+                          //利用RequestBodyAdvice处理请求体为空的情况
+						body = getAdvice().handleEmptyBody(null, message, parameter, targetType, converterType);
+					}
+					break;
+				}
+			}
+			if (body == NO_VALUE && noContentType && !message.hasBody()) {
+                 //利用RequestBodyAdvice处理请求体为空的情况
+				body = getAdvice().handleEmptyBody(
+						null, message, parameter, targetType, NoContentTypeHttpMessageConverter.class);
+			}
+		}
+		catch (IOException ex) {
+			throw new HttpMessageNotReadableException("I/O error while reading input message", ex, inputMessage);
+		}
+		finally {
+             //关闭请求体的io流
+			if (message != null && message.hasBody()) {
+				closeStreamIfNecessary(message.getBody());
+			}
+		}
+
+		if (body == NO_VALUE) {
+			if (httpMethod == null || !SUPPORTED_METHODS.contains(httpMethod) || (noContentType && !message.hasBody())) {
+				return null;
+			}
+			throw new HttpMediaTypeNotSupportedException(contentType,
+					getSupportedMediaTypes(targetClass != null ? targetClass : Object.class), httpMethod);
+		}
+
+		MediaType selectedContentType = contentType;
+		Object theBody = body;
+		LogFormatUtils.traceDebug(logger, traceOn -> {
+			String formatted = LogFormatUtils.formatValue(theBody, !traceOn);
+			return "Read \"" + selectedContentType + "\" to [" + formatted + "]";
+		});
+		//返回 反序列化后的对象
+		return body;
+	}
+
+
+
+}
+```
+
+
+
+##### HttpMessageConverter
+
+**Spring MVC 将 HTTP 请求体（body）读成 Java 对象、将 Java 对象写成响应内容** 的核心 SPI
+
+```java
+public interface HttpMessageConverter<T> {
+
+	//判断当前转换器能否读成目标类，对应的content-type是否支持
+	boolean canRead(Class<?> clazz, @Nullable MediaType mediaType);
+
+	//判断当前转换器能否写成目标类，对应的content-type是否支持
+	boolean canWrite(Class<?> clazz, @Nullable MediaType mediaType);
+
+    //获取当前转换器支持的content-type
+	List<MediaType> getSupportedMediaTypes();
+
+
+	default List<MediaType> getSupportedMediaTypes(Class<?> clazz) {
+		return (canRead(clazz, null) || canWrite(clazz, null) ?
+				getSupportedMediaTypes() : Collections.emptyList());
+	}
+
+    //从请求体中读取某种格式转换成目标类
+	T read(Class<? extends T> clazz, HttpInputMessage inputMessage)
+			throws IOException, HttpMessageNotReadableException;
+
+    //将对象以某种格式写出到响应体中
+	void write(T t, @Nullable MediaType contentType, HttpOutputMessage outputMessage)
+			throws IOException, HttpMessageNotWritableException;
+
+}
+```
+
+
+
+##### GenericHttpMessageConverter
+
+普通的 `HttpMessageConverter` **只支持 `Class<?>` 级别的类型判断**，`GenericHttpMessageConverter`支持`List<MyObject>`类型判断
+
+```java
+//根据Type来进行泛型判断和转换
+public interface GenericHttpMessageConverter<T> extends HttpMessageConverter<T> {
+
+    boolean canRead(Type type, @Nullable Class<?> contextClass, @Nullable MediaType mediaType);
+
+   
+    T read(Type type, @Nullable Class<?> contextClass, HttpInputMessage inputMessage)
+          throws IOException, HttpMessageNotReadableException;
+
+   
+    boolean canWrite(@Nullable Type type, Class<?> clazz, @Nullable MediaType mediaType);
+
+   
+    void write(T t, @Nullable Type type, @Nullable MediaType contentType, HttpOutputMessage outputMessage)
+          throws IOException, HttpMessageNotWritableException;
+
+}
+```
+
+##### RequestBodyAdvice
+
+`RequestBodyAdvice` 是 Spring MVC 在 **反序列化 @RequestBody** 时插入的 **拦截器链**（类似于 AOP，但只作用于 RequestBody 反序列化）。
+
+```java
+public interface RequestBodyAdvice {
+
+    //决定这个 advice 是否应用
+    boolean supports(MethodParameter methodParameter, Type targetType,
+          Class<? extends HttpMessageConverter<?>> converterType);
+
+    //在 InputStream 被 Converter 读取之前调用
+    HttpInputMessage beforeBodyRead(HttpInputMessage inputMessage, MethodParameter parameter,
+          Type targetType, Class<? extends HttpMessageConverter<?>> converterType) throws IOException;
+
+    //在对象已经从 JSON/XML 等反序列化之后调用
+    Object afterBodyRead(Object body, HttpInputMessage inputMessage, MethodParameter parameter,
+          Type targetType, Class<? extends HttpMessageConverter<?>> converterType);
+
+    //如果请求体为空（没有 body），进入这个方法
+    @Nullable
+    Object handleEmptyBody(@Nullable Object body, HttpInputMessage inputMessage, MethodParameter parameter,
+          Type targetType, Class<? extends HttpMessageConverter<?>> converterType);
+
+}
+```
+
+#### RequestResponseBodyMethodProcessor
+
+负责处理`@RequestBody`参数的类
+
+```java
+public class RequestResponseBodyMethodProcessor extends AbstractMessageConverterMethodProcessor {
+
+    @Override
+	public boolean supportsParameter(MethodParameter parameter) {
+         //只处理@RequestBody注解的参数
+		return parameter.hasParameterAnnotation(RequestBody.class);
+	}
+    
+    
+    @Override
+	@Nullable
+	public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+		//脱去Optional
+		parameter = parameter.nestedIfOptional();
+         //利用converter反序列化请求体
+		Object arg = readWithMessageConverters(webRequest, parameter, parameter.getNestedGenericParameterType());
+
+		if (binderFactory != null) {
+			String name = Conventions.getVariableNameForParameter(parameter);
+			ResolvableType type = ResolvableType.forMethodParameter(parameter);
+			WebDataBinder binder = binderFactory.createBinder(webRequest, arg, name, type);
+			if (arg != null) {
+                 //校验？？？？
+				validateIfApplicable(binder, parameter);
+				if (binder.getBindingResult().hasErrors() && isBindExceptionRequired(binder, parameter)) {
+					throw new MethodArgumentNotValidException(parameter, binder.getBindingResult());
+				}
+			}
+			if (mavContainer != null) {
+				mavContainer.addAttribute(BindingResult.MODEL_KEY_PREFIX + name, binder.getBindingResult());
+			}
+		}
+		//如果目标类型是Optional 包装一层Optional
+		return adaptArgumentIfNecessary(arg, parameter);
+	}
+    
+    @Override
+	@Nullable
+	protected <T> Object readWithMessageConverters(NativeWebRequest webRequest, MethodParameter parameter,
+			Type paramType) throws IOException, HttpMediaTypeNotSupportedException, HttpMessageNotReadableException {
+
+		ServletServerHttpRequest inputMessage = createInputMessage(webRequest);
+         //利用converter反序列化请求体
+		Object arg = readWithMessageConverters(inputMessage, parameter, paramType);
+         //参数为空 @RequestBody(required=true) 报错
+		if (arg == null && checkRequired(parameter)) {
+			throw new HttpMessageNotReadableException("Required request body is missing: " +
+					parameter.getExecutable().toGenericString(), inputMessage);
+		}
+		return arg;
+	}
+
+}
+```
+
+#### RequestPartMethodArgumentResolver
+
+- 负责处理`@RequestPart`注解标注的参数
+- 不带`@RequestParam`注解的`MultipartFile`和`Part`的集合/数组
+
+```java
+public class RequestPartMethodArgumentResolver extends AbstractMessageConverterMethodArgumentResolver {
+
+    @Override
+	public boolean supportsParameter(MethodParameter parameter) {
+         //处理`@RequestPart`注解标注的参数
+		if (parameter.hasParameterAnnotation(RequestPart.class)) {
+			return true;
+		}
+		else {
+             //带`@RequestParam`注解不处理
+			if (parameter.hasParameterAnnotation(RequestParam.class)) {
+				return false;
+			}
+             //`MultipartFile`和`Part`集合/数组
+			return MultipartResolutionDelegate.isMultipartArgument(parameter.nestedIfOptional());
+		}
+	}
+
+	@Override
+	@Nullable
+	public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+			NativeWebRequest request, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+		HttpServletRequest servletRequest = request.getNativeRequest(HttpServletRequest.class);
+		Assert.state(servletRequest != null, "No HttpServletRequest");
+		//读取@RequestPart注解信息
+		RequestPart requestPart = parameter.getParameterAnnotation(RequestPart.class);
+		boolean isRequired = ((requestPart == null || requestPart.required()) && !parameter.isOptional());
+		//获取@RequestPart中的name
+		String name = getPartName(parameter, requestPart);
+		parameter = parameter.nestedIfOptional();
+		Object arg = null;
+		//如果参数类型是MultipartFile/Part类型的参数，获取名称为name的参数
+		Object mpArg = MultipartResolutionDelegate.resolveMultipartArgument(name, parameter, servletRequest);
+		if (mpArg != MultipartResolutionDelegate.UNRESOLVABLE) {
+			arg = mpArg;
+		}
+         //如果参数类型不是MultipartFile/Part类型的参数
+		else {
+			try {
+                 //利用converter进行反序列化获取
+				HttpInputMessage inputMessage = new RequestPartServletServerHttpRequest(servletRequest, name);
+				arg = readWithMessageConverters(inputMessage, parameter, parameter.getNestedGenericParameterType());
+				if (binderFactory != null) {
+					ResolvableType type = ResolvableType.forMethodParameter(parameter);
+					WebDataBinder binder = binderFactory.createBinder(request, arg, name, type);
+					if (arg != null) {
+                          //？？？？？？？
+						validateIfApplicable(binder, parameter);
+						if (binder.getBindingResult().hasErrors() && isBindExceptionRequired(binder, parameter)) {
+							throw new MethodArgumentNotValidException(parameter, binder.getBindingResult());
+						}
+					}
+					if (mavContainer != null) {
+						mavContainer.addAttribute(BindingResult.MODEL_KEY_PREFIX + name, binder.getBindingResult());
+					}
+				}
+			}
+			catch (MissingServletRequestPartException | MultipartException ex) {
+				if (isRequired) {
+					throw ex;
+				}
+			}
+		}
+
+		if (arg == null && isRequired) {
+			if (!MultipartResolutionDelegate.isMultipartRequest(servletRequest)) {
+				throw new MultipartException("Current request is not a multipart request");
+			}
+			else {
+				throw new MissingServletRequestPartException(name);
+			}
+		}
+		return adaptArgumentIfNecessary(arg, parameter);
+	}
+    
+    //获取name
+	private String getPartName(MethodParameter methodParam, @Nullable RequestPart requestPart) {
+		String partName = (requestPart != null ? requestPart.name() : "");
+		if (partName.isEmpty()) {
+			partName = methodParam.getParameterName();
+			if (partName == null) {
+				throw new IllegalArgumentException("Request part name for argument type [" +
+						methodParam.getNestedParameterType().getName() +
+						"] not specified, and parameter name information not found in class file either.");
+			}
+		}
+		return partName;
+	}
+}
+```
+
+
+
+#### RequestHeaderMethodArgumentResolver
+
+负责处理`@RequestHeader`注解
+
+```java
+public class RequestHeaderMethodArgumentResolver extends AbstractNamedValueMethodArgumentResolver {
+
+	@Override
+	public boolean supportsParameter(MethodParameter parameter) {
+         //参数上有@RequestHeader并且不是Map类型
+		return (parameter.hasParameterAnnotation(RequestHeader.class) &&
+				!Map.class.isAssignableFrom(parameter.nestedIfOptional().getNestedParameterType()));
+	}
+
+    //创建RequestHeaderNamedValueInfo
+	@Override
+	protected NamedValueInfo createNamedValueInfo(MethodParameter parameter) {
+		RequestHeader ann = parameter.getParameterAnnotation(RequestHeader.class);
+		Assert.state(ann != null, "No RequestHeader annotation");
+		return new RequestHeaderNamedValueInfo(ann);
+	}
+
+	@Override
+	@Nullable
+	protected Object resolveName(String name, MethodParameter parameter, NativeWebRequest request) throws Exception {
+         //直接通过request获取对应name的httpheader
+		String[] headerValues = request.getHeaderValues(name);
+		if (headerValues != null) {
+			return (headerValues.length == 1 ? headerValues[0] : headerValues);
+		}
+		else {
+			return null;
+		}
+	}
+}
+```
+
+#### RequestHeaderMapMethodArgumentResolver
+
+负责处理`@RequestHeader`注解的`Map`类型参数
+
+```java
+public class RequestHeaderMapMethodArgumentResolver implements HandlerMethodArgumentResolver {
+
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       //处理`@RequestHeader`注解的`Map`类型参数
+       return (parameter.hasParameterAnnotation(RequestHeader.class) &&
+             Map.class.isAssignableFrom(parameter.getParameterType()));
+    }
+
+    @Override
+    public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+          NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+	   //如果参数类型是MultiValueMap
+       Class<?> paramType = parameter.getParameterType();
+       if (MultiValueMap.class.isAssignableFrom(paramType)) {
+          MultiValueMap<String, String> result;
+          //如果参数类型是HttpHeaders
+          if (HttpHeaders.class.isAssignableFrom(paramType)) {
+             result = new HttpHeaders();
+          }
+          //否则创建LinkedMultiValueMap
+          else {
+             result = new LinkedMultiValueMap<>();
+          }
+          //把所有的header都加入map
+          for (Iterator<String> iterator = webRequest.getHeaderNames(); iterator.hasNext();) {
+             String headerName = iterator.next();
+             String[] headerValues = webRequest.getHeaderValues(headerName);
+             if (headerValues != null) {
+                for (String headerValue : headerValues) {
+                   result.add(headerName, headerValue);
+                }
+             }
+          }
+          return result;
+       }
+       //参数类型是普通map
+       else {
+          //把所有的header都加入map
+          Map<String, String> result = new LinkedHashMap<>();
+          for (Iterator<String> iterator = webRequest.getHeaderNames(); iterator.hasNext();) {
+             String headerName = iterator.next();
+             String headerValue = webRequest.getHeader(headerName);
+             if (headerValue != null) {
+                result.put(headerName, headerValue);
+             }
+          }
+          return result;
+       }
+    }
+
+}
+```
+
+#### AbstractCookieValueMethodArgumentResolver
+
+负责处理`@CookieValue`注解
+
+```java
+public abstract class AbstractCookieValueMethodArgumentResolver extends AbstractNamedValueMethodArgumentResolver {
+
+    //处理@CookieValue注解
+	@Override
+	public boolean supportsParameter(MethodParameter parameter) {
+		return parameter.hasParameterAnnotation(CookieValue.class);
+	}
+    //创建CookieValueNamedValueInfo
+	@Override
+	protected NamedValueInfo createNamedValueInfo(MethodParameter parameter) {
+		CookieValue annotation = parameter.getParameterAnnotation(CookieValue.class);
+		Assert.state(annotation != null, "No CookieValue annotation");
+		return new CookieValueNamedValueInfo(annotation);
+	}
+}
+```
+
+
+
+#### ServletCookieValueMethodArgumentResolver
+
+负责处理`@CookieValue`注解
+
+```java
+public class ServletCookieValueMethodArgumentResolver extends AbstractCookieValueMethodArgumentResolver {
+
+	@Override
+	@Nullable
+	protected Object resolveName(String cookieName, MethodParameter parameter,
+			NativeWebRequest webRequest) throws Exception {
+
+		HttpServletRequest servletRequest = webRequest.getNativeRequest(HttpServletRequest.class);
+		Assert.state(servletRequest != null, "No HttpServletRequest");
+		
+         //从request中获取对应cookie
+		Cookie cookieValue = WebUtils.getCookie(servletRequest, cookieName);
+         //如果参数类型是Cookie直接返回
+		if (Cookie.class.isAssignableFrom(parameter.getNestedParameterType())) {
+			return cookieValue;
+		}
+		else if (cookieValue != null) {
+             //否则进行url decode 返回cookie的value
+			return this.urlPathHelper.decodeRequestString(servletRequest, cookieValue.getValue());
+		}
+		else {
+			return null;
+		}
+	}
+
+}
+```
+
+
+
+#### ExpressionValueMethodArgumentResolver
+
+负责处理`@Value`注解的参数
+
+```java
+public class ExpressionValueMethodArgumentResolver extends AbstractNamedValueMethodArgumentResolver {
+
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       //负责处理`@Value`注解的参数
+       return parameter.hasParameterAnnotation(Value.class);
+    }
+
+    //创建ExpressionValueNamedValueInfo
+    @Override
+    protected NamedValueInfo createNamedValueInfo(MethodParameter parameter) {
+       Value ann = parameter.getParameterAnnotation(Value.class);
+       Assert.state(ann != null, "No Value annotation");
+       return new ExpressionValueNamedValueInfo(ann);
+    }
+
+    //@Value不需要进行解析参数名
+    @Override
+    @Nullable
+    protected Object resolveName(String name, MethodParameter parameter, NativeWebRequest webRequest) throws Exception {
+       // No name to resolve
+       return null;
+    }
+
+
+    private static final class ExpressionValueNamedValueInfo extends NamedValueInfo {
+	   //annotation的value被当作默认值，后续默认值会被占位符替换和spel表达式解析
+       private ExpressionValueNamedValueInfo(Value annotation) {
+          super("@Value", false, annotation.value());
+       }
+    }
+
+}
+```
+
+
+
+#### SessionAttributeMethodArgumentResolver
+
+负责`@SessionAttribute`注解
+
+```java
+public class SessionAttributeMethodArgumentResolver extends AbstractNamedValueMethodArgumentResolver {
+
+    //处理@SessionAttribute注解
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       return parameter.hasParameterAnnotation(SessionAttribute.class);
+    }
+    //创建NamedValueInfo
+    @Override
+    protected NamedValueInfo createNamedValueInfo(MethodParameter parameter) {
+       SessionAttribute ann = parameter.getParameterAnnotation(SessionAttribute.class);
+       Assert.state(ann != null, "No SessionAttribute annotation");
+       return new NamedValueInfo(ann.name(), ann.required(), ValueConstants.DEFAULT_NONE);
+    }
+
+    @Override
+    @Nullable
+    protected Object resolveName(String name, MethodParameter parameter, NativeWebRequest request) {
+       //通过request的SCOPE_SESSION作用域获取name的值
+       return request.getAttribute(name, RequestAttributes.SCOPE_SESSION);
+    }
+
+    @Override
+    protected void handleMissingValue(String name, MethodParameter parameter) throws ServletException {
+       throw new ServletRequestBindingException("Missing session attribute '" + name +
+             "' of type " + parameter.getNestedParameterType().getSimpleName());
+    }
+
+}
+```
+
+#### RequestAttributeMethodArgumentResolver
+
+负责`@RequestAttribute`注解的处理
+
+```java
+public class RequestAttributeMethodArgumentResolver extends AbstractNamedValueMethodArgumentResolver {
+	
+    //负责`@RequestAttribute`注解的处理
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       return parameter.hasParameterAnnotation(RequestAttribute.class);
+    }
+    
+    //创建NamedValueInfo
+    @Override
+    protected NamedValueInfo createNamedValueInfo(MethodParameter parameter) {
+       RequestAttribute ann = parameter.getParameterAnnotation(RequestAttribute.class);
+       Assert.state(ann != null, "No RequestAttribute annotation");
+       return new NamedValueInfo(ann.name(), ann.required(), ValueConstants.DEFAULT_NONE);
+    }
+	//通过request的SCOPE_REQUEST作用域获取name的值
+    @Override
+    @Nullable
+    protected Object resolveName(String name, MethodParameter parameter, NativeWebRequest request){
+       return request.getAttribute(name, RequestAttributes.SCOPE_REQUEST);
+    }
+
+    @Override
+    protected void handleMissingValue(String name, MethodParameter parameter) throws ServletException {
+       throw new ServletRequestBindingException("Missing request attribute '" + name +
+             "' of type " + parameter.getNestedParameterType().getSimpleName());
+    }
+
+}
+```
+
+#### ServletRequestMethodArgumentResolver
+
+| 参数类型                                                     | 说明                         |
+| ------------------------------------------------------------ | ---------------------------- |
+| `WebRequest` / `NativeWebRequest` / `ServletWebRequest`      | Spring 封装的请求对象        |
+| `ServletRequest` / `HttpServletRequest` / `MultipartRequest` | Servlet API 请求对象         |
+| `HttpSession`                                                | 当前会话                     |
+| `PushBuilder`                                                | HTTP/2 PushBuilder 对象      |
+| `Principal`                                                  | 用户身份信息（必须没有注解） |
+| `InputStream` / `Reader`                                     | 请求体流                     |
+| `HttpMethod`                                                 | 请求方法                     |
+| `Locale` / `TimeZone` / `ZoneId`                             | 时区/地区信息                |
+
+```java
+public class ServletRequestMethodArgumentResolver implements HandlerMethodArgumentResolver {
+
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       Class<?> paramType = parameter.getParameterType();
+       return (WebRequest.class.isAssignableFrom(paramType) ||
+             ServletRequest.class.isAssignableFrom(paramType) ||
+             MultipartRequest.class.isAssignableFrom(paramType) ||
+             HttpSession.class.isAssignableFrom(paramType) ||
+             PushBuilder.class.isAssignableFrom(paramType) ||
+             (Principal.class.isAssignableFrom(paramType) && !parameter.hasParameterAnnotations()) ||
+             InputStream.class.isAssignableFrom(paramType) ||
+             Reader.class.isAssignableFrom(paramType) ||
+             HttpMethod.class == paramType ||
+             Locale.class == paramType ||
+             TimeZone.class == paramType ||
+             ZoneId.class == paramType);
+    }
+
+    @Override
+    @Nullable
+    public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+          NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+       Class<?> paramType = parameter.getParameterType();
+	   //如果是WebRequest / NativeWebRequest / ServletWebRequest 返回webRequest
+       // WebRequest / NativeWebRequest / ServletWebRequest
+       if (WebRequest.class.isAssignableFrom(paramType)) {
+          if (!paramType.isInstance(webRequest)) {
+             throw new IllegalStateException(
+                   "Current request is not of type [" + paramType.getName() + "]: " + webRequest);
+          }
+          return webRequest;
+       }
+		
+        //如果是ServletRequest / HttpServletRequest / MultipartRequest / MultipartHttpServletRequest 返回resolveNativeRequest
+       // ServletRequest / HttpServletRequest / MultipartRequest / MultipartHttpServletRequest
+       if (ServletRequest.class.isAssignableFrom(paramType) || MultipartRequest.class.isAssignableFrom(paramType)) {
+          return resolveNativeRequest(webRequest, paramType);
+       }
+	   //处理其他情况
+       // HttpServletRequest required for all further argument types
+       return resolveArgument(paramType, resolveNativeRequest(webRequest, HttpServletRequest.class));
+    }
+    
+    
+    @Nullable
+	private Object resolveArgument(Class<?> paramType, HttpServletRequest request) throws IOException {
+         //如果是HttpSession
+		if (HttpSession.class.isAssignableFrom(paramType)) {
+			HttpSession session = request.getSession();
+			if (session != null && !paramType.isInstance(session)) {
+				throw new IllegalStateException(
+						"Current session is not of type [" + paramType.getName() + "]: " + session);
+			}
+			return session;
+		}
+         //如果是PushBuilder
+		else if (PushBuilder.class.isAssignableFrom(paramType)) {
+			PushBuilder pushBuilder = request.newPushBuilder();
+			if (pushBuilder != null && !paramType.isInstance(pushBuilder)) {
+				throw new IllegalStateException(
+						"Current push builder is not of type [" + paramType.getName() + "]: " + pushBuilder);
+			}
+			return pushBuilder;
+		}
+         //如果是InputStream
+		else if (InputStream.class.isAssignableFrom(paramType)) {
+			InputStream inputStream = request.getInputStream();
+			if (inputStream != null && !paramType.isInstance(inputStream)) {
+				throw new IllegalStateException(
+						"Request input stream is not of type [" + paramType.getName() + "]: " + inputStream);
+			}
+			return inputStream;
+		}
+        //如果是Reader
+		else if (Reader.class.isAssignableFrom(paramType)) {
+			Reader reader = request.getReader();
+			if (reader != null && !paramType.isInstance(reader)) {
+				throw new IllegalStateException(
+						"Request body reader is not of type [" + paramType.getName() + "]: " + reader);
+			}
+			return reader;
+		}
+         //如果是Principal
+		else if (Principal.class.isAssignableFrom(paramType)) {
+			Principal userPrincipal = request.getUserPrincipal();
+			if (userPrincipal != null && !paramType.isInstance(userPrincipal)) {
+				throw new IllegalStateException(
+						"Current user principal is not of type [" + paramType.getName() + "]: " + userPrincipal);
+			}
+			return userPrincipal;
+		}
+         //如果是HttpMethod
+		else if (HttpMethod.class == paramType) {
+			return HttpMethod.valueOf(request.getMethod());
+		}
+         //如果是Locale
+		else if (Locale.class == paramType) {
+			return RequestContextUtils.getLocale(request);
+		}
+         //如果是TimeZone
+		else if (TimeZone.class == paramType) {
+			TimeZone timeZone = RequestContextUtils.getTimeZone(request);
+			return (timeZone != null ? timeZone : TimeZone.getDefault());
+		}
+         //如果是ZoneId
+		else if (ZoneId.class == paramType) {
+			TimeZone timeZone = RequestContextUtils.getTimeZone(request);
+			return (timeZone != null ? timeZone.toZoneId() : ZoneId.systemDefault());
+		}
+
+		// Should never happen...
+		throw new UnsupportedOperationException("Unknown parameter type: " + paramType.getName());
+	}
+
+}
+```
+
+#### ServletResponseMethodArgumentResolver
+
+负责`ServletResponse/OutputStream/Writer`类型参数处理
+
+```java
+public class ServletResponseMethodArgumentResolver implements HandlerMethodArgumentResolver {
+
+    //负责`ServletResponse/OutputStream/Writer`类型参数处理
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       Class<?> paramType = parameter.getParameterType();
+       return (ServletResponse.class.isAssignableFrom(paramType) ||
+             OutputStream.class.isAssignableFrom(paramType) ||
+             Writer.class.isAssignableFrom(paramType));
+    }
+
+    @Override
+    public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+          NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+       if (mavContainer != null) {
+          //表示方法签名提供了对响应对象的访问，Spring 不会再去渲染视图或者处理返回值。
+          mavContainer.setRequestHandled(true);
+       }
+
+       Class<?> paramType = parameter.getParameterType();
+
+       //ServletResponse, HttpServletResponse类型参数处理
+       // ServletResponse, HttpServletResponse
+       if (ServletResponse.class.isAssignableFrom(paramType)) {
+          return resolveNativeResponse(webRequest, paramType);
+       }
+
+       // ServletResponse required for all further argument types
+       return resolveArgument(paramType, resolveNativeResponse(webRequest, ServletResponse.class));
+    }
+
+    private <T> T resolveNativeResponse(NativeWebRequest webRequest, Class<T> requiredType) {
+       T nativeResponse = webRequest.getNativeResponse(requiredType);
+       if (nativeResponse == null) {
+          throw new IllegalStateException(
+                "Current response is not of type [" + requiredType.getName() + "]: " + webRequest);
+       }
+       return nativeResponse;
+    }
+
+    private Object resolveArgument(Class<?> paramType, ServletResponse response) throws IOException {
+       //如果是OutputStream
+       if (OutputStream.class.isAssignableFrom(paramType)) {
+          return response.getOutputStream();
+       }
+        //如果是Writer
+       else if (Writer.class.isAssignableFrom(paramType)) {
+          return response.getWriter();
+       }
+
+       // Should never happen...
+       throw new UnsupportedOperationException("Unknown parameter type: " + paramType);
+    }
+
+}
+```
+
+#### HttpEntityMethodProcessor
+
+负责`HttpEntity/RequestEntity`类型参数处理
+
+```java
+public class HttpEntityMethodProcessor extends AbstractMessageConverterMethodProcessor {
+    //负责`HttpEntity/RequestEntity`类型参数处理
+    @Override
+	public boolean supportsParameter(MethodParameter parameter) {
+		return (HttpEntity.class == parameter.getParameterType() ||
+				RequestEntity.class == parameter.getParameterType());
+	}
+    @Override
+	@Nullable
+	public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory)
+			throws IOException, HttpMediaTypeNotSupportedException {
+		//包装http请求
+		ServletServerHttpRequest inputMessage = createInputMessage(webRequest);
+         //获取HttpEntity<T>和RequestEntity<T>中的泛型类型
+		Type paramType = getHttpEntityType(parameter);
+		if (paramType == null) {
+			throw new IllegalArgumentException("HttpEntity parameter '" + parameter.getParameterName() +
+					"' in method " + parameter.getMethod() + " is not parameterized");
+		}
+		//利用converter从请求体中反序列化成T类型
+		Object body = readWithMessageConverters(webRequest, parameter, paramType);
+        //包装成HttpEntity<T>和RequestEntity<T>返回参数
+		if (RequestEntity.class == parameter.getParameterType()) {
+			return new RequestEntity<>(body, inputMessage.getHeaders(),
+					inputMessage.getMethod(), inputMessage.getURI());
+		}
+		else {
+			return new HttpEntity<>(body, inputMessage.getHeaders());
+		}
+	}
+
+    //获取HttpEntity<T>和RequestEntity<T>中的泛型类型
+	@Nullable
+	private Type getHttpEntityType(MethodParameter parameter) {
+		Assert.isAssignable(HttpEntity.class, parameter.getParameterType());
+		Type parameterType = parameter.getGenericParameterType();
+		if (parameterType instanceof ParameterizedType type) {
+			if (type.getActualTypeArguments().length != 1) {
+				throw new IllegalArgumentException("Expected single generic parameter on '" +
+						parameter.getParameterName() + "' in method " + parameter.getMethod());
+			}
+			return type.getActualTypeArguments()[0];
+		}
+		else if (parameterType instanceof Class) {
+			return Object.class;
+		}
+		else {
+			return null;
+		}
+	}
+}
+```
+
+
+
+#### RedirectAttributesMethodArgumentResolver
+
+用于处理参数类型是`RedirectAttributes`
+
+```java
+public class RedirectAttributesMethodArgumentResolver implements HandlerMethodArgumentResolver {
+
+    //用于处理参数类型是`RedirectAttributes`
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       return RedirectAttributes.class.isAssignableFrom(parameter.getParameterType());
+    }
+
+    @Override
+    public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+          NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+       Assert.state(mavContainer != null, "RedirectAttributes argument only supported on regular handler methods");
+	   //创建RedirectAttributesModelMap
+       ModelMap redirectAttributes;
+       if (binderFactory != null) {
+          DataBinder dataBinder = binderFactory.createBinder(webRequest, null, DataBinder.DEFAULT_OBJECT_NAME);
+          redirectAttributes = new RedirectAttributesModelMap(dataBinder);
+       }
+       else {
+          redirectAttributes = new RedirectAttributesModelMap();
+       }
+       //设置到RedirectModel中
+       mavContainer.setRedirectModel(redirectAttributes);
+       return redirectAttributes;
+    }
+
+}
+```
+
+#### ModelMethodProcessor
+
+负责处理`Model`类型的参数
+
+```java
+public class ModelMethodProcessor implements HandlerMethodArgumentResolver, HandlerMethodReturnValueHandler {
+
+    //负责处理`Model`类型的参数
+	@Override
+	public boolean supportsParameter(MethodParameter parameter) {
+		return Model.class.isAssignableFrom(parameter.getParameterType());
+	}
+
+	@Override
+	@Nullable
+	public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+		Assert.state(mavContainer != null, "ModelAndViewContainer is required for model exposure");
+        //直接返回modelmap
+		return mavContainer.getModel();
+	}
+}
+```
+
+#### MapMethodProcessor
+
+负责处理`Map`类型的参数
+
+```java
+public class MapMethodProcessor implements HandlerMethodArgumentResolver, HandlerMethodReturnValueHandler {
+
+    //负责处理`Map`类型的参数 没有任何注解
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       return (Map.class.isAssignableFrom(parameter.getParameterType()) &&
+             parameter.getParameterAnnotations().length == 0);
+    }
+
+    @Override
+    @Nullable
+    public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+          NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+       Assert.state(mavContainer != null, "ModelAndViewContainer is required for model exposure");
+        //直接返回modelmap
+       return mavContainer.getModel();
+    }
+}
+```
+
+#### ErrorsMethodArgumentResolver
+
+用来处理 `BindingResult` / `Errors` 参数的解析器
+
+```java
+public class ErrorsMethodArgumentResolver implements HandlerMethodArgumentResolver {
+
+    //用来处理 BindingResult / Errors 参数的解析器
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       Class<?> paramType = parameter.getParameterType();
+       return Errors.class.isAssignableFrom(paramType);
+    }
+
+    @Override
+    @Nullable
+    public Object resolveArgument(MethodParameter parameter,
+          @Nullable ModelAndViewContainer mavContainer, NativeWebRequest webRequest,
+          @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+       Assert.state(mavContainer != null,
+             "Errors/BindingResult argument only supported on regular handler methods");
+	   //获取BindingResult.class.getName() + "."开头的key和value 返回
+       ModelMap model = mavContainer.getModel();
+       String lastKey = CollectionUtils.lastElement(model.keySet());
+       if (lastKey != null && lastKey.startsWith(BindingResult.MODEL_KEY_PREFIX)) {
+          return model.get(lastKey);
+       }
+
+        //BindingResult / Errors 必须在它所应用的 ModelAttribute / RequestBody / RequestPart 参数后面紧跟着出现。
+       throw new IllegalStateException(
+             "An Errors/BindingResult argument is expected to be declared immediately after " +
+             "the model attribute, the @RequestBody or the @RequestPart arguments " +
+             "to which they apply: " + parameter.getMethod());
+    }
+
+}
+```
+
+#### SessionStatusMethodArgumentResolver
+
+负责处理`SessionStatus`类型的参数
+
+```java
+public class SessionStatusMethodArgumentResolver implements HandlerMethodArgumentResolver {
+
+    //负责处理`SessionStatus`类型的参数
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       return SessionStatus.class == parameter.getParameterType();
+    }
+
+    //返回SessionStatus
+    @Override
+    public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+          NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+       Assert.state(mavContainer != null, "ModelAndViewContainer is required for session status exposure");
+       return mavContainer.getSessionStatus();
+    }
+
+}
+```
+
+#### UriComponentsBuilderMethodArgumentResolver
+
+负责处理`UriComponentsBuilder`类型的参数
+
+```java
+public class UriComponentsBuilderMethodArgumentResolver implements HandlerMethodArgumentResolver {
+
+    //负责处理`UriComponentsBuilder/ServletUriComponentsBuilder`类型的参数
+    @Override
+    public boolean supportsParameter(MethodParameter parameter) {
+       Class<?> type = parameter.getParameterType();
+       return (UriComponentsBuilder.class == type || ServletUriComponentsBuilder.class == type);
+    }
+
+    @Override
+    public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+          NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+       HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
+       Assert.state(request != null, "No HttpServletRequest");
+       //例如当前请求：http://localhost:8080/app/api/users?id=1
+       //返回 http://localhost:8080/app
+       //返回的是相对 servlet mapping 的路径 
+       return ServletUriComponentsBuilder.fromServletMapping(request);
+    }
+
+}
+```
+
+#### PrincipalMethodArgumentResolver
+
+用于处理`Principal`类型的参数
+
+```java
+public class PrincipalMethodArgumentResolver implements HandlerMethodArgumentResolver {
+
+    //用于处理`Principal`类型的参数
+	@Override
+	public boolean supportsParameter(MethodParameter parameter) {
+		return Principal.class.isAssignableFrom(parameter.getParameterType());
+	}
+
+    
+	@Override
+	public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
+
+		HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
+		if (request == null) {
+			throw new IllegalStateException("Current request is not of type HttpServletRequest: " + webRequest);
+		}
+		//返回UserPrincipal
+		Principal principal = request.getUserPrincipal();
+		if (principal != null && !parameter.getParameterType().isInstance(principal)) {
+			throw new IllegalStateException("Current user principal is not of type [" +
+					parameter.getParameterType().getName() + "]: " + principal);
+		}
+
+		return principal;
+	}
+
+}
+```
+
+#### RequestParamMethodArgumentResolver(useDefaultResolution=true)
+
+对简单类型/数组/集合的兜底解析器
+
+#### ModelAttributeMethodProcessor(annotationNotRequired=true)
+
+对非简单类型/数组/集合的兜底解析器
+
+
+
+
+
+### 返回值处理器
+
+<img src=".\images\image-20251128105320797.png" alt="image-20251128105320797" style="zoom:50%;" />
+
+#### HandlerMethodReturnValueHandler
+
+```java
+public interface HandlerMethodReturnValueHandler {
+
+    //是否支持处理返回值类型
+    boolean supportsReturnType(MethodParameter returnType);
+
+    //处理返回值
+    void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+          ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception;
+
+}
+```
+
+#### ModelAndViewMethodReturnValueHandler
+
+负责`ModelAndView`类型返回值的处理
+
+```java
+public class ModelAndViewMethodReturnValueHandler implements HandlerMethodReturnValueHandler {
+    
+    @Nullable
+	private String[] redirectPatterns;
+
+    //负责`ModelAndView`类型返回值的处理
+    @Override
+	public boolean supportsReturnType(MethodParameter returnType) {
+		return ModelAndView.class.isAssignableFrom(returnType.getParameterType());
+	}
+
+	@Override
+	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+		//如果返回值为null 设置请求体解析完毕，无需视图
+		if (returnValue == null) {
+			mavContainer.setRequestHandled(true);
+			return;
+		}
+
+        //如果有视图
+		ModelAndView mav = (ModelAndView) returnValue;
+		if (mav.isReference()) {
+			String viewName = mav.getViewName();
+			mavContainer.setViewName(viewName);
+             //判断是否是重定向
+			if (viewName != null && isRedirectViewName(viewName)) {
+                 //设置重定向标识
+				mavContainer.setRedirectModelScenario(true);
+			}
+		}
+		else {
+			View view = mav.getView();
+			mavContainer.setView(view);
+            //判断是否是重定向
+			if (view instanceof SmartView smartView && smartView.isRedirectView()) {
+                //设置重定向标识
+				mavContainer.setRedirectModelScenario(true);
+			}
+		}
+        //设置http状态码
+		mavContainer.setStatus(mav.getStatus());
+        //将model都加入mav 方便后面jsp使用
+		mavContainer.addAllAttributes(mav.getModel());
+	}
+	//判断是否重定向
+	protected boolean isRedirectViewName(String viewName) {
+		return (PatternMatchUtils.simpleMatch(this.redirectPatterns, viewName) || viewName.startsWith("redirect:"));
+	}
+
+}
+```
+
+#### ModelMethodProcessor
+
+负责处理`Model`类型的返回值
+
+```java
+public class ModelMethodProcessor implements HandlerMethodArgumentResolver, HandlerMethodReturnValueHandler {
+
+    //负责处理`Model`类型的返回值
+	@Override
+	public boolean supportsReturnType(MethodParameter returnType) {
+		return Model.class.isAssignableFrom(returnType.getParameterType());
+	}
+
+	@Override
+	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+		//返回值为null直接返回
+		if (returnValue == null) {
+			return;
+		}
+		else if (returnValue instanceof Model model) {
+             //将model加入到mav中
+			mavContainer.addAllAttributes(model.asMap());
+		}
+		else {
+			// should not happen
+			throw new UnsupportedOperationException("Unexpected return type [" +
+					returnType.getParameterType().getName() + "] in method: " + returnType.getMethod());
+		}
+	}
+
+}
+```
+
+
+
+#### ViewMethodReturnValueHandler
+
+负责处理`View`类型的返回值
+
+```java
+public class ViewMethodReturnValueHandler implements HandlerMethodReturnValueHandler {
+
+    //负责处理`View`类型的返回值
+    @Override
+    public boolean supportsReturnType(MethodParameter returnType) {
+       return View.class.isAssignableFrom(returnType.getParameterType());
+    }
+	
+    @Override
+    public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+          ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+	   //如果返回值是View类型
+       if (returnValue instanceof View view) {
+          //设置View
+          mavContainer.setView(view);
+          //如果是重定向 设置标识
+          if (view instanceof SmartView smartView && smartView.isRedirectView()) {
+             mavContainer.setRedirectModelScenario(true);
+          }
+       }
+       else if (returnValue != null) {
+          // should not happen
+          throw new UnsupportedOperationException("Unexpected return type: " +
+                returnType.getParameterType().getName() + " in method: " + returnType.getMethod());
+       }
+    }
+
+}
+```
+
+#### ResponseBodyEmitterReturnValueHandler
+
+负责处理 **异步流式响应**（streaming response）的核心组件，包括 `ResponseBodyEmitter`、`SseEmitter` 以及响应式（Reactive）Mono/Flux类型。
+
+```java
+public class ResponseBodyEmitterReturnValueHandler implements HandlerMethodReturnValueHandler {
+    
+    //处理 异步流式响应（streaming response）的核心组件，包括 ResponseBodyEmitter、SseEmitter 以及响应式（Reactive）类型。
+    @Override
+	public boolean supportsReturnType(MethodParameter returnType) {
+         //如果被ResponseEntity包装 获取ResponseEntity<T>中的T
+		Class<?> bodyType = ResponseEntity.class.isAssignableFrom(returnType.getParameterType()) ?
+				ResolvableType.forMethodParameter(returnType).getGeneric().resolve() :
+				returnType.getParameterType();
+		//检查T是不是响应式类型ResponseBodyEmitter/Mono/Flux等等
+		return (bodyType != null && (ResponseBodyEmitter.class.isAssignableFrom(bodyType) ||
+				this.reactiveHandler.isReactiveType(bodyType)));
+	}
+
+	@Override
+	@SuppressWarnings("resource")
+	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+		//返回值为空 标注请求内容已经处理 后续不用视图解析
+		if (returnValue == null) {
+			mavContainer.setRequestHandled(true);
+			return;
+		}
+		
+		HttpServletResponse response = webRequest.getNativeResponse(HttpServletResponse.class);
+		Assert.state(response != null, "No HttpServletResponse");
+		ServerHttpResponse outputMessage = new ServletServerHttpResponse(response);
+		//如果返回值是ResponseEntity
+		if (returnValue instanceof ResponseEntity<?> responseEntity) {
+             //设置响应状态码和响应头
+			response.setStatus(responseEntity.getStatusCode().value());
+			outputMessage.getHeaders().putAll(responseEntity.getHeaders());
+             //取出内部的泛型返回值
+			returnValue = responseEntity.getBody();
+			returnType = returnType.nested();
+			if (returnValue == null) {
+				mavContainer.setRequestHandled(true);
+				outputMessage.flush();
+				return;
+			}
+		}
+
+		ServletRequest request = webRequest.getNativeRequest(ServletRequest.class);
+		Assert.state(request != null, "No ServletRequest");
+		//如果返回值类型是ResponseBodyEmitter
+		ResponseBodyEmitter emitter;
+		if (returnValue instanceof ResponseBodyEmitter responseBodyEmitter) {
+			emitter = responseBodyEmitter;
+		}
+         //如果返回值是reactive类型 Mono/Flux等
+		else {
+             //使用reactiveHandler处理对应类型
+			emitter = this.reactiveHandler.handleValue(returnValue, returnType, mavContainer, webRequest);
+			if (emitter == null) {
+				// Not streaming: write headers without committing response..
+				outputMessage.getHeaders().forEach((headerName, headerValues) -> {
+					for (String headerValue : headerValues) {
+						response.addHeader(headerName, headerValue);
+					}
+				});
+				return;
+			}
+		}
+         //调用ResponseBodyEmitter扩展方法
+		emitter.extendResponse(outputMessage);
+		
+         //禁用缓存
+		// At this point we know we're streaming..
+		ShallowEtagHeaderFilter.disableContentCaching(request);
+
+		// Wrap the response to ignore further header changes
+		// Headers will be flushed at the first write
+		outputMessage = new StreamingServletServerHttpResponse(outputMessage);
+
+		HttpMessageConvertingHandler handler;
+		try {
+             //把 DeferredResult 注册到 AsyncManager 这个请求将切换到异步模式
+			DeferredResult<?> deferredResult = new DeferredResult<>(emitter.getTimeout());
+			WebAsyncUtils.getAsyncManager(webRequest).startDeferredResultProcessing(deferredResult, mavContainer);
+             //创建json/xml等格式的转换器
+			handler = new HttpMessageConvertingHandler(outputMessage, deferredResult);
+		}
+		catch (Throwable ex) {
+			emitter.initializeWithError(ex);
+			throw ex;
+		}
+		//初始化emitter，设置转换器和deferredResult回调 设置回调onTimeout、onError、onCompletion
+		emitter.initialize(handler);
+	}
+
+}
+```
+
+#### StreamingResponseBodyReturnValueHandler
+
+负责处理`StreamingResponseBody`和`ResponseEntity<StreamingResponseBody>`类型的返回值
+
+```java
+public class StreamingResponseBodyReturnValueHandler implements HandlerMethodReturnValueHandler {
+
+    //处理StreamingResponseBody和ResponseEntity<StreamingResponseBody>类型的返回值
+    @Override
+    public boolean supportsReturnType(MethodParameter returnType) {
+       if (StreamingResponseBody.class.isAssignableFrom(returnType.getParameterType())) {
+          return true;
+       }
+       else if (ResponseEntity.class.isAssignableFrom(returnType.getParameterType())) {
+          Class<?> bodyType = ResolvableType.forMethodParameter(returnType).getGeneric().resolve();
+          return (bodyType != null && StreamingResponseBody.class.isAssignableFrom(bodyType));
+       }
+       return false;
+    }
+
+    @Override
+    @SuppressWarnings("resource")
+    public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+          ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+	   
+       //如果返回值为空 标注请求内容已经处理 后续不用视图解析
+       if (returnValue == null) {
+          mavContainer.setRequestHandled(true);
+          return;
+       }
+
+       HttpServletResponse response = webRequest.getNativeResponse(HttpServletResponse.class);
+       Assert.state(response != null, "No HttpServletResponse");
+       ServerHttpResponse outputMessage = new ServletServerHttpResponse(response);
+	  //如果返回值是ResponseEntity 设置响应状态码和响应头 
+       if (returnValue instanceof ResponseEntity<?> responseEntity) {
+          response.setStatus(responseEntity.getStatusCode().value());
+          outputMessage.getHeaders().putAll(responseEntity.getHeaders());
+          returnValue = responseEntity.getBody();
+          if (returnValue == null) {
+             mavContainer.setRequestHandled(true);
+             outputMessage.flush();
+             return;
+          }
+       }
+
+       ServletRequest request = webRequest.getNativeRequest(ServletRequest.class);
+       Assert.state(request != null, "No ServletRequest");
+       ShallowEtagHeaderFilter.disableContentCaching(request);
+
+       Assert.isInstanceOf(StreamingResponseBody.class, returnValue, "StreamingResponseBody expected");
+       StreamingResponseBody streamingBody = (StreamingResponseBody) returnValue;
+	   //封装StreamingResponseBodyTask 将输出流指向响应体
+       Callable<Void> callable = new StreamingResponseBodyTask(outputMessage.getBody(), streamingBody);
+       //使用spring中的taskExecutor线程池来异步执行callable
+       WebAsyncUtils.getAsyncManager(webRequest).startCallableProcessing(callable, mavContainer);
+    }
+
+
+    private static class StreamingResponseBodyTask implements Callable<Void> {
+
+       private final OutputStream outputStream;
+
+       private final StreamingResponseBody streamingBody;
+
+       public StreamingResponseBodyTask(OutputStream outputStream, StreamingResponseBody streamingBody) {
+          this.outputStream = outputStream;
+          this.streamingBody = streamingBody;
+       }
+
+       @Override
+       public Void call() throws Exception {
+          this.streamingBody.writeTo(this.outputStream);
+          this.outputStream.flush();
+          return null;
+       }
+    }
+
+}
+```
+
+#### HttpEntityMethodProcessor
+
+负责处理`HttpEntity、ErrorResponse、ProblemDetail`类型的返回值，不包括`RequestEntity`
+
+```java
+public class HttpEntityMethodProcessor extends AbstractMessageConverterMethodProcessor {
+    
+    //负责处理HttpEntity、ErrorResponse、ProblemDetail类型的返回值，不包括RequestEntity
+    @Override
+	public boolean supportsReturnType(MethodParameter returnType) {
+		Class<?> type = returnType.getParameterType();
+		return ((HttpEntity.class.isAssignableFrom(type) && !RequestEntity.class.isAssignableFrom(type)) ||
+				ErrorResponse.class.isAssignableFrom(type) || ProblemDetail.class.isAssignableFrom(type));
+	}
+
+	@Override
+	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+
+        //告诉 Spring 这个请求已经由 Handler 处理完成，不需要再去解析 view。
+		mavContainer.setRequestHandled(true);
+		if (returnValue == null) {
+			return;
+		}
+		//封装输入输出对象
+		ServletServerHttpRequest inputMessage = createInputMessage(webRequest);
+		ServletServerHttpResponse outputMessage = createOutputMessage(webRequest);
+        
+		//将ErrorResponse、ProblemDetail、HttpEntity的子类对象统一封装成ResponseEntity
+		HttpEntity<?> httpEntity;
+		if (returnValue instanceof ErrorResponse response) {
+			httpEntity = new ResponseEntity<>(response.getBody(), response.getHeaders(), response.getStatusCode());
+		}
+		else if (returnValue instanceof ProblemDetail detail) {
+			httpEntity = ResponseEntity.of(detail).build();
+		}
+		else {
+			Assert.isInstanceOf(HttpEntity.class, returnValue);
+			httpEntity = (HttpEntity<?>) returnValue;
+		}
+		//如果返回值是 ProblemDetail（Spring 6 新增，用于 RFC7807 风格的错误响应），但没有 instance（请求 URI）时，自动设置。
+		if (httpEntity.getBody() instanceof ProblemDetail detail) {
+			if (detail.getInstance() == null) {
+				URI path = URI.create(inputMessage.getServletRequest().getRequestURI());
+				detail.setInstance(path);
+			}
+			if (logger.isWarnEnabled() && httpEntity instanceof ResponseEntity<?> responseEntity) {
+				if (responseEntity.getStatusCode().value() != detail.getStatus()) {
+					logger.warn(returnType.getExecutable().toGenericString() +
+							" returned ResponseEntity: " + responseEntity + ", but its status" +
+							" doesn't match the ProblemDetail status: " + detail.getStatus());
+				}
+			}
+		}
+		
+         //将 HttpEntity 的 headers 合并到响应 headers。
+		//特殊处理 VARY header：如果已有 VARY，会合并，不会覆盖。
+		HttpHeaders outputHeaders = outputMessage.getHeaders();
+		HttpHeaders entityHeaders = httpEntity.getHeaders();
+		if (!entityHeaders.isEmpty()) {
+			entityHeaders.forEach((key, value) -> {
+				if (HttpHeaders.VARY.equals(key) && outputHeaders.containsKey(HttpHeaders.VARY)) {
+					List<String> values = getVaryRequestHeadersToAdd(outputHeaders, entityHeaders);
+					if (!values.isEmpty()) {
+						outputHeaders.setVary(values);
+					}
+				}
+				else {
+					outputHeaders.put(key, value);
+				}
+			});
+		}
+		//如果是ResponseEntity类型
+		if (httpEntity instanceof ResponseEntity<?> responseEntity) {
+			int returnStatus = responseEntity.getStatusCode().value();
+			outputMessage.getServletResponse().setStatus(returnStatus);
+            //200 OK：处理 If-Modified-Since / ETag，如果资源未修改，则直接 flush，不写 body。
+			if (returnStatus == 200) {
+				HttpMethod method = inputMessage.getMethod();
+				if ((HttpMethod.GET.equals(method) || HttpMethod.HEAD.equals(method))
+						&& isResourceNotModified(inputMessage, outputMessage)) {
+					outputMessage.flush();
+					return;
+				}
+			}
+             //如果响应状态码是 3xx Redirect
+			else if (returnStatus / 100 == 3) {
+                  //保存 flash attributes
+				String location = outputHeaders.getFirst("location");
+				if (location != null) {
+					saveFlashAttributes(mavContainer, webRequest, location);
+				}
+			}
+		}
+		//使用 HttpMessageConverter 将 body 写入响应
+		// Try even with null body. ResponseBodyAdvice could get involved.
+		writeWithMessageConverters(httpEntity.getBody(), returnType, inputMessage, outputMessage);
+		//即使 body 为 null，也保证 headers 已经写入客户端。
+		// Ensure headers are flushed even if no body was written.
+		outputMessage.flush();
+	}
+}
+```
+
+#### HttpHeadersReturnValueHandler
+
+负责处理返回值类型是`HttpHeaders`
+
+```java
+public class HttpHeadersReturnValueHandler implements HandlerMethodReturnValueHandler {
+	
+    //如果返回值是HttpHeaders类型
+	@Override
+	public boolean supportsReturnType(MethodParameter returnType) {
+		return HttpHeaders.class.isAssignableFrom(returnType.getParameterType());
+	}
+
+	@Override
+	@SuppressWarnings("resource")
+	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+		//告诉 Spring 这个请求已经由 Handler 处理完成，不需要再去解析 view。
+		mavContainer.setRequestHandled(true);
+
+		Assert.state(returnValue instanceof HttpHeaders, "HttpHeaders expected");
+		HttpHeaders headers = (HttpHeaders) returnValue;
+
+         //把控制器返回的 headers 写入响应。
+		if (!headers.isEmpty()) {
+			HttpServletResponse servletResponse = webRequest.getNativeResponse(HttpServletResponse.class);
+			Assert.state(servletResponse != null, "No HttpServletResponse");
+			ServletServerHttpResponse outputMessage = new ServletServerHttpResponse(servletResponse);
+			outputMessage.getHeaders().putAll(headers);
+			outputMessage.getBody();  // flush headers
+		}
+	}
+
+}
+```
+
+#### CallableMethodReturnValueHandler
+
+负责处理`Callable`类型的返回值
+
+```java
+public class CallableMethodReturnValueHandler implements HandlerMethodReturnValueHandler {
+
+    //负责处理`Callable`类型的返回值
+	@Override
+	public boolean supportsReturnType(MethodParameter returnType) {
+		return Callable.class.isAssignableFrom(returnType.getParameterType());
+	}
+
+	@Override
+	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+  		//告诉 Spring 这个请求已经由 Handler 处理完成，不需要再去解析 view。
+		if (returnValue == null) {
+			mavContainer.setRequestHandled(true);
+			return;
+		}
+		//使用spring中的taskExecutor线程池来异步执行callable
+		Callable<?> callable = (Callable<?>) returnValue;
+		WebAsyncUtils.getAsyncManager(webRequest).startCallableProcessing(callable, mavContainer);
+	}
+
+}
+```
+
+#### DeferredResultMethodReturnValueHandler
+
+负责用于处理控制器方法返回 `DeferredResult`、`ListenableFuture` 或 `CompletionStage` 的情况
+
+```java
+public class DeferredResultMethodReturnValueHandler implements HandlerMethodReturnValueHandler {
+
+    //用于处理控制器方法返回 DeferredResult、ListenableFuture 或 CompletionStage 的情况
+    @SuppressWarnings("deprecation")
+    @Override
+    public boolean supportsReturnType(MethodParameter returnType) {
+       Class<?> type = returnType.getParameterType();
+       return (DeferredResult.class.isAssignableFrom(type) ||
+             org.springframework.util.concurrent.ListenableFuture.class.isAssignableFrom(type) ||
+             CompletionStage.class.isAssignableFrom(type));
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+          ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+	   //告诉 Spring 这个请求已经由 Handler 处理完成，不需要再去解析 view。
+       if (returnValue == null) {
+          mavContainer.setRequestHandled(true);
+          return;
+       }
+
+       DeferredResult<?> result;
+	  //将ListenableFuture和CompletionStage都封装成DeferredResult
+       if (returnValue instanceof DeferredResult<?> deferredResult) {
+          result = deferredResult;
+       }
+       else if (returnValue instanceof org.springframework.util.concurrent.ListenableFuture<?> listenableFuture) {
+          result = adaptListenableFuture(listenableFuture);
+       }
+       else if (returnValue instanceof CompletionStage<?> completionStage) {
+          result = adaptCompletionStage(completionStage);
+       }
+       else {
+          // Should not happen...
+          throw new IllegalStateException("Unexpected return value type: " + returnValue);
+       }
+	   //设置spring启动异步，实际异步由开发者管理调用，spring负责设置异步结束后的异步mvc流程
+       WebAsyncUtils.getAsyncManager(webRequest).startDeferredResultProcessing(result, mavContainer);
+    }
+	
+    //封装ListenableFuture
+    @SuppressWarnings("deprecation")
+    private DeferredResult<Object> adaptListenableFuture(org.springframework.util.concurrent.ListenableFuture<?> future) {
+       DeferredResult<Object> result = new DeferredResult<>();
+       future.addCallback(new org.springframework.util.concurrent.ListenableFutureCallback<Object>() {
+          @Override
+          public void onSuccess(@Nullable Object value) {
+             result.setResult(value);
+          }
+          @Override
+          public void onFailure(Throwable ex) {
+             result.setErrorResult(ex);
+          }
+       });
+       return result;
+    }
+	//封装CompletionStage
+    private DeferredResult<Object> adaptCompletionStage(CompletionStage<?> future) {
+       DeferredResult<Object> result = new DeferredResult<>();
+       future.whenComplete((value, ex) -> {
+          if (ex != null) {
+             if (ex instanceof CompletionException && ex.getCause() != null) {
+                ex = ex.getCause();
+             }
+             result.setErrorResult(ex);
+          }
+          else {
+             result.setResult(value);
+          }
+       });
+       return result;
+    }
+
+}
+```
+
+#### AsyncTaskMethodReturnValueHandler
+
+负责处理`WebAsyncTask`类型的返回值
+
+```java
+public class AsyncTaskMethodReturnValueHandler implements HandlerMethodReturnValueHandler {
+
+	@Nullable
+	private final BeanFactory beanFactory;
+
+
+	public AsyncTaskMethodReturnValueHandler(@Nullable BeanFactory beanFactory) {
+		this.beanFactory = beanFactory;
+	}
+
+	//负责处理WebAsyncTask类型的返回值
+	@Override
+	public boolean supportsReturnType(MethodParameter returnType) {
+		return WebAsyncTask.class.isAssignableFrom(returnType.getParameterType());
+	}
+
+	@Override
+	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+		//告诉 Spring 这个请求已经由 Handler 处理完成，不需要再去解析 view。
+		if (returnValue == null) {
+			mavContainer.setRequestHandled(true);
+			return;
+		}
+		//设置beanFactory
+		WebAsyncTask<?> webAsyncTask = (WebAsyncTask<?>) returnValue;
+		if (this.beanFactory != null) {
+			webAsyncTask.setBeanFactory(this.beanFactory);
+		}
+         //使用spring中的taskExecutor线程池来异步执行callable
+		WebAsyncUtils.getAsyncManager(webRequest).startCallableProcessing(webAsyncTask, mavContainer);
+	}
+
+}
+```
+
+#### ServletModelAttributeMethodProcessor
+
+```java
+public class ServletModelAttributeMethodProcessor extends ModelAttributeMethodProcessor {
+
+
+}
+```
+
+##### ModelAttributeMethodProcessor
+
+负责处理方法上有`@ModelAttribute`注解 或者`annotationNotRequired=true`并且返回值非简单类型
+
+```java
+public class ModelAttributeMethodProcessor implements HandlerMethodArgumentResolver, HandlerMethodReturnValueHandler {
+
+	protected final Log logger = LogFactory.getLog(getClass());
+
+	private final boolean annotationNotRequired;
+    
+    //方法上有@ModelAttribute注解
+    //或者 annotationNotRequired=true并且返回值非简单类型
+    @Override
+	public boolean supportsReturnType(MethodParameter returnType) {
+		return (returnType.hasMethodAnnotation(ModelAttribute.class) ||
+				(this.annotationNotRequired && !BeanUtils.isSimpleProperty(returnType.getParameterType())));
+	}
+    
+	@Override
+	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+		//返回值不为空
+		if (returnValue != null) {
+             //给返回值生成一个name 放入model中以便后续view渲染
+			String name = ModelFactory.getNameForReturnValue(returnValue, returnType);
+			mavContainer.addAttribute(name, returnValue);
+		}
+	}
+}
+```
+
+#### RequestResponseBodyMethodProcessor
+
+负责处理带有`@ResponseBody`注解的返回值
+
+```java
+public class RequestResponseBodyMethodProcessor extends AbstractMessageConverterMethodProcessor {
+	
+    //类/方法上有@ResponseBody注解的方法
+    @Override
+	public boolean supportsReturnType(MethodParameter returnType) {
+		return (AnnotatedElementUtils.hasAnnotation(returnType.getContainingClass(), ResponseBody.class) ||
+				returnType.hasMethodAnnotation(ResponseBody.class));
+	}
+    
+    @Override
+	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+			ModelAndViewContainer mavContainer, NativeWebRequest webRequest)
+			throws IOException, HttpMediaTypeNotAcceptableException, HttpMessageNotWritableException {
+		//告诉 Spring 这个请求已经由 Handler 处理完成，不需要再去解析 view。
+		mavContainer.setRequestHandled(true);
+        
+		ServletServerHttpRequest inputMessage = createInputMessage(webRequest);
+		ServletServerHttpResponse outputMessage = createOutputMessage(webRequest);
+		//如果返回值是ProblemDetail
+		if (returnValue instanceof ProblemDetail detail) {
+			outputMessage.setStatusCode(HttpStatusCode.valueOf(detail.getStatus()));
+			if (detail.getInstance() == null) {
+				URI path = URI.create(inputMessage.getServletRequest().getRequestURI());
+				detail.setInstance(path);
+			}
+		}
+		//利用MessageConverter转换对象写出到响应体中
+		// Try even with null return value. ResponseBodyAdvice could get involved.
+		writeWithMessageConverters(returnValue, returnType, inputMessage, outputMessage);
+	}
+
+}
+```
+
+#### ViewNameMethodReturnValueHandler
+
+负责处理类型为void或者CharSequence的返回值
+
+```java
+public class ViewNameMethodReturnValueHandler implements HandlerMethodReturnValueHandler {
+    
+    //处理类型为void或者CharSequence的返回值
+	@Override
+	public boolean supportsReturnType(MethodParameter returnType) {
+		Class<?> paramType = returnType.getParameterType();
+		return (void.class == paramType || CharSequence.class.isAssignableFrom(paramType));
+	}
+
+    
+	@Override
+	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+		//如果返回值是字符串
+		if (returnValue instanceof CharSequence) {
+             //设置成为视图名
+			String viewName = returnValue.toString();
+			mavContainer.setViewName(viewName);
+             //如果是重定向 设置重定向标识
+			if (isRedirectViewName(viewName)) {
+				mavContainer.setRedirectModelScenario(true);
+			}
+		}
+		else if (returnValue != null) {
+			// should not happen
+			throw new UnsupportedOperationException("Unexpected return type: " +
+					returnType.getParameterType().getName() + " in method: " + returnType.getMethod());
+		}
+        //如果返回值是void
+        //默认使用请求路径作为视图名
+	}
+
+}
+```
+
+#### MapMethodProcessor
+
+负责处理类型是`Map`的返回值
+
+```java
+public class MapMethodProcessor implements HandlerMethodArgumentResolver, HandlerMethodReturnValueHandler {
+    
+    //处理类型是Map的返回值
+    @Override
+	public boolean supportsReturnType(MethodParameter returnType) {
+		return Map.class.isAssignableFrom(returnType.getParameterType());
+	}
+
+	@Override
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
+			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
+		//将Map类型的返回值加入model中
+		if (returnValue instanceof Map map) {
+			mavContainer.addAllAttributes(map);
+		}
+		else if (returnValue != null) {
+			// should not happen
+			throw new UnsupportedOperationException("Unexpected return type [" +
+					returnType.getParameterType().getName() + "] in method: " + returnType.getMethod());
+		}
+	}
+}
+```
+
+#### ServletModelAttributeMethodProcessor(annotationNotRequired=true)
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 异步
+
+DeferredResult
+
+```
+ListenableFuture
+```
+
+```
+CompletionStage
+```
+
+
+
+## 异常处理
+
+### ProblemDetail
+
+`ProblemDetail` 是 Spring Framework 6 引入的新错误响应结构，用于支持 RFC 7807（Problem Details for HTTP APIs）标准化的错误输出格式。
+
+- **type**：一个 URI，指向错误类型的文档描述
+- **title**：简短的错误标题
+- **status**：HTTP 状态码（整数）
+- **detail**：具体错误描述
+- **instance**：哪个请求资源导致错误（如 `/users/1`）
+
+```json
+{
+  "type": "https://example.com/errors/not-found",
+  "title": "Resource Not Found",
+  "status": 404,
+  "detail": "User 123 not found",
+  "instance": "/users/123",
+  "errorCode": "USER_NOT_FOUND"
+}
+```
+
+**创建方式**
+
+根据 HTTP 状态创建：
+
+```java
+ProblemDetail.forStatus(HttpStatus.NOT_FOUND)
+```
+
+提供状态 + detail 信息：
+
+```java
+ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request")
+```
+
+**添加扩展字段**
+
+```java
+- detail.setProperty("errorCode", "USER_NOT_FOUND")
+- detail.setProperty("timestamp", System.currentTimeMillis())
+```
+
+
+
+### ErrorResponse
+
+`ErrorResponse` 是 Spring Framework 6 引入的一个接口，用于表示“异常如何转换成 ProblemDetail”。
+
+```java
+//若控制器抛出此异常，Spring 会自动返回 ProblemDetail JSON。
+public class UserNotFoundException extends RuntimeException implements ErrorResponse {
+
+    private final Long userId;
+
+    public UserNotFoundException(Long id) {
+        super("User not found: " + id);
+        this.userId = id;
+    }
+
+    @Override
+    public HttpStatusCode getStatusCode() {
+        return HttpStatus.NOT_FOUND;
+    }
+
+    @Override
+    public ProblemDetail getBody() {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        detail.setTitle("User Not Found");
+        detail.setDetail("User with id " + userId + " not found");
+        detail.setProperty("userId", userId);
+        detail.setProperty("errorCode", "USER_NOT_FOUND");
+        return detail;
+    }
+}
+```
+
+
+
+
+
+## 参数校验
 
 
 
@@ -3175,6 +6136,51 @@ public class InitBinderDemoController {
 
 
 
+### @ModelAttribute
+
+将请求参数绑定到方法参数的对象上，并将该对象自动加入到模型（`Model`）中，以便在视图中使用。
+
+- `binding = true`（默认）
+
+  Spring 会将 **请求参数绑定到模型属性对象的字段中**。
+
+  例如：
+   请求参数：`name=Tom&age=20`
+   `@ModelAttribute User user`
+   ➡️ Spring 会自动调用 setter 给 user 赋值。
+
+- `binding = false`
+
+  Spring **仍然会创建模型对象并放入 Model 中，但不会尝试绑定请求参数**。
+
+  - 对象会被实例化（通过构造方法或 `@ModelAttribute` 方法）
+  - **但不会用请求参数覆盖对象的字段**
+
+```java
+@Controller
+@SessionAttributes("user")
+public class UserController {
+
+    // 每次请求都会执行，将返回值以roles为名称加入model中
+    @ModelAttribute("roles")
+    public List<String> populateRoles() {
+        return Arrays.asList("Admin", "User", "Guest");
+    }
+
+    // POST 请求提交表单
+    @PostMapping("/addUser")
+    public String addUser(@ModelAttribute("user") User user, Model model) {
+        // user 对象已经绑定请求参数后自动加入到model中
+        return "userView";
+    }
+}
+
+```
+
+
+
+
+
 ### @ControllerAdvice
 
 `@ControllerAdvice` 是 Spring MVC 中的一个“控制器增强器”（Controller Enhancer）。
@@ -3184,6 +6190,46 @@ public class InitBinderDemoController {
 3. 全局模型数据预设（`@ModelAttribute`）。
 
 
+
+
+
+### @SessionAttribute
+
+### @SessionAttributes
+
+### @ResponseStatus
+
+### @RequestPart
+
+
+
+### @BindParam
+
+
+
+### @MatrixVariable
+
+
+
+### @Validated
+
+
+
+### @CookieValue
+
+
+
+### @Value
+
+
+
+### @RequestAttribute
+
+
+
+
+
+### @ExceptionHandler
 
 
 
@@ -3386,11 +6432,86 @@ If-Unmodified-Since: Tue, 04 Nov 2025 12:00:00 GMT
 
 
 
+## Servlet
+
+`getParameterMap()`可以获取到
+
+- URL 查询参数（query string）
+- multipart 表单的文本字段（文件字段（`file`）不会进入参数 map）
+
+`getParts()`
+
+- 只针对 **`Content-Type: multipart/form-data`** 的请求
+- 返回请求中 **所有 Part** 的集合
+  - 包括文本字段
+  - 包括文件字段（MultipartFile 对应的部分）
+- 返回的 `Collection<Part>` **不可修改**，修改集合不会影响原请求
 
 
 
+## RequestAttributes
+
+```
+SCOPE_REQUEST
+```
 
 
 
+## 泛型
 
+因为 **Java 的泛型是编译期泛型（伪泛型）**。
+
+在 Java 5 引入泛型时，为了与旧版本 JVM 兼容，Java 设计成：
+
+**泛型只在编译期有效，运行期不保留真实类型信息。**
+
+```java
+List<String> a = new ArrayList<>();
+List<Integer> b = new ArrayList<>();
+//运行时无法区分：
+a.getClass() == b.getClass();  // true
+//运行期只有：
+ArrayList.class
+```
+
+### 类型擦除带来什么问题？
+
+```java
+List<User>
+Map<String, Order>
+Response<List<User>>
+//运行时都只剩下：
+List
+Map
+Response
+```
+
+
+
+### Java 的 Type 体系（关键）
+
+| Type 子接口           | 含义         | 示例                               |
+| --------------------- | ------------ | ---------------------------------- |
+| **Class**             | 非泛型类型   | `User.class`                       |
+| **ParameterizedType** | 有参数的泛型 | `List<User>`、`Map<String, Order>` |
+| **GenericArrayType**  | 泛型数组     | `T[]`                              |
+| **TypeVariable**      | 类型变量     | `T`                                |
+| **WildcardType**      | 通配符类型   | `? extends Number`                 |
+
+通过子接口来获取泛型的类型
+
+```java
+//List<User>
+Type: ParameterizedType
+rawType: List
+typeArguments: [User]
+```
+
+
+
+### ResolvableType
+
+## HTTP
+
+## HttpEntity
 

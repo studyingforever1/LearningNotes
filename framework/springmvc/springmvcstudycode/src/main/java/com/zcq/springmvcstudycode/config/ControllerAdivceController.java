@@ -2,6 +2,7 @@ package com.zcq.springmvcstudycode.config;
 
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
@@ -22,5 +23,12 @@ public class ControllerAdivceController {
         stringObjectHashMap.put("id",1);
         return stringObjectHashMap;
     }
+
+
+    @ExceptionHandler(value = Exception.class)
+    public String handleException(Exception exception) {
+        return "error";
+    }
+
 
 }

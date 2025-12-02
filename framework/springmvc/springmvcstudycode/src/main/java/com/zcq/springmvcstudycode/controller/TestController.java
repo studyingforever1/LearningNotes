@@ -3,8 +3,8 @@ package com.zcq.springmvcstudycode.controller;
 import com.zcq.springmvcstudycode.bean.Student;
 import com.zcq.springmvcstudycode.bean.User;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
-import org.springframework.core.ResolvableType;
 import org.springframework.http.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.LinkedMultiValueMap;
@@ -275,5 +275,36 @@ public class TestController {
     @GetMapping("/problem")
     public ProblemDetail problem() {
         return ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+
+    @RequestMapping("/nullpoint")
+    public Integer nullpoint() {
+        String s = null;
+        return s.length();
+    }
+
+
+    @RequestMapping("/nullpoint2")
+    public Integer nullpoint2(@Validated @NotNull @RequestParam Integer id) {
+        System.out.println(id);
+        String s = null;
+        return s.length();
+    }
+
+    @ExceptionHandler
+    public String handleException(Exception e) {
+        return "error";
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public String handleException(RuntimeException e) {
+        return "RuntimeException";
+    }
+
+
+    @ExceptionHandler(NullPointerException.class)
+    public String handleException(NullPointerException e) {
+        return "NullPointerException";
     }
 }

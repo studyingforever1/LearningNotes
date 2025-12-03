@@ -5774,19 +5774,990 @@ public class MapMethodProcessor implements HandlerMethodArgumentResolver, Handle
 
 ### 异步
 
-DeferredResult
+#### Servlet的支持
 
+##### ServletRequest
+
+开启异步的入口，将请求响应设置为异步状态
+
+```java
+public interface ServletRequest {
+	//调用后 Servlet 线程立即返回 到容器，连接保持打开，真正的处理工作由你之后创建的线程继续执行。
+    //将 request 进入异步模式 response 的提交被延迟，直到 AsyncContext.complete()
+    AsyncContext startAsync() throws IllegalStateException;
+
+	//与无参版功能相同，也是开启异步模式，但允许你 使用（可能是 wrapper 的）自定义 request/response。
+    AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse)
+            throws IllegalStateException;
+
+	//判断当前 request 是否处于异步模式
+    boolean isAsyncStarted();
+
+	//判断当前 request 是否允许异步模式 asyncSupported=true
+    boolean isAsyncSupported();
+    
+	//返回最近一次调用 startAsync() 或 startAsync(ServletRequest, ServletResponse) 时创建或重置的 AsyncContext 对象。
+    AsyncContext getAsyncContext();
+}
 ```
-ListenableFuture
+
+
+
+##### AsyncContext
+
+异步上下文对象
+
+```java
+public interface AsyncContext {
+    //返回用于初始化此 AsyncContext 的 ServletRequest 对象。
+    ServletRequest getRequest();
+    //返回用于初始化此 AsyncContext 的ServletResponse对象。
+    ServletResponse getResponse();
+    //如果 AsyncContext 是用“原始的 request 和 response”初始化的，则返回 true。
+	//否则（使用包装对象）返回 false。
+    boolean hasOriginalRequestAndResponse();
+    //使用原始的请求 URI 和 原始的查询参数，将 request 和 response 派发（dispatch）回容器。
+    void dispatch();
+    //使用给定的相对路径（path），将 request 和 response 派发到容器。
+    void dispatch(String path);
+    //使用指定的 ServletContext 和 path 将 request 和 response 派发到容器。
+    void dispatch(ServletContext context, String path);
+    //完成异步操作，并关闭 AsyncContext 所绑定的 response。
+    //complete() 标志异步操作结束
+    //它会触发所有注册的 AsyncListener.onComplete() 回调
+    //调用后，response 将被容器最终提交（或关闭）
+    void complete();
+    //让容器从管理线程池中分配线程执行传入的 Runnable。 线程由 Servlet 容器管理
+    void start(Runnable run);
+    //注册监听器
+    void addListener(AsyncListener listener);
+    void addListener(AsyncListener listener, ServletRequest servletRequest, ServletResponse servletResponse);
+    <T extends AsyncListener> T createListener(Class<T> clazz) throws ServletException;
+    //设置异步操作超时 默认30s
+    void setTimeout(long timeout);
+    long getTimeout();
+
+}
 ```
 
+
+
+##### AsyncListener
+
+异步监听器
+
+```java
+public interface AsyncListener extends EventListener {
+    //当异步请求完成，调用了 AsyncContext.complete() 或者异步处理自然结束时。
+    void onComplete(AsyncEvent event) throws IOException;
+    //异步请求超过设置的超时时间（AsyncContext.setTimeout()），且没有调用 complete() 或 dispatch()。
+    void onTimeout(AsyncEvent event) throws IOException;
+    //异步操作中发生异常时，例如后台线程抛出了异常，或者在写 response 时抛异常。
+    void onError(AsyncEvent event) throws IOException;
+    //当前异步请求被重新初始化（又调用了一次 request.startAsync()）时。
+    void onStartAsync(AsyncEvent event) throws IOException;
+}
 ```
-CompletionStage
+
+
+
+
+
+
+
+#### springmvc的增强封装
+
+##### WebAsyncManager
+
+`WebAsyncManager` 主要负责管理异步请求的生命周期：
+
+- 启动异步请求 (`startAsyncProcessing`)
+- 管理异步线程执行 (`Callable` 或 `DeferredResult`)
+- 保存异步执行结果 (`concurrentResult`)
+- 异步完成后调度请求回主线程 (`dispatch`)
+- 支持超时和异常处理
+
+```java
+public final class WebAsyncManager {
+
+	private static final Object RESULT_NONE = new Object();
+	//默认异步任务执行器
+	private static final AsyncTaskExecutor DEFAULT_TASK_EXECUTOR =
+			new SimpleAsyncTaskExecutor(WebAsyncManager.class.getSimpleName());
+	//处理异步任务超时的默认拦截器。Callable 超时处理
+	private static final CallableProcessingInterceptor timeoutCallableInterceptor =
+			new TimeoutCallableProcessingInterceptor();
+	//DeferredResult 超时处理
+	private static final DeferredResultProcessingInterceptor timeoutDeferredResultInterceptor =
+			new TimeoutDeferredResultProcessingInterceptor();
+    
+    //封装底层 Servlet 异步请求
+    @Nullable
+	private AsyncWebRequest asyncWebRequest;
+	//异步任务执行器
+	private AsyncTaskExecutor taskExecutor = DEFAULT_TASK_EXECUTOR;
+	//标记请求是否是 multipart（文件上传）且已经解析
+	private boolean isMultipartRequestParsed;
+	//保存异步任务执行结果（成功结果或异常）
+	@Nullable
+	private volatile Object concurrentResult = RESULT_NONE;
+	//保存异步任务的上下文信息，可选参数。
+	@Nullable
+	private volatile Object[] concurrentResultContext;
+	//记录异步任务当前状态
+	private final AtomicReference<State> state = new AtomicReference<>(State.NOT_STARTED);
+	//保存对 Callable 异步任务的拦截器
+	private final Map<Object, CallableProcessingInterceptor> callableInterceptors = new LinkedHashMap<>();
+	//保存对 DeferredResult 异步任务的拦截器
+	private final Map<Object, DeferredResultProcessingInterceptor> deferredResultInterceptors = new LinkedHashMap<>();
+    
+    
+    //用 DeferredResult 处理异步任务
+    public void startDeferredResultProcessing(
+			final DeferredResult<?> deferredResult, Object... processingContext) throws Exception {
+
+		Assert.notNull(deferredResult, "DeferredResult must not be null");
+		Assert.state(this.asyncWebRequest != null, "AsyncWebRequest must not be null");
+		//更新状态为异步处理中
+		if (!this.state.compareAndSet(State.NOT_STARTED, State.ASYNC_PROCESSING)) {
+			throw new IllegalStateException(
+					"Unexpected call to startDeferredResultProcessing: [" + this.state.get() + "]");
+		}
+		//获取超时时间 设置到request中
+		Long timeout = deferredResult.getTimeoutValue();
+		if (timeout != null) {
+			this.asyncWebRequest.setTimeout(timeout);
+		}
+		//添加拦截器链 deferredResult的拦截器和默认超时拦截器
+		List<DeferredResultProcessingInterceptor> interceptors = new ArrayList<>();
+		interceptors.add(deferredResult.getInterceptor());
+		interceptors.addAll(this.deferredResultInterceptors.values());
+		interceptors.add(timeoutDeferredResultInterceptor);
+		//创建拦截器链
+		final DeferredResultInterceptorChain interceptorChain = new DeferredResultInterceptorChain(interceptors);
+		//添加超时处理到request中 拦截器的triggerAfterTimeout
+		this.asyncWebRequest.addTimeoutHandler(() -> {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Servlet container timeout notification for " + formatUri(this.asyncWebRequest));
+			}
+			try {
+				interceptorChain.triggerAfterTimeout(this.asyncWebRequest, deferredResult);
+			}
+			catch (Throwable ex) {
+				setConcurrentResultAndDispatch(ex);
+			}
+		});
+		//添加异常处理到request中 拦截器的triggerAfterError
+		this.asyncWebRequest.addErrorHandler(ex -> {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Servlet container error notification for " + formatUri(this.asyncWebRequest));
+			}
+			try {
+				if (!interceptorChain.triggerAfterError(this.asyncWebRequest, deferredResult, ex)) {
+					return;
+				}
+				deferredResult.setErrorResult(ex);
+			}
+			catch (Throwable interceptorEx) {
+				setConcurrentResultAndDispatch(interceptorEx);
+			}
+		});
+		//添加完成处理到request中 拦截器的triggerAfterCompletion
+		this.asyncWebRequest.addCompletionHandler(() ->
+				interceptorChain.triggerAfterCompletion(this.asyncWebRequest, deferredResult));
+		//调用拦截器的异步开始前方法
+		interceptorChain.applyBeforeConcurrentHandling(this.asyncWebRequest, deferredResult);
+         //启动异步
+		startAsyncProcessing(processingContext);
+
+		try {
+             //调用处理开始前方法 applyPreProcess
+			interceptorChain.applyPreProcess(this.asyncWebRequest, deferredResult);
+             //设置结果处理器
+			deferredResult.setResultHandler(result -> {
+                  //调用applyPostProcess处理结果
+				result = interceptorChain.applyPostProcess(this.asyncWebRequest, deferredResult, result);
+                  //设置结果 调用dispatch重新回到mvc链路
+				setConcurrentResultAndDispatch(result);
+			});
+		}
+		catch (Throwable ex) {
+			setConcurrentResultAndDispatch(ex);
+		}
+	}
+    
+    //处理callable的异步任务
+    public void startCallableProcessing(final WebAsyncTask<?> webAsyncTask, Object... processingContext)
+			throws Exception {
+
+		Assert.notNull(webAsyncTask, "WebAsyncTask must not be null");
+		Assert.state(this.asyncWebRequest != null, "AsyncWebRequest must not be null");
+		//更新状态为异步处理中
+		if (!this.state.compareAndSet(State.NOT_STARTED, State.ASYNC_PROCESSING)) {
+			throw new IllegalStateException(
+					"Unexpected call to startCallableProcessing: [" + this.state.get() + "]");
+		}
+		//获取超时时间 设置超时时间
+		Long timeout = webAsyncTask.getTimeout();
+		if (timeout != null) {
+			this.asyncWebRequest.setTimeout(timeout);
+		}
+		//获取spring的线程池 没有就用默认的
+		AsyncTaskExecutor executor = webAsyncTask.getExecutor();
+		if (executor != null) {
+			this.taskExecutor = executor;
+		}
+		//添加拦截器链 webAsyncTask的拦截器和默认超时拦截器
+		List<CallableProcessingInterceptor> interceptors = new ArrayList<>();
+		interceptors.add(webAsyncTask.getInterceptor());
+		interceptors.addAll(this.callableInterceptors.values());
+		interceptors.add(timeoutCallableInterceptor);
+
+		final Callable<?> callable = webAsyncTask.getCallable();
+		final CallableInterceptorChain interceptorChain = new CallableInterceptorChain(interceptors);
+		//添加超时处理到request中 拦截器的triggerAfterTimeout
+		this.asyncWebRequest.addTimeoutHandler(() -> {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Servlet container timeout notification for " + formatUri(this.asyncWebRequest));
+			}
+			Object result = interceptorChain.triggerAfterTimeout(this.asyncWebRequest, callable);
+			if (result != CallableProcessingInterceptor.RESULT_NONE) {
+				setConcurrentResultAndDispatch(result);
+			}
+		});
+		//添加超时处理到request中 拦截器的triggerAfterError
+		this.asyncWebRequest.addErrorHandler(ex -> {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Servlet container error notification for " + formatUri(this.asyncWebRequest) + ": " + ex);
+			}
+			Object result = interceptorChain.triggerAfterError(this.asyncWebRequest, callable, ex);
+			result = (result != CallableProcessingInterceptor.RESULT_NONE ? result : ex);
+			setConcurrentResultAndDispatch(result);
+		});
+		//添加超时处理到request中 拦截器的triggerAfterCompletion
+		this.asyncWebRequest.addCompletionHandler(() ->
+				interceptorChain.triggerAfterCompletion(this.asyncWebRequest, callable));
+		//调用拦截器的异步开始前方法
+		interceptorChain.applyBeforeConcurrentHandling(this.asyncWebRequest, callable);
+         //启动异步
+		startAsyncProcessing(processingContext);
+		try {
+             //将callable任务提交到spring的线程池中
+			Future<?> future = this.taskExecutor.submit(() -> {
+				Object result = null;
+				try {
+                      //执行拦截器的前置方法
+					interceptorChain.applyPreProcess(this.asyncWebRequest, callable);
+                      //执行callable
+					result = callable.call();
+				}
+				catch (Throwable ex) {
+					result = ex;
+				}
+				finally {
+                      //执行拦截器的后置方法
+					result = interceptorChain.applyPostProcess(this.asyncWebRequest, callable, result);
+				}
+                  //设置异步结果并dispatch
+				setConcurrentResultAndDispatch(result);
+			});
+			interceptorChain.setTaskFuture(future);
+		}
+		catch (Throwable ex) {
+			Object result = interceptorChain.applyPostProcess(this.asyncWebRequest, callable, ex);
+			setConcurrentResultAndDispatch(result);
+		}
+	}
+    
+    private void startAsyncProcessing(Object[] processingContext) {
+		synchronized (WebAsyncManager.this) {
+			this.concurrentResult = RESULT_NONE;
+			this.concurrentResultContext = processingContext;
+		}
+
+		Assert.state(this.asyncWebRequest != null, "AsyncWebRequest must not be null");
+		if (logger.isDebugEnabled()) {
+			logger.debug("Started async request for " + formatUri(this.asyncWebRequest));
+		}
+		//调用AsyncWebRequest的启动异步
+		this.asyncWebRequest.startAsync();
+	}
+    
+    private void setConcurrentResultAndDispatch(@Nullable Object result) {
+		Assert.state(this.asyncWebRequest != null, "AsyncWebRequest must not be null");
+		synchronized (WebAsyncManager.this) {
+             //更新状态为结果设置
+			if (!this.state.compareAndSet(State.ASYNC_PROCESSING, State.RESULT_SET)) {
+				if (logger.isDebugEnabled()) {
+					logger.debug("Async result already set: [" + this.state.get() +
+							"], ignored result for " + formatUri(this.asyncWebRequest));
+				}
+				return;
+			}
+
+			this.concurrentResult = result;
+			if (logger.isDebugEnabled()) {
+				logger.debug("Async result set for " + formatUri(this.asyncWebRequest));
+			}
+
+			if (this.asyncWebRequest.isAsyncComplete()) {
+				if (logger.isDebugEnabled()) {
+					logger.debug("Async request already completed for " + formatUri(this.asyncWebRequest));
+				}
+				return;
+			}
+
+			if (logger.isDebugEnabled()) {
+				logger.debug("Performing async dispatch for " + formatUri(this.asyncWebRequest));
+			}
+             //调用AsyncWebRequest的dispatch重新执行mvc链路
+			this.asyncWebRequest.dispatch();
+		}
+	}
+
+}
 ```
 
 
 
-### 异常处理
+##### StandardServletAsyncWebRequest
+
+封装底层`ServletRequest`的对象
+
+```java
+public class StandardServletAsyncWebRequest extends ServletWebRequest implements AsyncWebRequest, AsyncListener {
+    
+     //所有超时处理
+	private final List<Runnable> timeoutHandlers = new ArrayList<>();
+	//所有异常处理
+	private final List<Consumer<Throwable>> exceptionHandlers = new ArrayList<>();
+	//所有完成处理
+	private final List<Runnable> completionHandlers = new ArrayList<>();
+	//超时时间
+	@Nullable
+	private Long timeout;
+	//异步上下文
+	@Nullable
+	private AsyncContext asyncContext;
+	//状态
+	private State state;
+
+    //启动异步
+    @Override
+	public void startAsync() {
+		Assert.state(getRequest().isAsyncSupported(),
+				"Async support must be enabled on a servlet and for all filters involved " +
+				"in async request processing. This is done in Java code using the Servlet API " +
+				"or by adding \"<async-supported>true</async-supported>\" to servlet and " +
+				"filter declarations in web.xml.");
+		//异步已经启动
+		if (isAsyncStarted()) {
+			return;
+		}
+		//更新状态为异步启动
+		if (this.state == State.NEW) {
+			this.state = State.ASYNC;
+		}
+		else {
+			Assert.state(this.state == State.ASYNC, "Cannot start async: [" + this.state + "]");
+		}
+		//调用Servlet的startAsync启动异步
+		this.asyncContext = getRequest().startAsync(getRequest(), getResponse());
+         //添加AsyncListener 就是当前对象
+		this.asyncContext.addListener(this);
+         //设置超时时间
+		if (this.timeout != null) {
+			this.asyncContext.setTimeout(this.timeout);
+		}
+	}
+    
+    @Override
+	public void dispatch() {
+		Assert.state(this.asyncContext != null, "AsyncContext not yet initialized");
+		if (!this.isAsyncComplete()) {
+             //调用Servlet的dispatch重新走mvc链路
+			this.asyncContext.dispatch();
+		}
+	}
+    
+    //Servlet调用 超时处理
+    @Override
+	public void onTimeout(AsyncEvent event) throws IOException {
+		this.timeoutHandlers.forEach(Runnable::run);
+	}
+	//Servlet调用 异常处理
+	@Override
+	public void onError(AsyncEvent event) throws IOException {
+		this.stateLock.lock();
+		try {
+			this.state = State.ERROR;
+			Throwable ex = event.getThrowable();
+			this.exceptionHandlers.forEach(consumer -> consumer.accept(ex));
+		}
+		finally {
+			this.stateLock.unlock();
+		}
+	}
+	//Servlet调用 完成处理
+	@Override
+	public void onComplete(AsyncEvent event) throws IOException {
+		this.stateLock.lock();
+		try {
+			this.completionHandlers.forEach(Runnable::run);
+			this.asyncContext = null;
+			this.state = State.COMPLETED;
+		}
+		finally {
+			this.stateLock.unlock();
+		}
+	}
+
+}
+```
+
+
+
+##### WebAsyncUtils
+
+```java
+public abstract class WebAsyncUtils {
+    
+    public static final String WEB_ASYNC_MANAGER_ATTRIBUTE =
+			WebAsyncManager.class.getName() + ".WEB_ASYNC_MANAGER";
+    
+    //从requst属性中获取WebAsyncManager 没有就新建
+	public static WebAsyncManager getAsyncManager(ServletRequest servletRequest) {
+		WebAsyncManager asyncManager = null;
+		Object asyncManagerAttr = servletRequest.getAttribute(WEB_ASYNC_MANAGER_ATTRIBUTE);
+		if (asyncManagerAttr instanceof WebAsyncManager wam) {
+			asyncManager = wam;
+		}
+		if (asyncManager == null) {
+			asyncManager = new WebAsyncManager();
+			servletRequest.setAttribute(WEB_ASYNC_MANAGER_ATTRIBUTE, asyncManager);
+		}
+		return asyncManager;
+	}
+    //从requst属性中获取WebAsyncManager 没有就新建
+	public static WebAsyncManager getAsyncManager(WebRequest webRequest) {
+		int scope = RequestAttributes.SCOPE_REQUEST;
+		WebAsyncManager asyncManager = null;
+		Object asyncManagerAttr = webRequest.getAttribute(WEB_ASYNC_MANAGER_ATTRIBUTE, scope);
+		if (asyncManagerAttr instanceof WebAsyncManager wam) {
+			asyncManager = wam;
+		}
+		if (asyncManager == null) {
+			asyncManager = new WebAsyncManager();
+			webRequest.setAttribute(WEB_ASYNC_MANAGER_ATTRIBUTE, asyncManager, scope);
+		}
+		return asyncManager;
+	}
+    //创建StandardServletAsyncWebRequest
+	public static AsyncWebRequest createAsyncWebRequest(HttpServletRequest request, HttpServletResponse response) {
+		AsyncWebRequest prev = getAsyncManager(request).getAsyncWebRequest();
+		return (prev instanceof StandardServletAsyncWebRequest standardRequest ?
+				new StandardServletAsyncWebRequest(request, response, standardRequest) :
+				new StandardServletAsyncWebRequest(request, response));
+	}
+}
+```
+
+
+
+
+
+#### 异步类
+
+##### DeferredResult
+
+```java
+public class DeferredResult<T> {
+	//占位符，表示结果尚未设置。
+	private static final Object RESULT_NONE = new Object();
+	//超时时间
+	@Nullable
+	private final Long timeoutValue;
+	//超时默认结果
+	private final Supplier<?> timeoutResult;
+	//超时回调
+	@Nullable
+	private Runnable timeoutCallback;
+	//异常回调
+	@Nullable
+	private Consumer<Throwable> errorCallback;
+	//异步请求完成回调（无论成功、超时或异常）
+	@Nullable
+	private Runnable completionCallback;
+	//处理异步结果的回调接口
+	@Nullable
+	private DeferredResultHandler resultHandler;
+	//保存异步处理的结果对象
+	@Nullable
+	private volatile Object result = RESULT_NONE;
+	//标记 DeferredResult 是否已经过期（超时或请求完成）
+	private volatile boolean expired;
+    
+    //是否有结果
+    public boolean hasResult() {
+		return (this.result != RESULT_NONE);
+	}
+    //获取结果
+	@Nullable
+	public Object getResult() {
+		Object resultToCheck = this.result;
+		return (resultToCheck != RESULT_NONE ? resultToCheck : null);
+	}
+    //设置结果
+	public boolean setResult(@Nullable T result) {
+		return setResultInternal(result);
+	}
+    //设置结果处理器
+    public final void setResultHandler(DeferredResultHandler resultHandler) {
+		Assert.notNull(resultHandler, "DeferredResultHandler is required");
+		// Immediate expiration check outside of the result lock
+		if (this.expired) {
+			return;
+		}
+		Object resultToHandle;
+		synchronized (this) {
+			// Got the lock in the meantime: double-check expiration status
+			if (this.expired) {
+				return;
+			}
+			resultToHandle = this.result;
+			if (resultToHandle == RESULT_NONE) {
+				// No result yet: store handler for processing once it comes in
+				this.resultHandler = resultHandler;
+				return;
+			}
+		}
+		// If we get here, we need to process an existing result object immediately.
+		// The decision is made within the result lock; just the handle call outside
+		// of it, avoiding any deadlock potential with Servlet container locks.
+		try {
+			resultHandler.handleResult(resultToHandle);
+		}
+		catch (Throwable ex) {
+			logger.debug("Failed to process async result", ex);
+		}
+	}
+    
+	@FunctionalInterface
+	public interface DeferredResultHandler {
+
+		void handleResult(@Nullable Object result);
+	}
+}
+```
+
+
+
+##### ListenableFuture
+
+##### CompletionStage
+
+##### Callable
+
+##### WebAsyncTask
+
+```java
+public class WebAsyncTask<V> implements BeanFactoryAware {
+    //callable
+    private final Callable<V> callable;
+	//超时时间
+	@Nullable
+	private final Long timeout;
+	//spring线程池
+	@Nullable
+	private final AsyncTaskExecutor executor;
+
+	@Nullable
+	private final String executorName;
+
+	@Nullable
+	private BeanFactory beanFactory;
+	//超时处理
+	@Nullable
+	private Callable<V> timeoutCallback;
+	//异常处理
+	@Nullable
+	private Callable<V> errorCallback;
+	//完成处理
+	@Nullable
+	private Runnable completionCallback;
+    
+    //封装成CallableProcessingInterceptor
+    CallableProcessingInterceptor getInterceptor() {
+		return new CallableProcessingInterceptor() {
+			@Override
+			public <T> Object handleTimeout(NativeWebRequest request, Callable<T> task) throws Exception {
+				return (timeoutCallback != null ? timeoutCallback.call() : CallableProcessingInterceptor.RESULT_NONE);
+			}
+			@Override
+			public <T> Object handleError(NativeWebRequest request, Callable<T> task, Throwable t) throws Exception {
+				return (errorCallback != null ? errorCallback.call() : CallableProcessingInterceptor.RESULT_NONE);
+			}
+			@Override
+			public <T> void afterCompletion(NativeWebRequest request, Callable<T> task) throws Exception {
+				if (completionCallback != null) {
+					completionCallback.run();
+				}
+			}
+		};
+	}
+    
+}
+```
+
+
+
+
+
+
+
+#### 处理流程
+
+1. 当一个请求进入mvc流程中，不论是否是异步都要先创建`WebAsyncManager`，将其放入`request`中的`Attribute`中
+2. 注册`Callable`的拦截器`RequestBindingInterceptor`到`WebAsyncManager`中
+3. 在`RequestMappingHandlerAdapter`中执行`invokeHandlerMethod`时
+   1. 创建`StandardServletAsyncWebRequest`，设置超时时间
+   2. 设置`spring`线程池到`WebAsyncManager`中
+   3. 设置`StandardServletAsyncWebRequest`到`WebAsyncManager`中
+   4. 设置`Callable`和`DeferredResult`的拦截器到`WebAsyncManager`
+4. 在`HandlerMethodReturnValueHandler`处理返回值时，分为两个分支
+   1. 如果是`Callable`系的返回值（`StreamingResponseBody、Callable、WebAsyncTask`）
+      1. 调用`WebAsyncManager`的`startCallableProcessing`方法统一封装成为`WebAsyncTask`
+      2. 设置`WebAsyncManager`的状态为`ASYNC_PROCESSING`
+      3. 设置超时时间给`StandardServletAsyncWebRequest`，设置线程池
+      4. 添加`webAsyncTask`的拦截器、`callableInterceptors`拦截器和`Callable`的超时拦截器到拦截器链中
+      5. 设置超时处理、错误处理和完成处理到`StandardServletAsyncWebRequest`
+      6. 触发拦截器异步开始前方法
+      7. 通过`StandardServletAsyncWebRequest`调用`Servlet`的`startAsync`启动异步，添加`AsyncListener`到`Servlet`中
+      8. 提交任务给spring线程池，线程池工作如下
+         1. 拦截器前置处理
+         2. 调用`Callable.call`方法
+         3. 拦截器后置处理
+         4. 设置异步结果，调用`Servlet`的`dispatch`
+      9. 当前线程结束，回归`tomcat`线程池
+   2. 如果是`DeferredResult`系的返回值（`ResponseBodyEmitter/Mono/Flux等等、DeferredResult、ListenableFuture、CompletionStage`）
+      1. 调用`WebAsyncManager`的`startDeferredResultProcessing`方法统一封装成为`DeferredResult`
+      2. 设置`WebAsyncManager`的状态为`ASYNC_PROCESSING`
+      3. 设置超时时间给`StandardServletAsyncWebRequest`
+      4. 添加`deferredResult`的拦截器、`deferredResultInterceptors`拦截器和`DeferredResult`的超时拦截器到拦截器链中
+      5. 设置超时处理、错误处理和完成处理到`StandardServletAsyncWebRequest`
+      6. 触发拦截器异步开始前方法
+      7. 通过`StandardServletAsyncWebRequest`调用`Servlet`的`startAsync`启动异步，添加`AsyncListener`到`Servlet`中
+      8. 拦截器前置处理
+      9. 设置`deferredResult`的`resultHandler`，当业务线程完成业务任务后调用
+         1. 拦截器后置处理
+         2. 设置异步结果，调用`Servlet`的`dispatch`
+      10. 当前线程结束，回归`tomcat`线程池
+5. `dispatch`重新触发`mvc`链路流程，`Tomcat`分配新线程处理
+6. 获取`request`中旧的`WebAsyncManager`
+7. 在`RequestMappingHandlerAdapter`中执行`invokeHandlerMethod`时
+   1. 根据旧的`StandardServletAsyncWebRequest`创建新的`StandardServletAsyncWebRequest`，设置状态为`ASYNC`
+   2. 设置`spring`线程池到`WebAsyncManager`中
+   3. 设置`StandardServletAsyncWebRequest`到`WebAsyncManager`中
+   4. 设置`Callable`和`DeferredResult`的拦截器到`WebAsyncManager`
+8. 如果`WebAsyncManager`中有异步结果
+   1. 清理`WebAsyncManager`的状态
+   2. 利用异步结果包装`ServletInvocableHandlerMethod`为`ConcurrentResultHandlerMethod`
+9. 调用`invocableMethod.invokeAndHandle(webRequest, mavContainer);`处理异步结果
+   1. `ConcurrentResultHandlerMethod`中异常全部抛出
+10. 当前线程结束，返回`Tomcat`线程池
+
+
+
+
+
+##### FrameworkServlet
+
+```java
+public abstract class FrameworkServlet extends HttpServletBean implements ApplicationContextAware {
+    
+    protected final void processRequest(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+
+		long startTime = System.currentTimeMillis();
+		Throwable failureCause = null;
+
+		LocaleContext previousLocaleContext = LocaleContextHolder.getLocaleContext();
+		LocaleContext localeContext = buildLocaleContext(request);
+
+		RequestAttributes previousAttributes = RequestContextHolder.getRequestAttributes();
+		ServletRequestAttributes requestAttributes = buildRequestAttributes(request, response, previousAttributes);
+		//创建WebAsyncManager 将WebAsyncManager设置到request中
+		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+         //添加callable的拦截器 RequestBindingInterceptor
+		asyncManager.registerCallableInterceptor(FrameworkServlet.class.getName(), new RequestBindingInterceptor());
+
+		initContextHolders(request, localeContext, requestAttributes);
+
+		try {
+			doService(request, response);
+		}
+		catch (ServletException | IOException ex) {
+			failureCause = ex;
+			throw ex;
+		}
+		catch (Throwable ex) {
+			failureCause = ex;
+			throw new ServletException("Request processing failed: " + ex, ex);
+		}
+
+		finally {
+			resetContextHolders(request, previousLocaleContext, previousAttributes);
+			if (requestAttributes != null) {
+				requestAttributes.requestCompleted();
+			}
+			logResult(request, response, failureCause, asyncManager);
+			publishRequestHandledEvent(request, response, startTime, failureCause);
+		}
+	}
+
+}
+```
+
+##### DispatcherServlet
+
+```java
+public class DispatcherServlet extends FrameworkServlet {
+    
+    protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+		HttpServletRequest processedRequest = request;
+		HandlerExecutionChain mappedHandler = null;
+		boolean multipartRequestParsed = false;
+		//获取之前放在request中的WebAsyncManager
+		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+
+		try {
+			ModelAndView mv = null;
+			Exception dispatchException = null;
+
+			try {
+				processedRequest = checkMultipart(request);
+				multipartRequestParsed = (processedRequest != request);
+
+				// Determine handler for the current request.
+				mappedHandler = getHandler(processedRequest);
+				if (mappedHandler == null) {
+					noHandlerFound(processedRequest, response);
+					return;
+				}
+
+				// Determine handler adapter for the current request.
+				HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+
+				// Process last-modified header, if supported by the handler.
+				String method = request.getMethod();
+				boolean isGet = HttpMethod.GET.matches(method);
+				if (isGet || HttpMethod.HEAD.matches(method)) {
+					long lastModified = ha.getLastModified(request, mappedHandler.getHandler());
+					if (new ServletWebRequest(request, response).checkNotModified(lastModified) && isGet) {
+						return;
+					}
+				}
+
+				if (!mappedHandler.applyPreHandle(processedRequest, response)) {
+					return;
+				}
+
+				// Actually invoke the handler.
+				mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+				
+                 //异步已经启动 返回
+				if (asyncManager.isConcurrentHandlingStarted()) {
+					return;
+				}
+
+				applyDefaultViewName(processedRequest, mv);
+				mappedHandler.applyPostHandle(processedRequest, response, mv);
+			}
+			catch (Exception ex) {
+				dispatchException = ex;
+			}
+			catch (Throwable err) {
+				// As of 4.3, we're processing Errors thrown from handler methods as well,
+				// making them available for @ExceptionHandler methods and other scenarios.
+				dispatchException = new ServletException("Handler dispatch failed: " + err, err);
+			}
+			processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
+		}
+		catch (Exception ex) {
+			triggerAfterCompletion(processedRequest, response, mappedHandler, ex);
+		}
+		catch (Throwable err) {
+			triggerAfterCompletion(processedRequest, response, mappedHandler,
+					new ServletException("Handler processing failed: " + err, err));
+		}
+		finally {
+			if (asyncManager.isConcurrentHandlingStarted()) {
+				// Instead of postHandle and afterCompletion
+				if (mappedHandler != null) {
+					mappedHandler.applyAfterConcurrentHandlingStarted(processedRequest, response);
+				}
+				asyncManager.setMultipartRequestParsed(multipartRequestParsed);
+			}
+			else {
+				// Clean up any resources used by a multipart request.
+				if (multipartRequestParsed || asyncManager.isMultipartRequestParsed()) {
+					cleanupMultipart(processedRequest);
+				}
+			}
+		}
+	}
+
+}
+```
+
+##### RequestMappingHandlerAdapter
+
+```java
+public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
+		implements BeanFactoryAware, InitializingBean {
+    
+    @Nullable
+	protected ModelAndView invokeHandlerMethod(HttpServletRequest request,
+			HttpServletResponse response, HandlerMethod handlerMethod) throws Exception {
+		//获取asyncManager
+		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+         //创建StandardServletAsyncWebRequest
+		AsyncWebRequest asyncWebRequest = WebAsyncUtils.createAsyncWebRequest(request, response);
+         //设置超时时间
+		asyncWebRequest.setTimeout(this.asyncRequestTimeout);
+		//设置spring线程池
+		asyncManager.setTaskExecutor(this.taskExecutor);
+         //设置asyncWebRequest
+		asyncManager.setAsyncWebRequest(asyncWebRequest);
+         //注册callable和deferred拦截器
+		asyncManager.registerCallableInterceptors(this.callableInterceptors);
+		asyncManager.registerDeferredResultInterceptors(this.deferredResultInterceptors);
+
+		// Obtain wrapped response to enforce lifecycle rule from Servlet spec, section 2.3.3.4
+		response = asyncWebRequest.getNativeResponse(HttpServletResponse.class);
+
+		ServletWebRequest webRequest = (asyncWebRequest instanceof ServletWebRequest ?
+				(ServletWebRequest) asyncWebRequest : new ServletWebRequest(request, response));
+
+		WebDataBinderFactory binderFactory = getDataBinderFactory(handlerMethod);
+		ModelFactory modelFactory = getModelFactory(handlerMethod, binderFactory);
+
+		ServletInvocableHandlerMethod invocableMethod = createInvocableHandlerMethod(handlerMethod);
+		if (this.argumentResolvers != null) {
+			invocableMethod.setHandlerMethodArgumentResolvers(this.argumentResolvers);
+		}
+		if (this.returnValueHandlers != null) {
+			invocableMethod.setHandlerMethodReturnValueHandlers(this.returnValueHandlers);
+		}
+		invocableMethod.setDataBinderFactory(binderFactory);
+		invocableMethod.setParameterNameDiscoverer(this.parameterNameDiscoverer);
+		invocableMethod.setMethodValidator(this.methodValidator);
+
+		ModelAndViewContainer mavContainer = new ModelAndViewContainer();
+		mavContainer.addAllAttributes(RequestContextUtils.getInputFlashMap(request));
+		modelFactory.initModel(webRequest, mavContainer, invocableMethod);
+		mavContainer.setIgnoreDefaultModelOnRedirect(this.ignoreDefaultModelOnRedirect);
+		//dispatch后 第二次进入mvc流程时 有异步结果
+		if (asyncManager.hasConcurrentResult()) {
+             //获取异步结果
+			Object result = asyncManager.getConcurrentResult();
+			Object[] resultContext = asyncManager.getConcurrentResultContext();
+			Assert.state(resultContext != null && resultContext.length > 0, "Missing result context");
+             //获取之前的mav
+			mavContainer = (ModelAndViewContainer) resultContext[0];
+             //清除状态
+			asyncManager.clearConcurrentResult();
+			LogFormatUtils.traceDebug(logger, traceOn -> {
+				String formatted = LogFormatUtils.formatValue(result, !traceOn);
+				return "Resume with async result [" + formatted + "]";
+			});
+             //包装一个处理异步结果的invocableMethod
+			invocableMethod = invocableMethod.wrapConcurrentResult(result);
+		}
+		//执行invocableMethod 处理异步结果返回值
+		invocableMethod.invokeAndHandle(webRequest, mavContainer);
+         //异步已经启动 返回null
+		if (asyncManager.isConcurrentHandlingStarted()) {
+			return null;
+		}
+
+		return getModelAndView(mavContainer, modelFactory, webRequest);
+	}
+
+}
+```
+
+##### ConcurrentResultHandlerMethod
+
+异步结果处理的HandlerMethod
+
+```java
+private class ConcurrentResultHandlerMethod extends ServletInvocableHandlerMethod {
+
+		private final MethodParameter returnType;
+		
+		public ConcurrentResultHandlerMethod(@Nullable Object result, ConcurrentResultMethodParameter returnType) {
+			super((Callable<Object>) () -> {
+                 //如果异步结果是异常 直接抛出
+				if (result instanceof Exception exception) {
+					throw exception;
+				}
+				else if (result instanceof Throwable throwable) {
+					throw new ServletException("Async processing failed: " + result, throwable);
+				}
+                 //否则正常返回结果
+				return result;
+			}, CALLABLE_METHOD);
+
+			if (ServletInvocableHandlerMethod.this.returnValueHandlers != null) {
+				setHandlerMethodReturnValueHandlers(ServletInvocableHandlerMethod.this.returnValueHandlers);
+			}
+			this.returnType = returnType;
+		}
+}
+```
+
+
+
+
+
+#### 即时发送注意事项
+
+以上异步类型，除了`SseEmitter`默认设置`text/event-stream`的`content-type`可以达到发送即可收到响应的效果外
+
+其他异步类型都要等待`dispatch`第二次mvc流程之后才能收到响应结果，除非手动设置`text/event-stream`
+
+多次测试后，我认为，影响即时发送的因素只有`text/event-stream`这一个
+
+```java
+	@GetMapping(value = "/stream")
+    public ResponseEntity<ResponseBodyEmitter> streamLogs() {
+        ResponseBodyEmitter emitter = new ResponseBodyEmitter();
+        new Thread(() -> {
+            try {
+                emitter.send(new User("222", 3), MediaType.APPLICATION_JSON);
+                emitter.send("\r\n");
+                emitter.send("ssss".getBytes(), MediaType.IMAGE_PNG);
+                emitter.send("\r\n");
+                Thread.sleep(1000);
+                emitter.complete();
+            } catch (Exception e) {
+                // 出现异常时结束响应并传递错误信息
+                emitter.completeWithError(e);
+            }
+        }).start();
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.TEXT_EVENT_STREAM) //手动设置text/event-stream
+                .body(emitter);
+    }
+```
+
+
+
+
+
+### 异常处理器
 
 #### 继承关系
 

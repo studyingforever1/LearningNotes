@@ -1679,7 +1679,7 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping i
 
 #### 继承关系
 
-<img src=".\images\image-20251103100014993.png" alt="image-20251103100014993" style="zoom:50%;" />
+<img src="./images/image-20251103100014993.png" alt="image-20251103100014993" style="zoom:50%;" />
 
 | 类名                               | 主要作用                                                     | 特点                                                         |
 | ---------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
@@ -2627,7 +2627,7 @@ public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
 
 #### 继承关系
 
-<img src=".\images\image-20251105111225321.png" alt="image-20251105111225321" style="zoom:50%;" />
+<img src="./images/image-20251105111225321.png" alt="image-20251105111225321" style="zoom:50%;" />
 
 | 实例类型                         | 作用说明                                                     |
 | -------------------------------- | ------------------------------------------------------------ |
@@ -3091,7 +3091,7 @@ Object o = p.getValue();
 
 #### 继承关系
 
-<img src=".\images\image-20251126134316272.png" alt="image-20251126134316272" style="zoom:50%;" />
+<img src="./images/image-20251126134316272.png" alt="image-20251126134316272" style="zoom:50%;" />
 
 #### HandlerMethodArgumentResolver
 
@@ -5026,7 +5026,7 @@ public class PrincipalMethodArgumentResolver implements HandlerMethodArgumentRes
 
 ### 返回值处理器
 
-<img src=".\images\image-20251128105320797.png" alt="image-20251128105320797" style="zoom:50%;" />
+<img src="./images/image-20251128105320797.png" alt="image-20251128105320797" style="zoom:50%;" />
 
 #### HandlerMethodReturnValueHandler
 
@@ -6855,7 +6855,7 @@ public class ConfigController {
 
 #### 继承关系
 
-<img src=".\images\image-20251202150756331.png" alt="image-20251202150756331" style="zoom:50%;" />
+<img src="./images/image-20251202150756331.png" alt="image-20251202150756331" style="zoom:50%;" />
 
 #### 初始化
 

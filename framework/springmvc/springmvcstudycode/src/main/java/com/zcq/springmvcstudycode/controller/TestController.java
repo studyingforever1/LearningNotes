@@ -307,4 +307,12 @@ public class TestController {
     public String handleException(NullPointerException e) {
         return "NullPointerException";
     }
+
+
+    @RequestMapping("/testSession")
+    public String testSession(@RequestParam("user") String user) {
+        return user;
+    }
+
+
 }

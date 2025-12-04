@@ -927,10 +927,11 @@ org.springframework.web.servlet.FlashMapManager=org.springframework.web.servlet.
 ## 请求处理流程
 
 1. 当接收到对应的请求时，由`tomcat`调用`DispatcherServlet`中的`service`方法，不同请求类型的最终处理方式都是`processRequest`，再调用`doService`中的`doDispatch`
-2. 处理`mutipart`类型的请求
+2. 创建`WebAsyncManager`异步管理器，将`servletRequest`存放进入`reques`的`attribute`中
+3. 处理`mutipart`类型的请求
    1. 检查当前请求的`content-type`是否是`multipart/form-data`类型
    2. 将普通请求包装成`StandardMultipartHttpServletRequest`类型，并且将其中的普通参数和文件参数解析分别保存
-3. 获取`url`对应的`handler`
+4. 获取`url`对应的`handler`
    1. 先从`BeanNameUrlHandlerMapping`中获取
       1. 解析出请求的`uri`，根据`uri`直接匹配对应的`handler`
       2. 找不到的话就根据`pathPatternHandlerMap`匹配`uri`的路径
@@ -949,8 +950,78 @@ org.springframework.web.servlet.FlashMapManager=org.springframework.web.servlet.
    3. 如果没找到handler，获取默认的handler
    4. 将handler封装成`HandlerExecutionChain`对象，将`adaptedInterceptors`中的`MappedInterceptor`类型都添加到`HandlerExecutionChain`
    5. 如果请求方法上含有跨域配置，读取跨域配置，添加`CorsInterceptor`到`HandlerExecutionChain`中
+5. 如果`handler`未找到，返回`404`的错误信息，结束流程
+6. 查找适合的`HandlerAdapter`，通常是`RequestMappingHandlerAdapter`
+7. 如果是`GET`或者`HEAD`请求，检查`HTTP`缓存`etag`和`lastModified`是否过期，如果没过期直接返回，结束流程
+8. 调用`HandlerInterceptor`拦截器的前置方法`applyPreHandle`，如果拦截器返回`false`，倒序调用拦截器的`triggerAfterCompletion`方法，结束流程
+9. 调用`RequestMappingHandlerAdapter`的`handle`方法
+   1. 获取`request`中存储的异步管理器`WebAsyncManager`
+   2. 创建异步请求`StandardServletAsyncWebRequest`，封装`request`和`response`
+   3. 给`StandardServletAsyncWebRequest`设置超时时间
+   4. 设置`WebAsyncManager`中的`spring`线程池`TaskExecutor`
+   5. 将`StandardServletAsyncWebRequest`设置到`WebAsyncManager`中
+   6. 设置`Callable`和`DeferredResult`的拦截器到`WebAsyncManager`
+   7. 创建`WebDataBinderFactory`，用于数据绑定
+      1. 获取当前`Controller`中的`@InitBinder`注解的方法
+      2. 获取所有的`@ControllerAdivce`类，判断是否能作用于当前`Controller`，获取全局类中的`@InitBinder`注解的方法
+      3. 将上述的`@InitBinder`注解的方法封装成`InvocableHandlerMethod`，全局优先放入集合中
+      4. `InvocableHandlerMethod`集合当作参数创建`DefaultDataBinderFactory`
 
+   8. 创建`ModelFactory`，用于`model`管理
+      1. 如果当前`Controller`类上有`@SessionAttributes`注解，获取`SessionAttributesHandler`及其指定的属性名/类型集合
+      2. 获取当前`Controller`中`@ModelAttribute`注解但不是`@RequestMapping`标注的方法
+      3. 获取所有的`@ControllerAdivce`类，判断是否能作用于当前`Controller`，获取全局类中的`@ModelAttribute`注解的方法
+      4. 将上述的`@ModelAttribute`注解的方法封装成`InvocableHandlerMethod`，全局优先放入集合中
+      5. `InvocableHandlerMethod`集合、`WebDataBinderFactory`和`SessionAttributesHandler`当作参数创建`ModelFactory`
 
+   9. 将处理方法`handlerMethod`封装成`ServletInvocableHandlerMethod`
+   10. 设置参数解析器`HandlerMethodArgumentResolver`和返回值处理器`HandlerMethodReturnValueHandler`到`handlerMethod`中
+   11. 设置`WebDataBinderFactory`和参数名发现器`ParameterNameDiscoverer`到`handlerMethod`
+   12. 创建`ModelAndViewContainer`，将`InputFlashMap`设置进去
+   13. 初始化`ModelFactory`
+       1. 利用`SessionAttributesHandler`从`session`中取出`@SessionAttributes`的`name`对应的`value`，封装成`Map`
+       2. 将`@SessionAttributes`的`name`对应的`value`的`Map`和`ModelAndViewContainer`中的`modelMap`合并
+       3. 调用所有的`@ModelAttribute`标注的方法
+          1. 遍历所有的`@ModelAttribute`标注的方法，如果`ModelAndViewContainer`包含对应`name`的属性，如果禁止参数绑定，将`name`加入`ModelAndViewContainer`的绑定禁止列表，跳过该方法
+          2. 调用当前`@ModelAttribute`标注的方法，将其返回值以`@ModelAttribute`中的`name`加入`ModelAndViewContainer`中
+          3. 如果禁止参数绑定，将`name`加入`ModelAndViewContainer`的绑定禁止列表
+          4. 如果`ModelAndViewContainer`中不包含该`name`的属性，加入`ModelAndViewContainer`的`model`中
+
+       4. 找到`@ModelAttribute`标注的方法参数中，已经通过`@SessionAttributes`存储在`session`的，如果有直接从`session`中获取放到`ModelAndViewContainer`的`model`中，如果找不到报错
+
+   14. 如果`WebAsyncManager`中有异步结果
+       1. 清理`WebAsyncManager`的状态
+       2. 利用异步结果包装`ServletInvocableHandlerMethod`为`ConcurrentResultHandlerMethod`
+   15. 调用`invocableMethod.invokeAndHandle(webRequest, mavContainer)`
+       1. 获取方法参数列表，遍历参数列表，从`HandlerMethodArgumentResolver`中找到支持的参数解析器解析
+       2. 调用处理方法
+       3. 如果有响应状态码，设置响应状态码
+       4. 如果返回值为空，判断是否处理过，或者有响应状态码和原因，有就返回
+       5. 从`HandlerMethodReturnValueHandler`中找到支持的返回值处理器处理
+
+   16. 如果异步已经开启，返回空
+   17. 包装`ModelAndView`
+       1. 更新`model`
+          1. 如果`SessionStatus`已经完成，清理`@SessionAttributes`保存在`session`中的属性
+          2. 如果`SessionStatus`未完成，将当前`model`中`@SessionAttributes`的`name`一致的放入`session`中
+          3. 为 `Model `中能进行数据绑定的属性自动创建对应的 `BindingResult `对象加入`model`中
+
+       2. 创建`ModelAndView`对象，设置视图名称
+       3. 如果`model`是`RedirectAttributes`，设置重定向属性到`FlashMap`中
+
+   18. 如果响应头中不含`Cache-Control`，处理缓存相关
+
+10. 如果异步已经开启，返回，结束流程
+11. 如果没有视图，应用默认的视图
+12. 调用`HandlerInterceptor`的`postHandle`后置处理
+13. 如果有异常，找到`HandlerExceptionResolver`中支持处理异常的处理器
+    1. 一般是`ExceptionHandlerExceptionResolver`负责`@ExceptionHandler`的方法处理
+    2. 先找当前`Controller`下的`@ExceptionHandler`，再找`@ControllerAdive`下的`@ExceptionHandler`方法
+    3. 将异常处理方法封装成`ServletInvocableHandlerMethod`，设置参数解析器和返回值处理器调用
+    4. 封装返回`ModelAndView`
+
+14. 如果异步启动，调用`AsyncHandlerInterceptor`拦截器的`applyAfterConcurrentHandlingStarted`
+15. 清理`mutipart`类型请求占用的资源，临时文件等
 
 ```JAVA
 public abstract class FrameworkServlet extends HttpServletBean implements ApplicationContextAware {
@@ -8157,7 +8228,7 @@ public class InitBinderDemoController {
 
 ```java
 @Controller
-@SessionAttributes("user")
+@SessionAttributes("user") //当加上这个注解的时候 下面的user对象从session中获取
 public class UserController {
 
     // 每次请求都会执行，将返回值以roles为名称加入model中

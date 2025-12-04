@@ -887,13 +887,175 @@ public class PropertiesTest {
 
 
 
+## 泛型
+
+因为 **Java 的泛型是编译期泛型（伪泛型）**。
+
+在 Java 5 引入泛型时，为了与旧版本 JVM 兼容，Java 设计成：
+
+**泛型只在编译期有效，运行期不保留真实类型信息。**
+
+```java
+List<String> a = new ArrayList<>();
+List<Integer> b = new ArrayList<>();
+//运行时无法区分：
+a.getClass() == b.getClass();  // true
+//运行期只有：
+ArrayList.class
+```
+
+### 类型擦除带来什么问题？
+
+```java
+List<User>
+Map<String, Order>
+Response<List<User>>
+//运行时都只剩下：
+List
+Map
+Response
+```
+
+因为类型擦除机制，运行时期会将类的泛型擦除，**泛型只在编译期有效**，所以能获取到真实泛型的地方如下
+
+可以理解为泛型信息被记录在类上，获取泛型需要通过泛型的拥有类
+
+- 字段 (`Field`)
+- 方法参数 (`MethodParameter`)
+- 方法返回值 (`Method`)
+- 构造器参数 (`Constructor`)
+- 类 (`Class`)
+
+### Java 的 Type 体系（关键）
+
+| Type 子接口           | 含义         | 示例                               |
+| --------------------- | ------------ | ---------------------------------- |
+| **Class**             | 非泛型类型   | `User.class`                       |
+| **ParameterizedType** | 有参数的泛型 | `List<User>`、`Map<String, Order>` |
+| **GenericArrayType**  | 泛型数组     | `T[]`                              |
+| **TypeVariable**      | 类型变量     | `T`                                |
+| **WildcardType**      | 通配符类型   | `? extends Number`                 |
+
+通过子接口来获取泛型的类型
+
+```java
+//List<User>
+Type: ParameterizedType
+rawType: List
+typeArguments: [User]
+```
+
+```java
+class User {}
+class Order {}
+
+class Example<T> {
+    public User user;                      // Class
+    public List<User> userList;            // ParameterizedType
+    public Map<String, Order> orderMap;    // ParameterizedType
+    public T[] genericArray;               // GenericArrayType
+    public T typeVariable;                 // TypeVariable
+    public List<? extends User> wildcard;  // WildcardType
+}
+
+public class TypeDemo {
+    Example<Integer> example = new Example<>();
+
+    public static void main(String[] args) throws NoSuchFieldException {
+        Class<?> clazz = TypeDemo.class;
+
+        // 1. 获取 example 字段
+        Field exampleField = clazz.getDeclaredField("example");
+        Type exampleType = exampleField.getGenericType();
+        System.out.println("example field type: " + exampleType);
+
+        // 判断 exampleType 是否是 ParameterizedType
+        if (exampleType instanceof ParameterizedType pt) {
+            Type actualTypeArg = pt.getActualTypeArguments()[0]; // T 对应的实际类型 Integer
+            System.out.println("T 的实际类型: " + actualTypeArg);
+
+            // 获取 Example<Integer> 内部字段
+            Class<?> exampleClass = Example.class; // 泛型类
+            for (Field f : exampleClass.getFields()) {
+                Type fieldType = f.getGenericType();
+
+                // 如果字段是 TypeVariable，需要替换成实际类型
+                if (fieldType instanceof TypeVariable<?>) {
+                    System.out.println(f.getName() + " : " + actualTypeArg);
+                } else if (fieldType instanceof GenericArrayType gat) {
+                    Type componentType = gat.getGenericComponentType();
+                    if (componentType instanceof TypeVariable<?>) {
+                        System.out.println(f.getName() + " : " + actualTypeArg + "[]");
+                    } else {
+                        System.out.println(f.getName() + " : " + fieldType);
+                    }
+                } else if (fieldType instanceof ParameterizedType p) {
+                    System.out.print(f.getName() + " : " + p.getRawType() + "<");
+                    Type[] argsArr = p.getActualTypeArguments();
+                    for (int i = 0; i < argsArr.length; i++) {
+                        if (argsArr[i] instanceof TypeVariable<?>) {
+                            System.out.print(actualTypeArg.getTypeName());
+                        } else if (argsArr[i] instanceof WildcardType wt) {
+                            System.out.print("?");
+                            Type[] upper = wt.getUpperBounds();
+                            if (upper.length > 0) {
+                                System.out.print(" extends " + upper[0].getTypeName());
+                            }
+                        } else {
+                            System.out.print(argsArr[i].getTypeName());
+                        }
+                        if (i < argsArr.length - 1) System.out.print(", ");
+                    }
+                    System.out.println(">");
+                } else {
+                    System.out.println(f.getName() + " : " + fieldType.getTypeName());
+                }
+            }
+        }
+    }
+}
+```
 
 
 
 
 
+### ResolvableType
 
+因为类型擦除机制，运行时期会将类的泛型擦除，**泛型只在编译期有效**，所以能获取到真实泛型的地方如下
 
+可以理解为泛型信息被记录在类上，获取泛型需要通过泛型的拥有类
 
+- 字段 (`Field`)
+- 方法参数 (`MethodParameter`)
+- 方法返回值 (`Method`)
+- 构造器参数 (`Constructor`)
+- 类 (`Class`)
 
+```java
+public class Test {
 
+    // 泛型类示例
+    static class GenericClass<T> {
+        List<String> stringList;            // ParameterizedType
+        T[] genericArray;                   // 泛型数组
+        T genericField;                     // TypeVariable
+        List<? extends Number> wildcardList; // WildcardType
+    }
+    
+    //定义该字段时必须指定好泛型 后续才能获取到
+    private static GenericClass<Integer> integerGenericClass;
+
+    public static void main(String[] args) throws NoSuchFieldException {
+        
+        //通过integerGenericClass字段的拥有者Test来获取字段的泛型 可以获取到
+        ResolvableType t = ResolvableType.forField(Test.class.getDeclaredField("integerGenericClass"));
+        System.out.println(t.getGeneric(0).resolve()); // Integer 可以获取到泛型
+        
+	    //获取不到Integer 运行期间List<Integer>会被擦除为List 可以理解为List<Integer> list这个泛型信息没有被记录在任何类上 
+        List<Integer> list = new ArrayList<>();
+        ResolvableType type = ResolvableType.forInstance(list);
+        System.out.println(type);
+    }
+}
+```

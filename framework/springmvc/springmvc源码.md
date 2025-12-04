@@ -2983,7 +2983,42 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 
 ### 重定向与转发
 
+#### 重定向
 
+HTTP 重定向是服务器告诉浏览器或客户端“请求的资源已经移动到另一个 URL”，客户端应该去新的 URL 获取资源的机制。
+
+1. 用户在浏览器中访问 URL A。
+
+2. 服务器判断该请求需要重定向到 URL B。
+
+3. 服务器返回一个 HTTP 响应，通常包含：
+
+   状态码（3xx 系列）
+
+   `Location` 响应头，指明新的 URL
+
+4. 浏览器收到响应后，自动发起对新 URL 的请求。
+
+5. 浏览器访问 URL B 并显示内容给用户。
+
+#### 转发
+
+**请求在服务器内部从一个资源传递到另一个资源处理**，浏览器并不知道发生了转发
+
+- 浏览器请求 URL A
+- 服务器决定让内部的 URL B 来处理请求
+- 服务器把请求交给 URL B，返回的响应直接给浏览器
+- **浏览器地址栏仍然是 URL A**（和重定向不同）
+
+| 特性             | 转发（Forward）                  | 重定向（Redirect）                     |
+| ---------------- | -------------------------------- | -------------------------------------- |
+| 发生位置         | 服务器内部                       | 客户端发起                             |
+| URL 是否改变     | 不改变                           | 改变                                   |
+| 是否重新发请求   | 否                               | 是，浏览器重新发送请求                 |
+| 可访问资源       | 服务器内部路径                   | 可访问任何 URL（内外部）               |
+| 性能             | 高（服务器内部跳转，无额外网络） | 较低（浏览器新请求，增加一次网络往返） |
+| 浏览器地址栏显示 | 不变                             | 改变                                   |
+| 数据传递方式     | Request Attribute                | URL 参数或 Session                     |
 
 
 
@@ -6753,6 +6788,65 @@ private class ConcurrentResultHandlerMethod extends ServletInvocableHandlerMetho
     }
 ```
 
+#### HTTP Long Polling示例
+
+1. 客户端通过`/config/longpoll`连接服务器
+2. 保存`DeferredResult`和`namespace`，连接保持，直到超时
+3. 当操作了`/config/update`更新了指定`namespace`配置
+4. 获取`namespace`下的`DeferredResult`，设置`result`进行`dispatch`回到`mvc`流程，将`result`发回给`/config/longpoll`挂起的客户端
+5. 从`longPollingClients`中移除当前客户端长连接
+
+```java
+@RestController
+public class ConfigController {
+
+    // 存放每个 namespace 的 DeferredResult
+    private final Map<String, DeferredResult<String>> longPollingClients = new ConcurrentHashMap<>();
+
+    // 客户端请求长轮询接口
+    @GetMapping("/config/longpoll")
+    public DeferredResult<String> longPoll(@RequestParam String namespace) {
+        // 设置超时时间 60 秒
+        DeferredResult<String> deferredResult = new DeferredResult<>(60000L);
+
+        // 超时回调
+        deferredResult.onTimeout(() -> {
+            deferredResult.setResult("304"); // 无变化返回 304
+            longPollingClients.remove(namespace);
+        });
+
+        // 完成回调
+        deferredResult.onCompletion(() -> longPollingClients.remove(namespace));
+
+        // 保存 DeferredResult，供更新配置时触发
+        longPollingClients.put(namespace, deferredResult);
+
+        return deferredResult;
+    }
+
+    // 模拟配置更新接口
+    @GetMapping("/config/update")
+    public String updateConfig(@RequestParam String namespace, @RequestParam String content) {
+        DeferredResult<String> clientDeferredResult = longPollingClients.get(namespace);
+        if (clientDeferredResult != null) {
+            // 有客户端在等待，立即返回更新内容
+            clientDeferredResult.setResult(content);
+            return "Notified client for namespace: " + namespace;
+        }
+        return "No client waiting for namespace: " + namespace;
+    }
+}
+
+```
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7753,7 +7847,7 @@ public class UserNotFoundException extends RuntimeException implements ErrorResp
 
 ## 参数校验
 
-
+### @Validated
 
 
 
@@ -7814,9 +7908,31 @@ Content-Length: 0
 
 ### @ResponseBody
 
+用来**将控制器方法的返回值直接作为 HTTP 响应体输出**
 
+- Spring 不再解析视图名称；
+- 返回值会通过 **HttpMessageConverter** 转换为指定格式（如 JSON、XML、文本）；
+- 最终直接写入 HTTP 响应体。
 
+```java
+@GetMapping("/user")
+@ResponseBody
+public User getUser() {
+    return new User("Tom", 20);
+}
+```
 
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Content-Length: 48
+Date: Tue, 04 Feb 2025 12:00:00 GMT
+
+{
+  "name": "Tom",
+  "age": 20
+}
+```
 
 
 
@@ -8087,43 +8203,156 @@ public class UserController {
 
 
 
-
-
-
-
 ### @SessionAttribute
+
+从 HTTP Session 中取一个属性到方法参数中。
+
+```java
+@GetMapping("/profile")
+public String profile(@SessionAttribute("user") User user) {
+    System.out.println("Session user = " + user);
+    return "profile";
+}
+```
+
+
+
+
 
 ### @SessionAttributes
 
+用于类上，把 Model 中的某些属性自动放入 Session。
+
+```java
+@Controller
+@SessionAttributes("user")
+public class UserController {
+
+    @GetMapping("/step1")
+    public String step1(Model model) {
+        model.addAttribute("user", new User()); // 自动放入 Session
+        return "step1";
+    }
+}
+```
+
+
+
+
+
 ### @ResponseStatus
+
+指定返回给客户端的 **HTTP 状态码（如 200、404、500、201）**
+
+```java
+@PostMapping("/user")
+@ResponseStatus(HttpStatus.CREATED)
+public void createUser() {
+    // do something
+}
+
+//标注在自定义异常类上 当异常抛出时，Spring 自动返回指定状态码。
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public class UserNotFoundException extends RuntimeException {
+    public UserNotFoundException(String msg) {
+        super(msg);
+    }
+}
+
+```
+
+
+
+
 
 ### @RequestPart
 
+`@RequestPart` 是 Spring MVC / Spring Boot 中用于 **处理 multipart/form-data（文件上传 + JSON 混合提交）** 的注解。
+
+- 同时提交 **文件 + JSON**
+- 单独从 multipart 请求中取某个字段
+- 希望某一部分自动转换成对象（如 JSON → Java Bean）
+
+```java
+@PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+public String upload(
+        @RequestPart("file") MultipartFile file,
+        @RequestPart("user") User user
+) {
+    System.out.println("File = " + file.getOriginalFilename());
+    System.out.println("User = " + user);
+    return "success";
+}
+
+```
 
 
-### @BindParam
+
+
+
+
+
+
 
 
 
 ### @MatrixVariable
 
+`@MatrixVariable` 是 **Spring MVC** 中用于读取 **URL Matrix Variables（矩阵变量）** 的注解。
+
+```url
+Matrix 变量是按路径 segment 分组的。
+/owners;level=vip/cars;color=red
+```
+
+```java
+@GetMapping("/owners/{ownerId}/cars/{carId}")
+public String getOwnerCar(
+        @MatrixVariable(pathVar = "ownerId", name = "level") String level,
+        @MatrixVariable(pathVar = "carId", name = "color") String color) {
+
+    System.out.println(level); // vip
+    System.out.println(color); // red
+    return "ok";
+}
+```
+
+默认情况下 Spring MVC 关闭 Matrix 变量
 
 
-### @Validated
+
+
 
 
 
 ### @CookieValue
 
+`@CookieValue` 是 **Spring MVC** 提供的一个注解，用于 **将 HTTP 请求中的 Cookie 值绑定到方法参数**
 
+```java
+@GetMapping("/info")
+public String info(
+    @CookieValue("username") String username,
+    @CookieValue(value = "token", required = false) String token) {
 
-### @Value
+    return "User=" + username + ", Token=" + token;
+}
+
+```
 
 
 
 ### @RequestAttribute
 
+`@RequestAttribute` 是 **Spring MVC** 中的注解，用于 **从 HttpServletRequest 中获取请求属性（request attribute）** 并注入到 Controller 方法的参数中。
 
+```java
+@GetMapping("/test")
+public String test(@RequestAttribute("userId") String userId) {
+    System.out.println(userId);
+    return "ok";
+}
+```
 
 
 
@@ -8139,6 +8368,26 @@ public class UserController {
 - 如果 `value()` 指定了异常类型，则方法只处理这些指定的异常。
 - 如果 `value()` 未指定，Spring 会从方法参数中找异常类型
 
+```java
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    @GetMapping("/{id}")
+    public String getUser(@PathVariable int id) {
+        if (id <= 0) {
+            throw new IllegalArgumentException("ID 必须大于 0");
+        }
+        return "User-" + id;
+    }
+
+    // 处理 IllegalArgumentException
+    @ExceptionHandler(IllegalArgumentException.class)
+    public String handleIllegalArg(IllegalArgumentException ex) {
+        return "错误信息: " + ex.getMessage();
+    }
+}
+```
 
 
 
@@ -8147,13 +8396,6 @@ public class UserController {
 
 
 
-
-
-
-
-
-
-## 常见content-type
 
 
 
@@ -8367,69 +8609,23 @@ If-Unmodified-Since: Tue, 04 Nov 2025 12:00:00 GMT
 
 
 
-## RequestAttributes
+## Bean的作用域
 
-```
-SCOPE_REQUEST
-```
-
-
-
-## 泛型
-
-因为 **Java 的泛型是编译期泛型（伪泛型）**。
-
-在 Java 5 引入泛型时，为了与旧版本 JVM 兼容，Java 设计成：
-
-**泛型只在编译期有效，运行期不保留真实类型信息。**
+| 常量                      | Scope 名称  | 描述                       |
+| ------------------------- | ----------- | -------------------------- |
+| `SCOPE_SINGLETON`（默认） | singleton   | Spring 容器级别单例        |
+| `SCOPE_PROTOTYPE`         | prototype   | 每次注入创建新实例         |
+| `SCOPE_REQUEST`           | request     | 每个 HTTP 请求一个实例     |
+| `SCOPE_SESSION`           | session     | 每个 HTTP Session 一个实例 |
+| `SCOPE_APPLICATION`       | application | ServletContext 全局单例    |
 
 ```java
-List<String> a = new ArrayList<>();
-List<Integer> b = new ArrayList<>();
-//运行时无法区分：
-a.getClass() == b.getClass();  // true
-//运行期只有：
-ArrayList.class
+@Component
+@Scope(value = WebApplicationContext.SCOPE_REQUEST, proxyMode = ScopedProxyMode.TARGET_CLASS)
+public class RequestBean {
+    // 每次 HTTP 请求都会创建新的实例
+}
 ```
 
-### 类型擦除带来什么问题？
-
-```java
-List<User>
-Map<String, Order>
-Response<List<User>>
-//运行时都只剩下：
-List
-Map
-Response
-```
-
-
-
-### Java 的 Type 体系（关键）
-
-| Type 子接口           | 含义         | 示例                               |
-| --------------------- | ------------ | ---------------------------------- |
-| **Class**             | 非泛型类型   | `User.class`                       |
-| **ParameterizedType** | 有参数的泛型 | `List<User>`、`Map<String, Order>` |
-| **GenericArrayType**  | 泛型数组     | `T[]`                              |
-| **TypeVariable**      | 类型变量     | `T`                                |
-| **WildcardType**      | 通配符类型   | `? extends Number`                 |
-
-通过子接口来获取泛型的类型
-
-```java
-//List<User>
-Type: ParameterizedType
-rawType: List
-typeArguments: [User]
-```
-
-
-
-### ResolvableType
-
-## HTTP
-
-## HttpEntity
+**必须使用 Scoped Proxy**，否则注入到 singleton Bean 中会报错
 

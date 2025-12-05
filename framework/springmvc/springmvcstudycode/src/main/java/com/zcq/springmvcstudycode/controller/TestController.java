@@ -3,6 +3,7 @@ package com.zcq.springmvcstudycode.controller;
 import com.zcq.springmvcstudycode.bean.Student;
 import com.zcq.springmvcstudycode.bean.User;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.http.*;
@@ -292,21 +293,21 @@ public class TestController {
         return s.length();
     }
 
-    @ExceptionHandler
-    public String handleException(Exception e) {
-        return "error";
-    }
+//    @ExceptionHandler
+//    public String handleException(Exception e) {
+//        return "error";
+//    }
 
-    @ExceptionHandler(RuntimeException.class)
-    public String handleException(RuntimeException e) {
-        return "RuntimeException";
-    }
+//    @ExceptionHandler(RuntimeException.class)
+//    public String handleException(RuntimeException e) {
+//        return "RuntimeException";
+//    }
 
 
-    @ExceptionHandler(NullPointerException.class)
-    public String handleException(NullPointerException e) {
-        return "NullPointerException";
-    }
+//    @ExceptionHandler(NullPointerException.class)
+//    public String handleException(NullPointerException e) {
+//        return "NullPointerException";
+//    }
 
 
     @RequestMapping("/testSession")
@@ -314,5 +315,11 @@ public class TestController {
         return user;
     }
 
+    //@DateTimeFormat
+    @Validated
+    @RequestMapping("/testValidated")
+    public String testValidated(@RequestParam(value = "user",required = false) @NotBlank(message = "不能为空！") String user) {
+        return user;
+    }
 
 }

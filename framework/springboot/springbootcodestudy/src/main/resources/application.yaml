@@ -1,0 +1,9 @@
+spring:
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          cache-private: false
+
+debug: true
+

@@ -1,31 +1,75 @@
 package com.zcq;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 
 public class Test {
     public static void main(String[] args) {
     }
 }
 
+class LFUCache {
 
-class Solution {
-    public int countNodes(TreeNode root) {
-        TreeNode l = root, r = root;
-        int hl = 0, hr = 0;
-        while (l != null){
-            l = l.left;
-            hl++;
+    int capacity;
+    int minF = 0;
+    HashMap<Integer, Integer> kv = new HashMap<>();
+    HashMap<Integer, Integer> kf = new HashMap<>();
+    HashMap<Integer, LinkedHashSet<Integer>> fk = new HashMap<>();
+
+    public LFUCache(int capacity) {
+        this.capacity = capacity;
+    }
+
+    public int get(int key) {
+        if (kv.containsKey(key)) {
+            incrF(key);
+            return kv.get(key);
         }
-        while (r != null){
-            r = r.right;
-            hr++;
+        return -1;
+    }
+
+    private void incrF(int key) {
+        Integer oldF = kf.get(key);
+        kf.put(key, oldF + 1);
+        fk.putIfAbsent(oldF + 1, new LinkedHashSet<>());
+        fk.get(oldF + 1).add(key);
+
+        fk.get(oldF).remove(key);
+        if (fk.get(oldF).isEmpty()) {
+            fk.remove(oldF);
+            if (minF == oldF) {
+                minF = oldF + 1;
+            }
         }
-        if (hl == hr) {
-            return (int) Math.pow(2, hl) - 1;
+    }
+
+    public void put(int key, int value) {
+        if (kv.containsKey(key)) {
+            incrF(key);
+            kv.put(key, value);
+            return;
         }
-        return 1 + countNodes(root.left) + countNodes(root.right);
+        if (capacity <= kv.size()) {
+            removeLastest();
+        }
+        kv.put(key, value);
+        kf.put(key, 1);
+        fk.putIfAbsent(1, new LinkedHashSet<>());
+        fk.get(1).add(key);
+        minF = 1;
+    }
+
+    private void removeLastest() {
+        Integer removeKey = fk.get(minF).iterator().next();
+        kv.remove(removeKey);
+        kf.remove(removeKey);
+        fk.get(minF).remove(removeKey);
+        if (fk.get(minF).isEmpty()) {
+            fk.remove(minF);
+        }
     }
 }
+
 //class Solution {
 //    public long countOfSubstrings(String word, int k) {
 //        long ans = 0, len = word.length();

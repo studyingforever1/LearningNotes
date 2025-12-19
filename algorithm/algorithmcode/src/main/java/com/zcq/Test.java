@@ -1,115 +1,98 @@
 package com.zcq;
 
-import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.function.BinaryOperator;
 
 public class Test {
     public static void main(String[] args) {
+
     }
 }
 
-class LFUCache {
+class NumArray {
+    SegmentTree segmentTree;
 
-    int capacity;
-    int minF = 0;
-    HashMap<Integer, Integer> kv = new HashMap<>();
-    HashMap<Integer, Integer> kf = new HashMap<>();
-    HashMap<Integer, LinkedHashSet<Integer>> fk = new HashMap<>();
-
-    public LFUCache(int capacity) {
-        this.capacity = capacity;
+    public NumArray(int[] nums) {
+        segmentTree = new SegmentTree(nums, Integer::sum);
     }
 
-    public int get(int key) {
-        if (kv.containsKey(key)) {
-            incrF(key);
-            return kv.get(key);
-        }
-        return -1;
+    public void update(int index, int val) {
+        segmentTree.update(index,val);
     }
 
-    private void incrF(int key) {
-        Integer oldF = kf.get(key);
-        kf.put(key, oldF + 1);
-        fk.putIfAbsent(oldF + 1, new LinkedHashSet<>());
-        fk.get(oldF + 1).add(key);
+    public int sumRange(int left, int right) {
+        return segmentTree.query(left, right);
+    }
+}
 
-        fk.get(oldF).remove(key);
-        if (fk.get(oldF).isEmpty()) {
-            fk.remove(oldF);
-            if (minF == oldF) {
-                minF = oldF + 1;
-            }
+class SegmentTree {
+    public static class SegmentNode {
+        int l, r;
+        int mergeValue;
+        SegmentNode left, right;
+
+        public SegmentNode(int l, int r, int mergeValue) {
+            this.l = l;
+            this.r = r;
+            this.mergeValue = mergeValue;
         }
     }
 
-    public void put(int key, int value) {
-        if (kv.containsKey(key)) {
-            incrF(key);
-            kv.put(key, value);
+    SegmentNode root;
+    BinaryOperator<Integer> operator;
+
+    public SegmentTree(int[] nums, BinaryOperator<Integer> operator) {
+        this.operator = operator;
+        this.root = build(nums, 0, nums.length - 1);
+    }
+
+    private SegmentNode build(int[] nums, int left, int right) {
+        if (left == right) {
+            return new SegmentNode(left, right, nums[left]);
+        }
+        int mid = left + (right - left) / 2 ;
+        SegmentNode leftNode = build(nums, left, mid);
+        SegmentNode rightNode = build(nums, mid + 1, right);
+
+        Integer mergeValue = operator.apply(leftNode.mergeValue, rightNode.mergeValue);
+        SegmentNode root = new SegmentNode(left, right, mergeValue);
+        root.left = leftNode;
+        root.right = rightNode;
+        return root;
+    }
+
+    public void update(int index, int value) {
+        update(root, index, value);
+    }
+
+    private void update(SegmentNode root, int index, int value) {
+        if (root.l == root.r) {
+            root.mergeValue = value;
             return;
         }
-        if (capacity <= kv.size()) {
-            removeLastest();
+        int mid = root.l + (root.r - root.l) / 2;
+        if (mid >= index) {
+            update(root.left, index, value);
+        } else {
+            update(root.right, index, value);
         }
-        kv.put(key, value);
-        kf.put(key, 1);
-        fk.putIfAbsent(1, new LinkedHashSet<>());
-        fk.get(1).add(key);
-        minF = 1;
+        root.mergeValue = operator.apply(root.left.mergeValue, root.right.mergeValue);
     }
 
-    private void removeLastest() {
-        Integer removeKey = fk.get(minF).iterator().next();
-        kv.remove(removeKey);
-        kf.remove(removeKey);
-        fk.get(minF).remove(removeKey);
-        if (fk.get(minF).isEmpty()) {
-            fk.remove(minF);
+    public int query(int ql, int qr) {
+        return query(root, ql, qr);
+    }
+
+    private int query(SegmentNode root, int ql, int qr) {
+        if (root.l == ql && root.r == qr) {
+            return root.mergeValue;
+        }
+        int mid = root.l + (root.r - root.l) / 2;
+        if (mid >= qr) {
+            return query(root.left, ql, qr);
+        } else if (mid < ql) {
+            return query(root.right, ql, qr);
+        } else {
+            return operator.apply(query(root.left, ql, mid), query(root.right, mid + 1, qr));
         }
     }
 }
-
-//class Solution {
-//    public long countOfSubstrings(String word, int k) {
-//        long ans = 0, len = word.length();
-//        int left = 0, right = 0, valid = 0, yuanCount = 0;
-//        int[] arr = new int[26];
-//        HashSet<Character> yuan = new HashSet<>();
-//        add(yuan);
-//        while (right < len) {
-//            char c = word.charAt(right);
-//            arr[c - 'a']++;
-//            if (yuan.contains(c)) {
-//                yuanCount++;
-//                if (arr[c - 'a'] == 1) {
-//                    valid++;
-//                }
-//            }
-//            right++;
-//            while (valid == yuan.size() && right - left - yuanCount >= k) {
-//                if (right - left - yuanCount == k) {
-//                    ans++;
-//                }
-//                char d = word.charAt(left);
-//                arr[d - 'a']--;
-//                if (yuan.contains(d)) {
-//                    yuanCount--;
-//                    if (arr[d - 'a'] == 0) {
-//                        valid--;
-//                    }
-//                }
-//                left++;
-//            }
-//        }
-//        return ans;
-//    }
-//
-//    private void add(HashSet<Character> yuan) {
-//        yuan.add('a');
-//        yuan.add('e');
-//        yuan.add('i');
-//        yuan.add('o');
-//        yuan.add('u');
-//    }
-//}

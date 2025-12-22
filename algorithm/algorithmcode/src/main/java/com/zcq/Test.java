@@ -1,98 +1,125 @@
 package com.zcq;
 
-import java.util.function.BinaryOperator;
-
 public class Test {
     public static void main(String[] args) {
 
     }
 }
 
-class NumArray {
+class MyCalendar {
+
     SegmentTree segmentTree;
 
-    public NumArray(int[] nums) {
-        segmentTree = new SegmentTree(nums, Integer::sum);
+    public MyCalendar() {
+        segmentTree = new SegmentTree(0, Integer.MAX_VALUE, 0);
     }
 
-    public void update(int index, int val) {
-        segmentTree.update(index,val);
-    }
-
-    public int sumRange(int left, int right) {
-        return segmentTree.query(left, right);
+    public boolean book(int startTime, int endTime) {
+        if (segmentTree.query(startTime, endTime - 1) > 0) {
+            return false;
+        }
+        segmentTree.updateRange(startTime, endTime - 1, 1);
+        return true;
     }
 }
 
 class SegmentTree {
     public static class SegmentNode {
         int l, r;
-        int mergeValue;
+        int sum;
         SegmentNode left, right;
 
-        public SegmentNode(int l, int r, int mergeValue) {
+        boolean hasLazyAssign;
+        int lazyAssign;
+
+        public SegmentNode(int l, int r, int sum) {
             this.l = l;
             this.r = r;
-            this.mergeValue = mergeValue;
+            this.sum = sum;
+            this.hasLazyAssign = false;
         }
     }
 
     SegmentNode root;
-    BinaryOperator<Integer> operator;
+    int defaultValue;
 
-    public SegmentTree(int[] nums, BinaryOperator<Integer> operator) {
-        this.operator = operator;
-        this.root = build(nums, 0, nums.length - 1);
+    public SegmentTree(int start, int end, int defaultValue) {
+        this.defaultValue = defaultValue;
+        root = new SegmentNode(start, end, defaultValue);
     }
 
-    private SegmentNode build(int[] nums, int left, int right) {
-        if (left == right) {
-            return new SegmentNode(left, right, nums[left]);
-        }
-        int mid = left + (right - left) / 2 ;
-        SegmentNode leftNode = build(nums, left, mid);
-        SegmentNode rightNode = build(nums, mid + 1, right);
-
-        Integer mergeValue = operator.apply(leftNode.mergeValue, rightNode.mergeValue);
-        SegmentNode root = new SegmentNode(left, right, mergeValue);
-        root.left = leftNode;
-        root.right = rightNode;
-        return root;
-    }
-
-    public void update(int index, int value) {
-        update(root, index, value);
-    }
-
-    private void update(SegmentNode root, int index, int value) {
-        if (root.l == root.r) {
-            root.mergeValue = value;
+    private void initChildNodeIfNeed(SegmentNode node) {
+        if (node.l == node.r) {
             return;
         }
-        int mid = root.l + (root.r - root.l) / 2;
-        if (mid >= index) {
-            update(root.left, index, value);
-        } else {
-            update(root.right, index, value);
+        int mid = node.l + (node.r - node.l) / 2;
+        if (node.left == null) {
+            node.left = new SegmentNode(node.l, mid, defaultValue);
         }
-        root.mergeValue = operator.apply(root.left.mergeValue, root.right.mergeValue);
+        if (node.right == null) {
+            node.right = new SegmentNode(mid + 1, node.r, defaultValue);
+        }
     }
 
-    public int query(int ql, int qr) {
-        return query(root, ql, qr);
+    public void updateRange(int qL, int qR, int value) {
+        updateRange(root, qL, qR, value);
     }
 
-    private int query(SegmentNode root, int ql, int qr) {
-        if (root.l == ql && root.r == qr) {
-            return root.mergeValue;
+    private void updateRange(SegmentNode node, int qL, int qR, int value) {
+        if (node.l >= qL && node.r <= qR) {
+            node.hasLazyAssign = true;
+            node.sum = (node.r - node.l + 1) * value;
+            node.lazyAssign = value;
+            return;
         }
-        int mid = root.l + (root.r - root.l) / 2;
-        if (mid >= qr) {
-            return query(root.left, ql, qr);
-        } else if (mid < ql) {
-            return query(root.right, ql, qr);
+        initChildNodeIfNeed(node);
+        pushDown(node);
+
+        int mid = node.l + (node.r - node.l) / 2;
+        if (mid >= qR) {
+            updateRange(node.left, qL, qR, value);
+        } else if (mid < qL) {
+            updateRange(node.right, qL, qR, value);
         } else {
-            return operator.apply(query(root.left, ql, mid), query(root.right, mid + 1, qr));
+            updateRange(node.left, qL, mid, value);
+            updateRange(node.right, mid + 1, qR, value);
+        }
+        node.sum = node.left.sum + node.right.sum;
+    }
+
+    private void pushDown(SegmentNode node) {
+        if (!node.hasLazyAssign) {
+            return;
+        }
+        node.left.hasLazyAssign = true;
+        node.left.sum = (node.left.r - node.left.l + 1) * node.lazyAssign;
+        node.left.lazyAssign = node.lazyAssign;
+
+        node.right.hasLazyAssign = true;
+        node.right.sum = (node.right.r - node.right.l + 1) * node.lazyAssign;
+        node.right.lazyAssign = node.lazyAssign;
+
+        node.hasLazyAssign = false;
+    }
+
+    public int query(int qL, int qR) {
+        return query(root, qL, qR);
+    }
+
+    private int query(SegmentNode root, int qL, int qR) {
+        if (root.l >= qL && root.r <= qR) {
+            return root.sum;
+        }
+        initChildNodeIfNeed(root);
+        pushDown(root);
+        int mid = root.l + (root.r - root.l) / 2;
+        if (mid >= qR) {
+            return query(root.left, qL, qR);
+        } else if (mid < qL) {
+            return query(root.right, qL, qR);
+        } else {
+            return query(root.left, qL, mid) + query(root.right, mid + 1, qR);
         }
     }
+
 }

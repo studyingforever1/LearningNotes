@@ -1,35 +1,42 @@
 package com.zcq;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 class Solution {
-    List<List<Integer>> result = new ArrayList<>();
-    List<Integer> list = new ArrayList<>();
+    boolean isSubIsland = true;
+    int[][] dx = new int[][]{{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
 
-    public List<List<Integer>> combinationSum2(int[] candidates, int target) {
-        Arrays.sort(candidates);
-        backtrack(candidates, 0, target);
-        return result;
+    public int countSubIslands(int[][] grid1, int[][] grid2) {
+        int m = grid2.length;
+        int n = grid2[0].length;
+        int res = 0;
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                if (grid1[i][j] == 1) {
+                    isSubIsland = true;
+                    dfs(grid1, grid2, i, j);
+                    if (isSubIsland) {
+                        res++;
+                    }
+                }
+            }
+        }
+        return res;
     }
 
-    private void backtrack(int[] nums, int start, int target) {
-        Integer sum = list.stream().reduce(0, Integer::sum);
-        if (sum.equals(target)) {
-            result.add(new ArrayList<>(list));
-        }
-        if (sum > target) {
+    private void dfs(int[][] grid1, int[][] grid2, int i, int j) {
+        if (i < 0 || j < 0 || i >= grid2.length || j >= grid2[0].length) {
             return;
         }
-        for (int i = start; i < nums.length; i++) {
-            if (i > start && nums[i] == nums[i - 1]) {
-                continue;
-            }
-            list.add(nums[i]);
-            backtrack(nums, i + 1, target);
-            list.remove(list.size() - 1);
+        if (grid2[i][j] == 0) {
+            return;
+        }
+        if (grid1[i][j] == 0 && grid2[i][j] == 1) {
+            isSubIsland = false;
+        }
+        grid2[i][j] = 0;
+        for (int[] ints : dx) {
+            int x = ints[0] + i;
+            int y = ints[1] + j;
+            dfs(grid1, grid2, x, y);
         }
     }
 }
-

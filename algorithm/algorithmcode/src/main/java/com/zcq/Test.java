@@ -1,42 +1,55 @@
 package com.zcq;
 
 class Solution {
-    boolean isSubIsland = true;
-    int[][] dx = new int[][]{{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+    int res = 0;
+    boolean[][] used;
+    int[][] d = new int[][]{{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+    int count = 0, visitedCount = 0;
 
-    public int countSubIslands(int[][] grid1, int[][] grid2) {
-        int m = grid2.length;
-        int n = grid2[0].length;
-        int res = 0;
+    public int uniquePathsIII(int[][] grid) {
+        int m = grid.length;
+        int n = grid[0].length;
+        used = new boolean[m][n];
+        int startI = 0, startJ = 0;
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
-                if (grid1[i][j] == 1) {
-                    isSubIsland = true;
-                    dfs(grid1, grid2, i, j);
-                    if (isSubIsland) {
-                        res++;
-                    }
+                if (grid[i][j] == 1 || grid[i][j] == 0) {
+                    count++;
+                }
+                if (grid[i][j] == 1) {
+                    startI = i;
+                    startJ = j;
                 }
             }
         }
+
+        backtrack(startI, startJ, grid);
+
         return res;
     }
 
-    private void dfs(int[][] grid1, int[][] grid2, int i, int j) {
-        if (i < 0 || j < 0 || i >= grid2.length || j >= grid2[0].length) {
+    private void backtrack(int i, int j, int[][] grid) {
+
+        if (grid[i][j] == 2 && count == visitedCount) {
+            res++;
             return;
         }
-        if (grid2[i][j] == 0) {
-            return;
-        }
-        if (grid1[i][j] == 0 && grid2[i][j] == 1) {
-            isSubIsland = false;
-        }
-        grid2[i][j] = 0;
-        for (int[] ints : dx) {
+        used[i][j] = true;
+        visitedCount++;
+        for (int[] ints : d) {
             int x = ints[0] + i;
             int y = ints[1] + j;
-            dfs(grid1, grid2, x, y);
+
+            if (x < 0 || x >= grid.length || y < 0 || y >= grid[0].length) {
+                continue;
+            }
+            if (used[x][y] || grid[x][y] == -1) {
+                continue;
+            }
+
+            backtrack(x, y, grid);
         }
+        used[i][j] = false;
+        visitedCount--;
     }
 }

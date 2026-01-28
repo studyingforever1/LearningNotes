@@ -1,55 +1,57 @@
 package com.zcq;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
 class Solution {
-    int res = 0;
-    boolean[][] used;
-    int[][] d = new int[][]{{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
-    int count = 0, visitedCount = 0;
+    LinkedList<Integer> path = new LinkedList<>();
+    List<Integer> res;
+    boolean[] visited;
+    boolean found;
 
-    public int uniquePathsIII(int[][] grid) {
-        int m = grid.length;
-        int n = grid[0].length;
-        used = new boolean[m][n];
-        int startI = 0, startJ = 0;
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                if (grid[i][j] == 1 || grid[i][j] == 0) {
-                    count++;
-                }
-                if (grid[i][j] == 1) {
-                    startI = i;
-                    startJ = j;
-                }
-            }
-        }
-
-        backtrack(startI, startJ, grid);
-
+    public List<Integer> grayCode(int n) {
+        int m = 1 << n;
+        visited = new boolean[m];
+        visited[0] = true;
+        path.add(0);
+        backtrack(m);
         return res;
     }
 
-    private void backtrack(int i, int j, int[][] grid) {
+    private void backtrack(int m) {
+        if (path.size() == m) {
+            Integer last = path.getLast();
+            if (!differsByOneBit(last, 0)) {
+                return;
+            }
 
-        if (grid[i][j] == 2 && count == visitedCount) {
-            res++;
+            res = new ArrayList<>(path);
+            found = true;
             return;
         }
-        used[i][j] = true;
-        visitedCount++;
-        for (int[] ints : d) {
-            int x = ints[0] + i;
-            int y = ints[1] + j;
-
-            if (x < 0 || x >= grid.length || y < 0 || y >= grid[0].length) {
-                continue;
-            }
-            if (used[x][y] || grid[x][y] == -1) {
-                continue;
-            }
-
-            backtrack(x, y, grid);
+        if (found) {
+            return;
         }
-        used[i][j] = false;
-        visitedCount--;
+        for (int i = 0; i < m; i++) {
+            if (visited[i]) {
+                continue;
+            }
+            Integer last = path.getLast();
+            if (!differsByOneBit(last, i)) {
+                continue;
+            }
+            path.add(i);
+            visited[i] = true;
+            backtrack(m);
+            path.removeLast();
+            visited[i] = false;
+        }
     }
+
+    public static boolean differsByOneBit(int a, int b) {
+        int x = a ^ b;
+        return x != 0 && (x & (x - 1)) == 0;
+    }
+
 }

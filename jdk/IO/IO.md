@@ -71,6 +71,53 @@ public void testTransferTo() throws IOException {
 
 
 
+**Mmap**
+
+mmap 将文件在内核中的页缓存（page cache）映射到用户进程的虚拟地址空间。
+
+```java
+磁盘
+ ↓ (DMA copy)
+Kernel Buffer
+ ↓ (页表映射)
+User Virtual Address
+```
+
+**没有 Kernel Buffer → User Buffer 的数据复制。**
+
+因为：
+
+- 用户程序访问的是 **同一块物理内存**
+- 只是 **地址映射不同**
+
+**传统流程**
+
+```java
+磁盘
+ ↓ (DMA copy)
+Kernel Buffer
+ ↓ (CPU copy)
+User Buffer
+```
+
+1.**磁盘 → Kernel Buffer**
+
+- DMA拷贝（硬件完成）
+
+2.**Kernel Buffer → User Buffer**
+
+- CPU拷贝
+
+
+
+
+
+
+
+
+
+
+
 ### IO模型
 
 数据到达（接收数据）：网卡会把接收到的数据写入内存中的socket接收缓存区中（DMA），网卡向CPU发出一个中断信号，CPU就知道数据到了，所以可以读取数据。

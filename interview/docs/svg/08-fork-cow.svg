@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="620" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2980b9"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="960" height="620" fill="#f8f9fa" rx="12"/>
+  <text x="480" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#1a1a2e">fork() 与 Copy-on-Write (COW) 内存机制</text>
+
+  <!-- ===== 阶段一标题 ===== -->
+  <text x="40" y="72" font-size="14" font-weight="bold" fill="#555">① fork() 刚完成 — 父子共享物理页，所有可写页 PTE 标记只读</text>
+
+  <!-- 父进程虚拟地址空间 -->
+  <rect x="40" y="85" width="200" height="200" rx="8" fill="#dce8f8" stroke="#4a90d9" stroke-width="2"/>
+  <text x="140" y="108" text-anchor="middle" font-size="13" font-weight="bold" fill="#2c5f8a">父进程 虚拟空间</text>
+  <rect x="55" y="118" width="170" height="30" rx="4" fill="#4a90d9"/>
+  <text x="140" y="138" text-anchor="middle" font-size="11" fill="white">代码段（r-x）</text>
+  <rect x="55" y="155" width="170" height="30" rx="4" fill="#e74c3c"/>
+  <text x="140" y="175" text-anchor="middle" font-size="11" fill="white">数据段 PTE→只读(COW)</text>
+  <rect x="55" y="192" width="170" height="30" rx="4" fill="#e74c3c"/>
+  <text x="140" y="212" text-anchor="middle" font-size="11" fill="white">堆 PTE→只读(COW)</text>
+  <rect x="55" y="229" width="170" height="30" rx="4" fill="#e74c3c"/>
+  <text x="140" y="249" text-anchor="middle" font-size="11" fill="white">栈 PTE→只读(COW)</text>
+
+  <!-- 子进程虚拟地址空间 -->
+  <rect x="720" y="85" width="200" height="200" rx="8" fill="#ddf5e8" stroke="#27ae60" stroke-width="2"/>
+  <text x="820" y="108" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a7a42">子进程 虚拟空间</text>
+  <rect x="735" y="118" width="170" height="30" rx="4" fill="#4a90d9"/>
+  <text x="820" y="138" text-anchor="middle" font-size="11" fill="white">代码段（r-x）</text>
+  <rect x="735" y="155" width="170" height="30" rx="4" fill="#e74c3c"/>
+  <text x="820" y="175" text-anchor="middle" font-size="11" fill="white">数据段 PTE→只读(COW)</text>
+  <rect x="735" y="192" width="170" height="30" rx="4" fill="#e74c3c"/>
+  <text x="820" y="212" text-anchor="middle" font-size="11" fill="white">堆 PTE→只读(COW)</text>
+  <rect x="735" y="229" width="170" height="30" rx="4" fill="#e74c3c"/>
+  <text x="820" y="249" text-anchor="middle" font-size="11" fill="white">栈 PTE→只读(COW)</text>
+
+  <!-- 物理内存（中间） -->
+  <rect x="330" y="85" width="300" height="200" rx="8" fill="#fef5e7" stroke="#e67e22" stroke-width="2"/>
+  <text x="480" y="108" text-anchor="middle" font-size="13" font-weight="bold" fill="#8b4513">物理内存（共享）</text>
+  <rect x="345" y="118" width="270" height="30" rx="4" fill="#4a90d9"/>
+  <text x="480" y="138" text-anchor="middle" font-size="11" fill="white">代码段物理页（refcount=2）</text>
+  <rect x="345" y="155" width="270" height="30" rx="4" fill="#e67e22"/>
+  <text x="480" y="175" text-anchor="middle" font-size="11" fill="white">数据段物理页（refcount=2，只读共享）</text>
+  <rect x="345" y="192" width="270" height="30" rx="4" fill="#e67e22"/>
+  <text x="480" y="212" text-anchor="middle" font-size="11" fill="white">堆物理页（refcount=2，只读共享）</text>
+  <rect x="345" y="229" width="270" height="30" rx="4" fill="#e67e22"/>
+  <text x="480" y="249" text-anchor="middle" font-size="11" fill="white">栈物理页（refcount=2，只读共享）</text>
+
+  <!-- 箭头：父进程→物理内存 -->
+  <line x1="225" y1="133" x2="343" y2="133" stroke="#4a90d9" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="225" y1="170" x2="343" y2="170" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <line x1="225" y1="207" x2="343" y2="207" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <line x1="225" y1="244" x2="343" y2="244" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+
+  <!-- 箭头：子进程→物理内存 -->
+  <line x1="735" y1="133" x2="617" y2="133" stroke="#4a90d9" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="735" y1="170" x2="617" y2="170" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <line x1="735" y1="207" x2="617" y2="207" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <line x1="735" y1="244" x2="617" y2="244" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+
+  <!-- 图例 -->
+  <rect x="40" y="300" width="16" height="16" rx="3" fill="#4a90d9"/>
+  <text x="62" y="313" font-size="11" fill="#333">直接共享（只读页，不触发COW）</text>
+  <rect x="240" y="300" width="16" height="16" rx="3" fill="#e74c3c"/>
+  <text x="262" y="313" font-size="11" fill="#333">COW 共享（写时触发复制）</text>
+
+  <!-- 分隔线 -->
+  <line x1="40" y1="330" x2="920" y2="330" stroke="#ccc" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+  <!-- ===== 阶段二标题 ===== -->
+  <text x="40" y="356" font-size="14" font-weight="bold" fill="#555">② 父进程写入数据段 — 触发 COW，分配新物理页</text>
+
+  <!-- 父进程（写后） -->
+  <rect x="40" y="370" width="200" height="210" rx="8" fill="#dce8f8" stroke="#4a90d9" stroke-width="2"/>
+  <text x="140" y="393" text-anchor="middle" font-size="13" font-weight="bold" fill="#2c5f8a">父进程（写后）</text>
+  <rect x="55" y="403" width="170" height="30" rx="4" fill="#4a90d9"/>
+  <text x="140" y="423" text-anchor="middle" font-size="11" fill="white">代码段（共享不变）</text>
+  <rect x="55" y="440" width="170" height="30" rx="4" fill="#27ae60"/>
+  <text x="140" y="460" text-anchor="middle" font-size="11" fill="white">数据段 PTE→新物理页 ✓</text>
+  <rect x="55" y="477" width="170" height="30" rx="4" fill="#e74c3c"/>
+  <text x="140" y="497" text-anchor="middle" font-size="11" fill="white">堆（仍共享）</text>
+  <rect x="55" y="514" width="170" height="30" rx="4" fill="#e74c3c"/>
+  <text x="140" y="534" text-anchor="middle" font-size="11" fill="white">栈（仍共享）</text>
+
+  <!-- 子进程（未变） -->
+  <rect x="720" y="370" width="200" height="210" rx="8" fill="#ddf5e8" stroke="#27ae60" stroke-width="2"/>
+  <text x="820" y="393" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a7a42">子进程（未写）</text>
+  <rect x="735" y="403" width="170" height="30" rx="4" fill="#4a90d9"/>
+  <text x="820" y="423" text-anchor="middle" font-size="11" fill="white">代码段（共享不变）</text>
+  <rect x="735" y="440" width="170" height="30" rx="4" fill="#e67e22"/>
+  <text x="820" y="460" text-anchor="middle" font-size="11" fill="white">数据段→旧物理页（原值）</text>
+  <rect x="735" y="477" width="170" height="30" rx="4" fill="#e74c3c"/>
+  <text x="820" y="497" text-anchor="middle" font-size="11" fill="white">堆（仍共享）</text>
+  <rect x="735" y="514" width="170" height="30" rx="4" fill="#e74c3c"/>
+  <text x="820" y="534" text-anchor="middle" font-size="11" fill="white">栈（仍共享）</text>
+
+  <!-- 物理内存（分裂后） -->
+  <rect x="310" y="370" width="340" height="210" rx="8" fill="#fef5e7" stroke="#e67e22" stroke-width="2"/>
+  <text x="480" y="393" text-anchor="middle" font-size="13" font-weight="bold" fill="#8b4513">物理内存</text>
+  <rect x="325" y="403" width="310" height="30" rx="4" fill="#4a90d9"/>
+  <text x="480" y="423" text-anchor="middle" font-size="11" fill="white">代码段物理页（共享）</text>
+  <!-- 数据段分裂 -->
+  <rect x="325" y="440" width="148" height="30" rx="4" fill="#27ae60"/>
+  <text x="399" y="460" text-anchor="middle" font-size="10" fill="white">新数据段页（父，修改值）</text>
+  <rect x="479" y="440" width="156" height="30" rx="4" fill="#e67e22"/>
+  <text x="557" y="460" text-anchor="middle" font-size="10" fill="white">旧数据段页（子，原值）</text>
+  <rect x="325" y="477" width="310" height="30" rx="4" fill="#e67e22"/>
+  <text x="480" y="497" text-anchor="middle" font-size="11" fill="white">堆物理页（refcount=2，共享）</text>
+  <rect x="325" y="514" width="310" height="30" rx="4" fill="#e67e22"/>
+  <text x="480" y="534" text-anchor="middle" font-size="11" fill="white">栈物理页（refcount=2，共享）</text>
+
+  <!-- 箭头：父→新数据段页 -->
+  <line x1="225" y1="455" x2="323" y2="455" stroke="#27ae60" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <!-- 箭头：子→旧数据段页 -->
+  <line x1="735" y1="455" x2="637" y2="455" stroke="#e67e22" stroke-width="2" marker-end="url(#arrow)"/>
+  <!-- 箭头：父→堆 -->
+  <line x1="225" y1="492" x2="323" y2="492" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <!-- 箭头：子→堆 -->
+  <line x1="735" y1="492" x2="637" y2="492" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <!-- 箭头：父→代码段 -->
+  <line x1="225" y1="418" x2="323" y2="418" stroke="#4a90d9" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- 箭头：子→代码段 -->
+  <line x1="735" y1="418" x2="637" y2="418" stroke="#4a90d9" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- COW 触发标注 -->
+  <rect x="360" y="432" width="240" height="20" rx="4" fill="#c0392b"/>
+  <text x="480" y="446" text-anchor="middle" font-size="10" fill="white">写保护缺页 → do_wp_page() → 复制页 → 分配新物理页</text>
+
+  <!-- 底部说明 -->
+  <rect x="40" y="590" width="880" height="22" rx="4" fill="#ecf0f1"/>
+  <text x="480" y="606" text-anchor="middle" font-size="11" fill="#555">父子进程数据段现已各自独立；代码段、堆、栈未写入时仍共享物理页，节省内存</text>
+</svg>

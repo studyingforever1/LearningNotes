@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="660" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="960" height="660" fill="#f8f9fa" rx="12"/>
+  <text x="480" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#1a1a2e">Linux 内核虚拟地址空间布局（x86_64）</text>
+
+  <!-- 左侧：地址尺 -->
+  <!-- 不可访问空洞 -->
+  <rect x="60" y="55" width="240" height="40" rx="6" fill="#bdc3c7" stroke="#95a5a6" stroke-width="1.5"/>
+  <text x="180" y="70" text-anchor="middle" font-size="11" font-weight="bold" fill="#555">不可访问空洞（non-canonical）</text>
+  <text x="180" y="86" text-anchor="middle" font-size="10" fill="#777">0x0001_0000_0000_0000 ~ 0xFFFF_7FFF_FFFF_FFFF</text>
+
+  <!-- 内核空间总体框 -->
+  <rect x="60" y="100" width="580" height="520" rx="8" fill="#fef9f0" stroke="#e67e22" stroke-width="2"/>
+  <text x="350" y="122" text-anchor="middle" font-size="14" font-weight="bold" fill="#8b4513">内核虚拟地址空间（高128TB，0xFFFF_8000… 起）</text>
+
+  <!-- 各区域（从高到低排列） -->
+
+  <!-- Fixmap 区 -->
+  <rect x="80" y="133" width="540" height="52" rx="6" fill="#c0392b" stroke="#8b1a1a" stroke-width="1.5"/>
+  <text x="190" y="155" font-size="12" font-weight="bold" fill="white">Fixmap 区</text>
+  <text x="190" y="173" font-size="10" fill="#ffcccc">编译期固定虚拟地址槽（~512个）用于 APIC、EFI 等早期映射</text>
+  <text x="620" y="155" text-anchor="end" font-size="10" fill="#ffaaaa">0xFFFF_FF7F…</text>
+  <text x="620" y="173" text-anchor="end" font-size="10" fill="#ffaaaa">~ 0xFFFF_FFFF…</text>
+
+  <!-- vmemmap 区 -->
+  <rect x="80" y="193" width="540" height="52" rx="6" fill="#8e44ad" stroke="#5d2d7a" stroke-width="1.5"/>
+  <text x="190" y="215" font-size="12" font-weight="bold" fill="white">vmemmap 区</text>
+  <text x="190" y="233" font-size="10" fill="#e8c8ff">所有物理页帧对应的 struct page 数组，pfn_to_page(pfn) = O(1)</text>
+  <text x="620" y="215" text-anchor="end" font-size="10" fill="#d4aaff">0xFFFF_FE00…</text>
+  <text x="620" y="233" text-anchor="end" font-size="10" fill="#d4aaff">~ 0xFFFF_FF7F…</text>
+
+  <!-- 模块区 -->
+  <rect x="80" y="253" width="540" height="52" rx="6" fill="#c0392b" stroke="#8b1a1a" stroke-width="1.5" fill-opacity="0.75"/>
+  <text x="190" y="275" font-size="12" font-weight="bold" fill="white">内核模块区（Modules）</text>
+  <text x="190" y="293" font-size="10" fill="#ffcccc">insmod 加载的 .ko 代码/数据，紧靠内核 text 以满足 ±2GB 相对跳转</text>
+  <text x="620" y="275" text-anchor="end" font-size="10" fill="#ffaaaa">0xFFFF_C900…</text>
+  <text x="620" y="293" text-anchor="end" font-size="10" fill="#ffaaaa">~ 0xFFFF_FE00…</text>
+
+  <!-- vmalloc 区 -->
+  <rect x="80" y="313" width="540" height="72" rx="6" fill="#e67e22" stroke="#b7510a" stroke-width="2"/>
+  <text x="190" y="337" font-size="12" font-weight="bold" fill="white">vmalloc / ioremap 区（~32TB）</text>
+  <text x="190" y="355" font-size="10" fill="#ffe8cc">物理非连续，虚拟连续；vmalloc()、ioremap() 设备寄存器映射均在此</text>
+  <text x="190" y="372" font-size="10" fill="#ffe8cc">访问需走页表，有额外 TLB 开销；内核模块大缓冲区首选</text>
+  <text x="620" y="337" text-anchor="end" font-size="10" fill="#ffe0b0">0xFFFF_8880…</text>
+  <text x="620" y="372" text-anchor="end" font-size="10" fill="#ffe0b0">~ 0xFFFF_C900…</text>
+
+  <!-- 直接映射区 -->
+  <rect x="80" y="393" width="540" height="100" rx="6" fill="#27ae60" stroke="#1a7a42" stroke-width="2"/>
+  <text x="190" y="417" font-size="12" font-weight="bold" fill="white">直接映射区（Linear Mapping，最大 64TB）</text>
+  <text x="190" y="437" font-size="10" fill="#c8f5d8">物理地址 0 → 虚拟地址 0xFFFF_8880_0000_0000（固定偏移）</text>
+  <text x="190" y="455" font-size="10" fill="#c8f5d8">__pa(virt) / __va(phys) 宏 O(1) 互转，无需查页表</text>
+  <text x="190" y="473" font-size="10" fill="#c8f5d8">kmalloc/kzalloc 分配的内存均在此区域，访问性能最优</text>
+  <text x="620" y="417" text-anchor="end" font-size="10" fill="#a0e8b8">0xFFFF_8880…</text>
+  <text x="620" y="473" text-anchor="end" font-size="10" fill="#a0e8b8">~ + 物理RAM大小</text>
+
+  <!-- 内核 text/data/bss -->
+  <rect x="80" y="501" width="540" height="52" rx="6" fill="#2980b9" stroke="#1a5c8a" stroke-width="1.5"/>
+  <text x="190" y="523" font-size="12" font-weight="bold" fill="white">内核 text / data / bss</text>
+  <text x="190" y="541" font-size="10" fill="#c8e0ff">内核自身代码和静态数据，KASLR 在启动时随机化加载偏移</text>
+  <text x="620" y="523" text-anchor="end" font-size="10" fill="#a8d0f8">0xFFFF_8000…</text>
+  <text x="620" y="541" text-anchor="end" font-size="10" fill="#a8d0f8">（随 KASLR 随机）</text>
+
+  <!-- 起始注记 -->
+  <text x="80" y="635" font-size="11" fill="#888">↑ 内核空间起始：0xFFFF_8000_0000_0000（canonical 边界）</text>
+
+  <!-- 右侧：分配方式对应区域 -->
+  <rect x="660" y="100" width="280" height="520" rx="8" fill="#f0f4f8" stroke="#95a5a6" stroke-width="1.5"/>
+  <text x="800" y="122" text-anchor="middle" font-size="13" font-weight="bold" fill="#2c3e50">分配 API 对应区域</text>
+
+  <!-- Fixmap -->
+  <rect x="675" y="133" width="250" height="52" rx="5" fill="#fdecea" stroke="#c0392b" stroke-width="1"/>
+  <text x="800" y="155" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0392b">set_fixmap(idx, phys)</text>
+  <text x="800" y="172" text-anchor="middle" font-size="10" fill="#888">引导期临时映射</text>
+
+  <!-- vmemmap -->
+  <rect x="675" y="193" width="250" height="52" rx="5" fill="#f5eaff" stroke="#8e44ad" stroke-width="1"/>
+  <text x="800" y="215" text-anchor="middle" font-size="11" font-weight="bold" fill="#8e44ad">pfn_to_page(pfn)</text>
+  <text x="800" y="232" text-anchor="middle" font-size="10" fill="#888">自动映射，无需手动分配</text>
+
+  <!-- 模块 -->
+  <rect x="675" y="253" width="250" height="52" rx="5" fill="#fdecea" stroke="#c0392b" stroke-width="1"/>
+  <text x="800" y="275" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0392b">module_alloc()</text>
+  <text x="800" y="292" text-anchor="middle" font-size="10" fill="#888">insmod 时内核自动调用</text>
+
+  <!-- vmalloc -->
+  <rect x="675" y="313" width="250" height="72" rx="5" fill="#fef5e7" stroke="#e67e22" stroke-width="1"/>
+  <text x="800" y="338" text-anchor="middle" font-size="11" font-weight="bold" fill="#e67e22">vmalloc(size)</text>
+  <text x="800" y="356" text-anchor="middle" font-size="10" fill="#888">ioremap(phys, size)</text>
+  <text x="800" y="374" text-anchor="middle" font-size="10" fill="#888">物理非连续大内存</text>
+
+  <!-- 直接映射 -->
+  <rect x="675" y="393" width="250" height="100" rx="5" fill="#edfaf1" stroke="#27ae60" stroke-width="1"/>
+  <text x="800" y="418" text-anchor="middle" font-size="11" font-weight="bold" fill="#27ae60">kmalloc / kzalloc</text>
+  <text x="800" y="436" text-anchor="middle" font-size="10" fill="#888">get_free_pages(order)</text>
+  <text x="800" y="454" text-anchor="middle" font-size="10" fill="#888">alloc_pages()</text>
+  <text x="800" y="472" text-anchor="middle" font-size="10" fill="#888">物理连续，性能最优</text>
+
+  <!-- 内核 text -->
+  <rect x="675" y="501" width="250" height="52" rx="5" fill="#eaf3fb" stroke="#2980b9" stroke-width="1"/>
+  <text x="800" y="523" text-anchor="middle" font-size="11" font-weight="bold" fill="#2980b9">静态分配（编译期确定）</text>
+  <text x="800" y="540" text-anchor="middle" font-size="10" fill="#888">KASLR 随机化基址</text>
+
+  <!-- 连线（左区域→右说明） -->
+  <line x1="622" y1="159" x2="673" y2="159" stroke="#c0392b" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="622" y1="219" x2="673" y2="219" stroke="#8e44ad" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="622" y1="279" x2="673" y2="279" stroke="#c0392b" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="622" y1="349" x2="673" y2="349" stroke="#e67e22" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="622" y1="443" x2="673" y2="443" stroke="#27ae60" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="622" y1="527" x2="673" y2="527" stroke="#2980b9" stroke-width="1.2" stroke-dasharray="4,3"/>
+
+  <!-- 底部说明 -->
+  <rect x="60" y="638" width="880" height="18" rx="4" fill="#ecf0f1"/>
+  <text x="480" y="651" text-anchor="middle" font-size="10" fill="#555">5级页表（57位地址）下各区域更大；KASLR 每次启动随机化内核 text/vmalloc/vmemmap 基址以防 ROP 攻击</text>
+</svg>

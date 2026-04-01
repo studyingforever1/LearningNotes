@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e67e22"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2980b9"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="960" height="640" fill="#f8f9fa" rx="12"/>
+  <text x="480" y="36" text-anchor="middle" font-size="21" font-weight="bold" fill="#1a1a2e">Swap 与 Page Cache 内存回收机制对比</text>
+
+  <!-- ===== 顶部：LRU 扫描入口 ===== -->
+  <rect x="340" y="58" width="280" height="52" rx="8" fill="#2c3e50" stroke="#1a252f" stroke-width="2"/>
+  <text x="480" y="80" text-anchor="middle" font-size="13" font-weight="bold" fill="white">内存压力 → kswapd 激活</text>
+  <text x="480" y="100" text-anchor="middle" font-size="11" fill="#95a5a6">扫描 LRU 链表，选出候选回收页</text>
+
+  <!-- 决策菱形 -->
+  <polygon points="480,128 580,170 480,212 380,170" fill="#f39c12" stroke="#d68910" stroke-width="2"/>
+  <text x="480" y="165" text-anchor="middle" font-size="12" font-weight="bold" fill="white">页类型？</text>
+  <text x="480" y="181" text-anchor="middle" font-size="11" fill="#fff8e1">page-&gt;mapping</text>
+
+  <!-- 左分支标签：文件页 -->
+  <text x="290" y="163" text-anchor="middle" font-size="12" font-weight="bold" fill="#2980b9">文件页（Page Cache）</text>
+  <text x="290" y="178" text-anchor="middle" font-size="10" fill="#888">有后端文件</text>
+
+  <!-- 右分支标签：匿名页 -->
+  <text x="680" y="163" text-anchor="middle" font-size="12" font-weight="bold" fill="#e74c3c">匿名页</text>
+  <text x="680" y="178" text-anchor="middle" font-size="10" fill="#888">无后端文件</text>
+
+  <!-- 左箭头 -->
+  <line x1="380" y1="170" x2="260" y2="230" stroke="#2980b9" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <!-- 右箭头 -->
+  <line x1="580" y1="170" x2="700" y2="230" stroke="#e74c3c" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+
+  <!-- ===== 左侧：文件页回收路径 ===== -->
+  <rect x="60" y="230" width="380" height="310" rx="8" fill="#eaf3fb" stroke="#2980b9" stroke-width="2"/>
+  <text x="250" y="254" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a5276">文件页回收路径（不走 Swap）</text>
+
+  <!-- 脏/干净 判断 -->
+  <polygon points="250,270 330,302 250,334 170,302" fill="#2980b9" stroke="#1a5276" stroke-width="1.5"/>
+  <text x="250" y="297" text-anchor="middle" font-size="11" font-weight="bold" fill="white">PG_dirty?</text>
+  <text x="250" y="312" text-anchor="middle" font-size="10" fill="#d6eaf8">是否为脏页</text>
+
+  <!-- 干净路径 -->
+  <text x="148" y="295" text-anchor="middle" font-size="11" fill="#27ae60" font-weight="bold">干净页</text>
+  <line x1="170" y1="302" x2="100" y2="342" stroke="#27ae60" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="60" y="342" width="160" height="50" rx="6" fill="#27ae60"/>
+  <text x="140" y="364" text-anchor="middle" font-size="11" font-weight="bold" fill="white">直接丢弃</text>
+  <text x="140" y="380" text-anchor="middle" font-size="10" fill="#d5f5e3">释放物理页帧</text>
+
+  <!-- 脏页路径 -->
+  <text x="352" y="295" text-anchor="middle" font-size="11" fill="#e67e22" font-weight="bold">脏页</text>
+  <line x1="330" y1="302" x2="380" y2="342" stroke="#e67e22" stroke-width="2" marker-end="url(#arrow-orange)"/>
+  <rect x="300" y="342" width="135" height="50" rx="6" fill="#e67e22"/>
+  <text x="367" y="364" text-anchor="middle" font-size="11" font-weight="bold" fill="white">先回写文件</text>
+  <text x="367" y="380" text-anchor="middle" font-size="10" fill="#fef5e7">writeback() 落盘</text>
+
+  <!-- 两条路径汇合 -->
+  <line x1="140" y1="392" x2="200" y2="432" stroke="#27ae60" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <line x1="367" y1="392" x2="300" y2="432" stroke="#e67e22" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+  <rect x="150" y="432" width="200" height="44" rx="6" fill="#2980b9"/>
+  <text x="250" y="452" text-anchor="middle" font-size="11" font-weight="bold" fill="white">PTE present=0（页已释放）</text>
+  <text x="250" y="468" text-anchor="middle" font-size="10" fill="#d6eaf8">TLB flush，物理页归还 Buddy</text>
+
+  <!-- 再次访问 -->
+  <line x1="250" y1="476" x2="250" y2="512" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="150" y="512" width="200" height="28" rx="6" fill="#d6eaf8" stroke="#2980b9" stroke-width="1"/>
+  <text x="250" y="530" text-anchor="middle" font-size="11" fill="#1a5276">再访问 → 缺页 → 从文件重读</text>
+
+  <!-- 关键说明 -->
+  <rect x="75" y="550" width="350" height="30" rx="6" fill="#d6eaf8" stroke="#2980b9" stroke-width="1"/>
+  <text x="250" y="570" text-anchor="middle" font-size="11" fill="#1a5276" font-weight="bold">文件就是后端 → 无需 Swap → 直接丢弃</text>
+
+  <!-- ===== 右侧：匿名页回收路径（Swap） ===== -->
+  <rect x="520" y="230" width="400" height="310" rx="8" fill="#fdecea" stroke="#e74c3c" stroke-width="2"/>
+  <text x="720" y="254" text-anchor="middle" font-size="13" font-weight="bold" fill="#922b21">匿名页回收路径（必须走 Swap）</text>
+
+  <!-- Swap 步骤 -->
+  <rect x="545" y="268" width="350" height="44" rx="6" fill="#e74c3c"/>
+  <text x="720" y="288" text-anchor="middle" font-size="11" font-weight="bold" fill="white">swap_writepage()：将页内容写入 Swap 分区/文件</text>
+  <text x="720" y="305" text-anchor="middle" font-size="10" fill="#ffcccc">submit_bio() → DMA → Swap 设备</text>
+
+  <line x1="720" y1="312" x2="720" y2="338" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)"/>
+
+  <rect x="545" y="338" width="350" height="44" rx="6" fill="#c0392b"/>
+  <text x="720" y="358" text-anchor="middle" font-size="11" font-weight="bold" fill="white">PTE 写入 swap entry（记录 Swap 位置）</text>
+  <text x="720" y="375" text-anchor="middle" font-size="10" fill="#ffcccc">swap_offset | swap_type 编码到 PTE 中</text>
+
+  <line x1="720" y1="382" x2="720" y2="408" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)"/>
+
+  <rect x="545" y="408" width="350" height="44" rx="6" fill="#e74c3c"/>
+  <text x="720" y="428" text-anchor="middle" font-size="11" font-weight="bold" fill="white">释放物理页帧（归还 Buddy System）</text>
+  <text x="720" y="445" text-anchor="middle" font-size="10" fill="#ffcccc">物理内存空闲；TLB flush</text>
+
+  <line x1="720" y1="452" x2="720" y2="480" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="590" y="480" width="260" height="30" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="1"/>
+  <text x="720" y="500" text-anchor="middle" font-size="11" fill="#922b21">再访问 → 缺页 → 从 Swap 换入 → 恢复 PTE</text>
+
+  <!-- 关键说明 -->
+  <rect x="535" y="520" width="370" height="30" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="1"/>
+  <text x="720" y="540" text-anchor="middle" font-size="11" fill="#922b21" font-weight="bold">无后端文件 → 必须先写 Swap → 才能释放物理页</text>
+
+  <!-- ===== 底部对比表 ===== -->
+  <rect x="60" y="590" width="840" height="38" rx="6" fill="#2c3e50"/>
+  <text x="480" y="607" text-anchor="middle" font-size="11" font-weight="bold" fill="white">swappiness：控制优先回收匿名页（走Swap）还是文件页（直接丢弃）的比例，不是Swap开关</text>
+  <text x="480" y="622" text-anchor="middle" font-size="11" fill="#95a5a6">swappiness=0 → 优先回收文件缓存  |  swappiness=60（默认）→ 均衡  |  swappiness=200 → 积极换出匿名页</text>
+
+  <!-- 顶部箭头 -->
+  <line x1="480" y1="110" x2="480" y2="126" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+</svg>

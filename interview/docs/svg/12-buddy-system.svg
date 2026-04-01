@@ -1,0 +1,197 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Courier New', monospace">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+    </marker>
+    <marker id="arr-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#e74c3c"/>
+    </marker>
+    <marker id="arr-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="680" fill="#f8f9fa"/>
+
+  <!-- Title -->
+  <text x="480" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#2c3e50">Buddy System 物理页分配过程</text>
+
+  <!-- ===== 左侧：Buddy System 结构 ===== -->
+  <rect x="20" y="55" width="560" height="300" rx="8" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="300" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#2980b9">Buddy System 结构（每个 Zone 独立）</text>
+
+  <!-- free_area rows -->
+  <!-- Header -->
+  <rect x="35" y="85" width="110" height="24" fill="#2980b9" rx="3"/>
+  <text x="90" y="101" text-anchor="middle" font-size="11" fill="white" font-weight="bold">free_area[N]</text>
+  <rect x="155" y="85" width="120" height="24" fill="#2980b9" rx="3"/>
+  <text x="215" y="101" text-anchor="middle" font-size="11" fill="white" font-weight="bold">阶(order)</text>
+  <rect x="285" y="85" width="140" height="24" fill="#2980b9" rx="3"/>
+  <text x="355" y="101" text-anchor="middle" font-size="11" fill="white" font-weight="bold">页块大小</text>
+  <rect x="435" y="85" width="130" height="24" fill="#2980b9" rx="3"/>
+  <text x="500" y="101" text-anchor="middle" font-size="11" fill="white" font-weight="bold">空闲链表示意</text>
+
+  <!-- rows -->
+  <g font-size="11">
+    <!-- order 0 -->
+    <rect x="35" y="113" width="110" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="90" y="128" text-anchor="middle" fill="#1a252f">free_area[0]</text>
+    <rect x="155" y="113" width="120" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="215" y="128" text-anchor="middle" fill="#1a252f">0  (2⁰=1 页)</text>
+    <rect x="285" y="113" width="140" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="355" y="128" text-anchor="middle" fill="#1a252f">4 KB</text>
+    <rect x="435" y="113" width="130" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="500" y="128" text-anchor="middle" fill="#27ae60" font-weight="bold">[P]→[P]→[P]→…</text>
+
+    <!-- order 1 -->
+    <rect x="35" y="137" width="110" height="22" fill="#eaf4fb" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="90" y="152" text-anchor="middle" fill="#1a252f">free_area[1]</text>
+    <rect x="155" y="137" width="120" height="22" fill="#eaf4fb" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="215" y="152" text-anchor="middle" fill="#1a252f">1  (2¹=2 页)</text>
+    <rect x="285" y="137" width="140" height="22" fill="#eaf4fb" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="355" y="152" text-anchor="middle" fill="#1a252f">8 KB</text>
+    <rect x="435" y="137" width="130" height="22" fill="#eaf4fb" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="500" y="152" text-anchor="middle" fill="#27ae60" font-weight="bold">[PP]→[PP]→…</text>
+
+    <!-- order 2 -->
+    <rect x="35" y="161" width="110" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="90" y="176" text-anchor="middle" fill="#1a252f">free_area[2]</text>
+    <rect x="155" y="161" width="120" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="215" y="176" text-anchor="middle" fill="#1a252f">2  (2²=4 页)</text>
+    <rect x="285" y="161" width="140" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="355" y="176" text-anchor="middle" fill="#1a252f">16 KB</text>
+    <rect x="435" y="161" width="130" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="500" y="176" text-anchor="middle" fill="#e67e22" font-weight="bold">（空）</text>
+
+    <!-- order 3 -->
+    <rect x="35" y="185" width="110" height="22" fill="#eaf4fb" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="90" y="200" text-anchor="middle" fill="#1a252f">free_area[3]</text>
+    <rect x="155" y="185" width="120" height="22" fill="#eaf4fb" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="215" y="200" text-anchor="middle" fill="#1a252f">3  (2³=8 页)</text>
+    <rect x="285" y="185" width="140" height="22" fill="#eaf4fb" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="355" y="200" text-anchor="middle" fill="#1a252f">32 KB</text>
+    <rect x="435" y="185" width="130" height="22" fill="#eaf4fb" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="500" y="200" text-anchor="middle" fill="#27ae60" font-weight="bold">[PPPPPPPP]→…</text>
+
+    <text x="300" y="225" text-anchor="middle" fill="#7f8c8d" font-size="11">... (order 4~9 省略) ...</text>
+
+    <!-- order 10 -->
+    <rect x="35" y="233" width="110" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="90" y="248" text-anchor="middle" fill="#1a252f">free_area[10]</text>
+    <rect x="155" y="233" width="120" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="215" y="248" text-anchor="middle" fill="#1a252f">10 (2¹⁰=1024页)</text>
+    <rect x="285" y="233" width="140" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="355" y="248" text-anchor="middle" fill="#1a252f">4 MB</text>
+    <rect x="435" y="233" width="130" height="22" fill="#d6eaf8" stroke="#aed6f1" stroke-width="0.8"/>
+    <text x="500" y="248" text-anchor="middle" fill="#e67e22" font-weight="bold">（空）</text>
+  </g>
+
+  <!-- ===== 分配示例（申请 order=0，即 1 页） ===== -->
+  <rect x="20" y="362" width="560" height="302" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="300" y="382" text-anchor="middle" font-size="13" font-weight="bold" fill="#27ae60">分配示例：申请 order=0（1 个物理页）</text>
+
+  <!-- step boxes -->
+  <!-- Step 1 -->
+  <rect x="35" y="392" width="530" height="38" rx="5" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="50" y="409" font-size="11" fill="#1a5276" font-weight="bold">步骤①</text>
+  <text x="105" y="409" font-size="11" fill="#1a252f">查 free_area[0]（1页块链表）</text>
+  <text x="50" y="424" font-size="11" fill="#27ae60">  → 有空闲 1页块 → 直接弹出，返回。分配完成！✓</text>
+
+  <!-- Step 2 -->
+  <rect x="35" y="436" width="530" height="52" rx="5" fill="#fef9e7" stroke="#f39c12" stroke-width="1"/>
+  <text x="50" y="453" font-size="11" fill="#1a5276" font-weight="bold">步骤②</text>
+  <text x="105" y="453" font-size="11" fill="#1a252f">free_area[0] 为空 → 向上找 free_area[1]（2页块链表）</text>
+  <text x="50" y="468" font-size="11" fill="#1a252f">  → 找到一个 2页块 [P₁][P₂]</text>
+  <text x="50" y="483" font-size="11" fill="#e67e22">  → 拆分：P₁ 分配出去，P₂ 放回 free_area[0]（成为伙伴）</text>
+
+  <!-- Step 3 -->
+  <rect x="35" y="494" width="530" height="66" rx="5" fill="#fef5e7" stroke="#e67e22" stroke-width="1"/>
+  <text x="50" y="511" font-size="11" fill="#1a5276" font-weight="bold">步骤③</text>
+  <text x="105" y="511" font-size="11" fill="#1a252f">free_area[0] 和 free_area[1] 都为空 → 继续向上找</text>
+  <text x="50" y="526" font-size="11" fill="#1a252f">  → 在 free_area[3]（8页块）找到 [P₁P₂P₃P₄P₅P₆P₇P₈]</text>
+  <text x="50" y="541" font-size="11" fill="#e67e22">  → 拆分为 [P₁P₂P₃P₄] 和 [P₅P₆P₇P₈] → 前半放入 free_area[2]</text>
+  <text x="50" y="556" font-size="11" fill="#e67e22">  → 再拆 [P₁P₂P₃P₄] → [P₁P₂] 放入 free_area[1]</text>
+  <text x="50" y="571" font-size="11" fill="#e67e22">  → 再拆 [P₁P₂] → P₁ 分配出去，P₂ 放入 free_area[0]</text>
+
+  <!-- 释放（合并） -->
+  <rect x="35" y="568" width="530" height="52" rx="5" fill="#ebdef0" stroke="#8e44ad" stroke-width="1"/>
+  <text x="50" y="585" font-size="11" fill="#1a5276" font-weight="bold">释放（合并）</text>
+  <text x="50" y="600" font-size="11" fill="#1a252f">  释放 P₁ → 检查伙伴 P₂ 是否也空闲</text>
+  <text x="50" y="615" font-size="11" fill="#8e44ad">  → P₂ 空闲：合并为 [P₁P₂] 放入 free_area[1]，继续检查上层伙伴，递归合并</text>
+
+  <!-- ===== 右侧：alloc_pages 调用路径 ===== -->
+  <rect x="596" y="55" width="348" height="609" rx="8" fill="#fef9e7" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="770" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#e67e22">alloc_pages() 完整调用路径</text>
+
+  <!-- flow boxes -->
+  <g font-size="11">
+    <!-- box 1 -->
+    <rect x="618" y="87" width="304" height="36" rx="5" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+    <text x="770" y="104" text-anchor="middle" fill="#1a252f" font-weight="bold">alloc_pages(gfp_flags, order)</text>
+    <text x="770" y="118" text-anchor="middle" fill="#7f8c8d">申请 2ᵒʳᵈᵉʳ 个连续物理页</text>
+
+    <!-- arrow -->
+    <line x1="770" y1="123" x2="770" y2="138" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- box 2 -->
+    <rect x="618" y="139" width="304" height="44" rx="5" fill="#d6eaf8" stroke="#2980b9" stroke-width="1"/>
+    <text x="770" y="158" text-anchor="middle" fill="#1a252f" font-weight="bold">NUMA 节点选择</text>
+    <text x="770" y="173" text-anchor="middle" fill="#555">优先本地 CPU 所在节点</text>
+    <text x="627" y="178" font-size="10" fill="#2980b9">→ 延迟最低，远端节点访问慢 40%~100%</text>
+
+    <line x1="770" y1="183" x2="770" y2="198" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- box 3 -->
+    <rect x="618" y="199" width="304" height="64" rx="5" fill="#d6eaf8" stroke="#2980b9" stroke-width="1"/>
+    <text x="770" y="217" text-anchor="middle" fill="#1a252f" font-weight="bold">Zone 选择</text>
+    <text x="627" y="233" font-size="10" fill="#1a252f">ZONE_DMA    0~16MB  (ISA DMA)</text>
+    <text x="627" y="246" font-size="10" fill="#1a252f">ZONE_DMA32  0~4GB   (32位DMA设备)</text>
+    <text x="627" y="259" font-size="10" fill="#1a252f">ZONE_NORMAL 主区域  ← GFP_KERNEL 默认</text>
+
+    <line x1="770" y1="263" x2="770" y2="278" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- box 4 -->
+    <rect x="618" y="279" width="304" height="52" rx="5" fill="#fef9e7" stroke="#f39c12" stroke-width="1"/>
+    <text x="770" y="297" text-anchor="middle" fill="#1a252f" font-weight="bold">per-CPU pageset（冷热页缓存）</text>
+    <text x="627" y="312" font-size="10" fill="#27ae60">命中 → 直接弹出，无锁，最快 ~100ns</text>
+    <text x="627" y="325" font-size="10" fill="#e67e22">未中 → 补充缓存 or 进入 Buddy System</text>
+
+    <!-- arrow split -->
+    <line x1="770" y1="331" x2="770" y2="346" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- box 5 -->
+    <rect x="618" y="347" width="304" height="80" rx="5" fill="#fdedec" stroke="#e74c3c" stroke-width="1"/>
+    <text x="770" y="366" text-anchor="middle" fill="#c0392b" font-weight="bold">Buddy System 分配</text>
+    <text x="627" y="382" font-size="10" fill="#1a252f">查 free_area[order] 有空闲块？</text>
+    <text x="627" y="396" font-size="10" fill="#27ae60">  有 → 取出，返回</text>
+    <text x="627" y="410" font-size="10" fill="#e67e22">  无 → 从 free_area[order+1] 取，拆分</text>
+    <text x="627" y="424" font-size="10" fill="#e67e22">       多余半块放回对应阶链表</text>
+
+    <line x1="770" y1="427" x2="770" y2="442" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- box 6 -->
+    <rect x="618" y="443" width="304" height="44" rx="5" fill="#fdedec" stroke="#e74c3c" stroke-width="1"/>
+    <text x="770" y="462" text-anchor="middle" fill="#c0392b" font-weight="bold">所有阶都为空？→ 内存回收</text>
+    <text x="627" y="477" font-size="10" fill="#e74c3c">直接回收（direct reclaim）→ 重试分配</text>
+
+    <line x1="770" y1="487" x2="770" y2="502" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- box 7 -->
+    <rect x="618" y="503" width="304" height="44" rx="5" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+    <text x="770" y="521" text-anchor="middle" fill="#1a252f" font-weight="bold">返回物理页帧（struct page *）</text>
+    <text x="627" y="536" font-size="10" fill="#27ae60">建立 PTE（present=1），进程可访问</text>
+
+    <!-- GFP flags note -->
+    <rect x="618" y="558" width="304" height="94" rx="5" fill="#f4f6f7" stroke="#95a5a6" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="770" y="574" text-anchor="middle" fill="#2c3e50" font-size="11" font-weight="bold">GFP 标志速查</text>
+    <text x="627" y="590" font-size="10" fill="#1a252f">GFP_KERNEL → 可睡眠，进程上下文</text>
+    <text x="627" y="604" font-size="10" fill="#1a252f">GFP_ATOMIC → 不可睡眠，中断上下文</text>
+    <text x="627" y="618" font-size="10" fill="#1a252f">GFP_DMA    → 从 DMA zone 分配</text>
+    <text x="627" y="632" font-size="10" fill="#1a252f">__GFP_ZERO → 分配后清零</text>
+    <text x="627" y="646" font-size="10" fill="#1a252f">__GFP_NOFAIL → 循环重试直到成功</text>
+  </g>
+
+  <!-- 底部注释 -->
+  <text x="300" y="272" text-anchor="middle" font-size="11" fill="#7f8c8d">※ Buddy System 保证分配的页物理连续，是 DMA 等需要连续物理内存场景的基础</text>
+</svg>

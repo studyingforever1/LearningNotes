@@ -1,0 +1,211 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 780" font-family="'Courier New', monospace">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#555"/>
+    </marker>
+    <marker id="arr-r" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#c0392b"/>
+    </marker>
+    <marker id="arr-g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#27ae60"/>
+    </marker>
+    <marker id="arr-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#2980b9"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="780" fill="#f8f9fa"/>
+  <text x="500" y="30" text-anchor="middle" font-size="19" font-weight="bold" fill="#2c3e50">NUMA 架构详解</text>
+  <text x="500" y="50" text-anchor="middle" font-size="12" fill="#7f8c8d">Non-Uniform Memory Access：非一致内存访问</text>
+
+  <!-- ===== 上半部：SMP vs NUMA 对比 ===== -->
+
+  <!-- SMP (left) -->
+  <rect x="20" y="62" width="440" height="240" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="240" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#1d8348">SMP（对称多处理，旧模型）</text>
+  <text x="240" y="98" text-anchor="middle" font-size="11" fill="#7f8c8d">所有 CPU 共享同一内存总线，访问延迟相同</text>
+
+  <!-- CPUs -->
+  <rect x="40" y="108" width="80" height="40" rx="5" fill="#27ae60"/>
+  <text x="80" y="124" text-anchor="middle" font-size="11" fill="white" font-weight="bold">CPU 0</text>
+  <text x="80" y="140" text-anchor="middle" font-size="10" fill="#d5f5e3">Core 0-3</text>
+
+  <rect x="135" y="108" width="80" height="40" rx="5" fill="#27ae60"/>
+  <text x="175" y="124" text-anchor="middle" font-size="11" fill="white" font-weight="bold">CPU 1</text>
+  <text x="175" y="140" text-anchor="middle" font-size="10" fill="#d5f5e3">Core 4-7</text>
+
+  <rect x="230" y="108" width="80" height="40" rx="5" fill="#27ae60"/>
+  <text x="270" y="124" text-anchor="middle" font-size="11" fill="white" font-weight="bold">CPU 2</text>
+  <text x="270" y="140" text-anchor="middle" font-size="10" fill="#d5f5e3">Core 8-11</text>
+
+  <rect x="325" y="108" width="80" height="40" rx="5" fill="#27ae60"/>
+  <text x="365" y="124" text-anchor="middle" font-size="11" fill="white" font-weight="bold">CPU 3</text>
+  <text x="365" y="140" text-anchor="middle" font-size="10" fill="#d5f5e3">Core 12-15</text>
+
+  <!-- shared bus -->
+  <rect x="40" y="158" width="366" height="16" rx="3" fill="#f39c12"/>
+  <text x="223" y="170" text-anchor="middle" font-size="10" fill="white" font-weight="bold">共享内存总线（瓶颈！）</text>
+
+  <!-- shared memory -->
+  <rect x="130" y="182" width="220" height="40" rx="5" fill="#d5f5e3" stroke="#27ae60"/>
+  <text x="240" y="198" text-anchor="middle" font-size="11" fill="#1d8348" font-weight="bold">统一物理内存</text>
+  <text x="240" y="213" text-anchor="middle" font-size="10" fill="#555">所有 CPU 访问延迟相同 ~60ns</text>
+
+  <!-- problem -->
+  <rect x="40" y="234" width="366" height="58" rx="5" fill="#fadbd8" stroke="#e74c3c" stroke-width="1"/>
+  <text x="223" y="250" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0392b">问题：总线竞争</text>
+  <text x="50" y="266" font-size="10" fill="#1a252f">CPU 核心数增加 → 所有核心争同一总线 → 带宽成瓶颈</text>
+  <text x="50" y="280" font-size="10" fill="#c0392b">扩展性极差，32核以上性能不再线性增长</text>
+
+  <!-- NUMA (right) -->
+  <rect x="480" y="62" width="500" height="240" rx="8" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="730" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#2980b9">NUMA（非一致内存访问，现代服务器）</text>
+  <text x="730" y="98" text-anchor="middle" font-size="11" fill="#7f8c8d">每个 CPU（Socket）有自己的本地内存控制器</text>
+
+  <!-- NUMA node 0 -->
+  <rect x="495" y="106" width="220" height="130" rx="6" fill="#d6eaf8" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="605" y="122" text-anchor="middle" font-size="11" font-weight="bold" fill="#1a5276">NUMA Node 0</text>
+
+  <rect x="505" y="130" width="90" height="32" rx="4" fill="#2980b9"/>
+  <text x="550" y="144" text-anchor="middle" font-size="10" fill="white" font-weight="bold">Socket 0</text>
+  <text x="550" y="157" text-anchor="middle" font-size="9" fill="#d6eaf8">Core 0-7</text>
+
+  <rect x="605" y="130" width="100" height="32" rx="4" fill="#1a5276"/>
+  <text x="655" y="144" text-anchor="middle" font-size="10" fill="white" font-weight="bold">IMC（内存控制器）</text>
+
+  <rect x="530" y="172" width="150" height="28" rx="4" fill="#d6eaf8" stroke="#2980b9"/>
+  <text x="605" y="186" text-anchor="middle" font-size="10" fill="#1a5276" font-weight="bold">本地内存 32GB</text>
+  <text x="605" y="200" text-anchor="middle" font-size="9" fill="#27ae60">访问延迟 ~60ns ✓</text>
+
+  <line x1="550" y1="162" x2="550" y2="172" stroke="#2980b9" stroke-width="1.5" marker-end="url(#arr-b)"/>
+  <line x1="655" y1="162" x2="655" y2="172" stroke="#2980b9" stroke-width="1.5" marker-end="url(#arr-b)"/>
+
+  <!-- NUMA node 1 -->
+  <rect x="730" y="106" width="220" height="130" rx="6" fill="#fadbd8" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="840" y="122" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0392b">NUMA Node 1</text>
+
+  <rect x="740" y="130" width="90" height="32" rx="4" fill="#e74c3c"/>
+  <text x="785" y="144" text-anchor="middle" font-size="10" fill="white" font-weight="bold">Socket 1</text>
+  <text x="785" y="157" text-anchor="middle" font-size="9" fill="#fadbd8">Core 8-15</text>
+
+  <rect x="840" y="130" width="100" height="32" rx="4" fill="#c0392b"/>
+  <text x="890" y="144" text-anchor="middle" font-size="10" fill="white" font-weight="bold">IMC（内存控制器）</text>
+
+  <rect x="760" y="172" width="160" height="28" rx="4" fill="#fadbd8" stroke="#e74c3c"/>
+  <text x="840" y="186" text-anchor="middle" font-size="10" fill="#c0392b" font-weight="bold">本地内存 32GB</text>
+  <text x="840" y="200" text-anchor="middle" font-size="9" fill="#27ae60">访问延迟 ~60ns ✓</text>
+
+  <line x1="785" y1="162" x2="785" y2="172" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arr-r)"/>
+  <line x1="890" y1="162" x2="890" y2="172" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arr-r)"/>
+
+  <!-- QPI/UPI interconnect -->
+  <line x1="715" y1="170" x2="730" y2="170" stroke="#8e44ad" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="730" y1="170" x2="715" y2="170" stroke="#8e44ad" stroke-width="2.5" stroke-dasharray="0"/>
+  <rect x="707" y="158" width="6" height="24" fill="#8e44ad"/>
+  <rect x="727" y="158" width="6" height="24" fill="#8e44ad"/>
+  <text x="722" y="154" text-anchor="middle" font-size="9" fill="#8e44ad" font-weight="bold">QPI/UPI</text>
+  <text x="722" y="248" text-anchor="middle" font-size="9" fill="#c0392b">跨节点访问延迟 ~120-150ns（慢 2x）</text>
+
+  <!-- cross access arrow -->
+  <path d="M 550 200 Q 550 248 760 210" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-r)"/>
+  <text x="630" y="242" font-size="10" fill="#c0392b">Node 0 的 CPU 访问 Node 1 的内存</text>
+
+  <!-- ===== 中间：NUMA 在 Linux 中的体现 ===== -->
+  <rect x="20" y="316" width="960" height="180" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="500" y="335" text-anchor="middle" font-size="13" font-weight="bold" fill="#b7770d">NUMA 在 Linux 内存管理中的体现</text>
+
+  <!-- zone structure -->
+  <rect x="35" y="344" width="290" height="144" rx="5" fill="#fff" stroke="#f39c12" stroke-width="1"/>
+  <text x="180" y="360" text-anchor="middle" font-size="11" font-weight="bold" fill="#b7770d">内存分区结构</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="44" y="376">pglist_data（每个 NUMA Node 一个）</text>
+    <text x="44" y="392">  ├── node_id: 0</text>
+    <text x="44" y="408">  ├── node_zones[]:</text>
+    <text x="44" y="424">  │     ├── ZONE_DMA    (0~16MB)</text>
+    <text x="44" y="440">  │     ├── ZONE_DMA32  (0~4GB)</text>
+    <text x="44" y="456">  │     └── ZONE_NORMAL (主区域)</text>
+    <text x="44" y="472" fill="#27ae60">  └── free_area[] (Buddy System)</text>
+  </g>
+
+  <!-- alloc policy -->
+  <rect x="335" y="344" width="300" height="144" rx="5" fill="#fff" stroke="#f39c12" stroke-width="1"/>
+  <text x="485" y="360" text-anchor="middle" font-size="11" font-weight="bold" fill="#b7770d">内存分配策略（NUMA Policy）</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="344" y="376">MPOL_DEFAULT（默认）</text>
+    <text x="344" y="392" fill="#27ae60">  优先本地 Node，不足再远端</text>
+    <text x="344" y="410">MPOL_BIND</text>
+    <text x="344" y="426">  严格绑定指定 Node，不足报 OOM</text>
+    <text x="344" y="442">MPOL_INTERLEAVE</text>
+    <text x="344" y="458">  交替在多个 Node 分配（均衡带宽）</text>
+    <text x="344" y="474">MPOL_PREFERRED</text>
+    <text x="344" y="488" fill="#7f8c8d">  优先指定 Node，失败后可用其他</text>
+  </g>
+
+  <!-- numa commands -->
+  <rect x="645" y="344" width="322" height="144" rx="5" fill="#fff" stroke="#f39c12" stroke-width="1"/>
+  <text x="806" y="360" text-anchor="middle" font-size="11" font-weight="bold" fill="#b7770d">查看与调优命令</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="654" y="376">numactl --hardware         # 查看拓扑</text>
+    <text x="654" y="392">numastat                   # 各Node命中率</text>
+    <text x="654" y="408">cat /proc/buddyinfo        # 各Node空闲页</text>
+    <text x="654" y="426" fill="#27ae60">numactl --membind=0 \      # 绑定内存到Node0</text>
+    <text x="654" y="442" fill="#27ae60">  --cpunodebind=0 ./app</text>
+    <text x="654" y="458">numactl --interleave=all \ # 内存交织分配</text>
+    <text x="654" y="474">  ./mysqld</text>
+    <text x="654" y="490" fill="#7f8c8d">vm.zone_reclaim_mode=0     # 跨Node借页</text>
+  </g>
+
+  <!-- ===== 下半部：NUMA 与 Socket 的关系 ===== -->
+  <rect x="20" y="508" width="960" height="140" rx="8" fill="#ebdef0" stroke="#8e44ad" stroke-width="1.5"/>
+  <text x="500" y="527" text-anchor="middle" font-size="13" font-weight="bold" fill="#6c3483">NUMA Node 与 CPU Socket 的关系</text>
+
+  <rect x="35" y="536" width="440" height="102" rx="5" fill="#fff" stroke="#8e44ad" stroke-width="1"/>
+  <text x="255" y="552" text-anchor="middle" font-size="11" font-weight="bold" fill="#6c3483">物理概念对应关系</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="44" y="568">CPU Socket（插槽）：</text>
+    <text x="44" y="582">  主板上的一个物理 CPU 芯片插槽</text>
+    <text x="44" y="596">  一台服务器通常有 2~8 个 Socket</text>
+    <text x="44" y="612" fill="#8e44ad">NUMA Node：</text>
+    <text x="44" y="626">  一个 Socket + 它直连的内存条 = 一个 NUMA Node</text>
+    <text x="44" y="638" fill="#27ae60">  通常 1 Socket = 1 NUMA Node（现代服务器标准配置）</text>
+  </g>
+
+  <rect x="485" y="536" width="480" height="102" rx="5" fill="#fff" stroke="#8e44ad" stroke-width="1"/>
+  <text x="725" y="552" text-anchor="middle" font-size="11" font-weight="bold" fill="#6c3483">特殊情况：sub-NUMA clustering</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="494" y="568">Intel Xeon Scalable（Ice Lake/Sapphire Rapids）支持：</text>
+    <text x="494" y="582">  1 个 Socket 可分成 2 或 4 个 NUMA Node（SNC2/SNC4）</text>
+    <text x="494" y="596">  目的：减小单个 Node 的内存访问延迟（L3 cache 分区）</text>
+    <text x="494" y="612" fill="#e67e22">  numactl --hardware 可能看到 4 nodes 但只有 2 个 Socket</text>
+    <text x="494" y="626">AMD EPYC：每个物理 Socket 内有多个 CCD（chiplet）</text>
+    <text x="494" y="638" fill="#e67e22">  也可能呈现为多个 NUMA Node（NPS4 模式）</text>
+  </g>
+
+  <!-- ===== 底部：NUMA 问题与调优 ===== -->
+  <rect x="20" y="660" width="960" height="108" rx="8" fill="#f4f6f7" stroke="#95a5a6" stroke-width="1.2"/>
+  <text x="500" y="678" text-anchor="middle" font-size="13" font-weight="bold" fill="#2c3e50">NUMA 常见问题与调优</text>
+
+  <rect x="35" y="686" width="290" height="74" rx="5" fill="#fadbd8" stroke="#e74c3c" stroke-width="1"/>
+  <text x="180" y="700" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0392b">NUMA 不均衡症状</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="44" y="716">numastat 看到某个 Node other_node 很高</text>
+    <text x="44" y="730">进程频繁访问远端 Node 内存 → 高延迟</text>
+    <text x="44" y="744" fill="#c0392b">MySQL/Java 在 NUMA 机器上内存使用不均</text>
+  </g>
+
+  <rect x="335" y="686" width="290" height="74" rx="5" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="480" y="700" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d8348">解决方案</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="344" y="716">numactl --interleave=all  # 交织分配，均衡带宽</text>
+    <text x="344" y="730">taskset + numactl 绑 CPU 和内存到同 Node</text>
+    <text x="344" y="744" fill="#27ae60">vm.zone_reclaim_mode=0  # 允许跨 Node 借内存</text>
+  </g>
+
+  <rect x="635" y="686" width="332" height="74" rx="5" fill="#d6eaf8" stroke="#2980b9" stroke-width="1"/>
+  <text x="801" y="700" text-anchor="middle" font-size="11" font-weight="bold" fill="#1a5276">Java / JVM 的 NUMA 支持</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="644" y="716">java -XX:+UseNUMA  # 开启 JVM NUMA 感知</text>
+    <text x="644" y="730">G1/ZGC 按 NUMA Node 分配 Region，减少跨节点访问</text>
+    <text x="644" y="744" fill="#2980b9">Heap 中 Eden/Survivor 按 CPU 所在 Node 优先分配</text>
+  </g>
+</svg>

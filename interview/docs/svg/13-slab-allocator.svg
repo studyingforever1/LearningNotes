@@ -1,0 +1,214 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" font-family="'Courier New', monospace">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+    </marker>
+    <marker id="arr-g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#27ae60"/>
+    </marker>
+    <marker id="arr-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2980b9"/>
+    </marker>
+    <marker id="arr-r" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#c0392b"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="720" fill="#f8f9fa"/>
+
+  <!-- Title -->
+  <text x="480" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2c3e50">Slab / SLUB 分配器原理</text>
+  <text x="480" y="52" text-anchor="middle" font-size="12" fill="#7f8c8d">针对固定大小内核对象（task_struct / dentry / inode 等）的高性能分配机制</text>
+
+  <!-- ===== 整体层次结构 ===== -->
+  <!-- Top: kmem_cache -->
+  <rect x="300" y="65" width="360" height="44" rx="8" fill="#2980b9" />
+  <text x="480" y="84" text-anchor="middle" font-size="13" fill="white" font-weight="bold">kmem_cache（对象缓存）</text>
+  <text x="480" y="100" text-anchor="middle" font-size="11" fill="#d6eaf8">name / object_size / align / ctor</text>
+
+  <!-- arrow down -->
+  <line x1="480" y1="109" x2="480" y2="124" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- NUMA nodes -->
+  <rect x="100" y="124" width="164" height="36" rx="6" fill="#1a5276"/>
+  <text x="182" y="138" text-anchor="middle" font-size="11" fill="white" font-weight="bold">NUMA node 0</text>
+  <text x="182" y="153" text-anchor="middle" font-size="10" fill="#aed6f1">partial / full / free</text>
+
+  <rect x="398" y="124" width="164" height="36" rx="6" fill="#1a5276"/>
+  <text x="480" y="138" text-anchor="middle" font-size="11" fill="white" font-weight="bold">NUMA node 1</text>
+  <text x="480" y="153" text-anchor="middle" font-size="10" fill="#aed6f1">partial / full / free</text>
+
+  <rect x="696" y="124" width="164" height="36" rx="6" fill="#1a5276"/>
+  <text x="778" y="138" text-anchor="middle" font-size="11" fill="white" font-weight="bold">NUMA node N</text>
+  <text x="778" y="153" text-anchor="middle" font-size="10" fill="#aed6f1">partial / full / free</text>
+
+  <!-- dots -->
+  <text x="600" y="145" font-size="18" fill="#95a5a6" text-anchor="middle">…</text>
+
+  <!-- lines from kmem_cache to nodes -->
+  <line x1="400" y1="109" x2="182" y2="124" stroke="#2980b9" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="480" y1="109" x2="480" y2="124" stroke="#2980b9" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="560" y1="109" x2="778" y2="124" stroke="#2980b9" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <!-- per-CPU freelist (cpu cache) -->
+  <rect x="60" y="175" width="840" height="58" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="480" y="192" text-anchor="middle" font-size="12" font-weight="bold" fill="#1d8348">per-CPU freelist（CPU 局部缓存，无锁）</text>
+  <!-- cpu 0 -->
+  <rect x="75" y="198" width="100" height="26" rx="4" fill="#27ae60"/>
+  <text x="125" y="215" text-anchor="middle" font-size="10" fill="white">CPU 0 freelist</text>
+  <rect x="185" y="198" width="100" height="26" rx="4" fill="#27ae60"/>
+  <text x="235" y="215" text-anchor="middle" font-size="10" fill="white">CPU 1 freelist</text>
+  <rect x="295" y="198" width="100" height="26" rx="4" fill="#27ae60"/>
+  <text x="345" y="215" text-anchor="middle" font-size="10" fill="white">CPU 2 freelist</text>
+  <text x="470" y="214" font-size="14" fill="#95a5a6">…</text>
+  <rect x="520" y="198" width="100" height="26" rx="4" fill="#1a9750" stroke="#fff" stroke-width="0.5"/>
+  <text x="570" y="211" text-anchor="middle" font-size="9.5" fill="white">CPU N freelist</text>
+  <text x="570" y="222" text-anchor="middle" font-size="9" fill="#a9dfbf">obj→obj→obj→…</text>
+
+  <!-- ===== Slab 页结构 ===== -->
+  <rect x="20" y="250" width="480" height="200" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="260" y="270" text-anchor="middle" font-size="13" font-weight="bold" fill="#b7770d">Slab 页内部布局（一组连续物理页）</text>
+
+  <!-- slab memory bar -->
+  <!-- obj slots -->
+  <rect x="35" y="280" width="55" height="36" rx="3" fill="#f9e79f" stroke="#f39c12"/>
+  <text x="62" y="295" text-anchor="middle" font-size="10" fill="#7d6608">obj₀</text>
+  <text x="62" y="310" text-anchor="middle" font-size="9" fill="#7d6608">已分配</text>
+
+  <rect x="94" y="280" width="55" height="36" rx="3" fill="#d5f5e3" stroke="#27ae60"/>
+  <text x="121" y="295" text-anchor="middle" font-size="10" fill="#1d8348">obj₁</text>
+  <text x="121" y="310" text-anchor="middle" font-size="9" fill="#1d8348">空闲</text>
+
+  <rect x="153" y="280" width="55" height="36" rx="3" fill="#f9e79f" stroke="#f39c12"/>
+  <text x="180" y="295" text-anchor="middle" font-size="10" fill="#7d6608">obj₂</text>
+  <text x="180" y="310" text-anchor="middle" font-size="9" fill="#7d6608">已分配</text>
+
+  <rect x="212" y="280" width="55" height="36" rx="3" fill="#d5f5e3" stroke="#27ae60"/>
+  <text x="239" y="295" text-anchor="middle" font-size="10" fill="#1d8348">obj₃</text>
+  <text x="239" y="310" text-anchor="middle" font-size="9" fill="#1d8348">空闲</text>
+
+  <rect x="271" y="280" width="55" height="36" rx="3" fill="#d5f5e3" stroke="#27ae60"/>
+  <text x="298" y="295" text-anchor="middle" font-size="10" fill="#1d8348">obj₄</text>
+  <text x="298" y="310" text-anchor="middle" font-size="9" fill="#1d8348">空闲</text>
+
+  <rect x="330" y="280" width="55" height="36" rx="3" fill="#f9e79f" stroke="#f39c12"/>
+  <text x="357" y="295" text-anchor="middle" font-size="10" fill="#7d6608">obj₅</text>
+  <text x="357" y="310" text-anchor="middle" font-size="9" fill="#7d6608">已分配</text>
+
+  <text x="413" y="302" font-size="16" fill="#95a5a6">…</text>
+
+  <rect x="440" y="280" width="47" height="36" rx="3" fill="#d6eaf8" stroke="#2980b9"/>
+  <text x="463" y="295" text-anchor="middle" font-size="10" fill="#1a5276">管理</text>
+  <text x="463" y="310" text-anchor="middle" font-size="9" fill="#1a5276">元数据</text>
+
+  <!-- freelist arrow -->
+  <text x="260" y="340" text-anchor="middle" font-size="11" fill="#7f8c8d">空闲对象通过指针串联成链表（freelist）</text>
+  <!-- arrows between free objs -->
+  <line x1="121" y1="305" x2="239" y2="305" stroke="#27ae60" stroke-width="1.2" marker-end="url(#arr-g)"/>
+  <line x1="239" y1="305" x2="298" y2="305" stroke="#27ae60" stroke-width="1.2" marker-end="url(#arr-g)"/>
+  <text x="155" y="301" font-size="9" fill="#1d8348">→</text>
+
+  <!-- partial / full / free list labels -->
+  <rect x="35" y="355" width="440" height="80" rx="5" fill="#f4f6f7" stroke="#95a5a6" stroke-width="1"/>
+  <text x="255" y="372" text-anchor="middle" font-size="11" font-weight="bold" fill="#2c3e50">Slab 的三种状态（每个 NUMA node 维护三条链表）</text>
+  <!-- partial -->
+  <rect x="45" y="378" width="125" height="48" rx="4" fill="#fef9e7" stroke="#f39c12"/>
+  <text x="107" y="393" text-anchor="middle" font-size="11" font-weight="bold" fill="#b7770d">partial</text>
+  <text x="107" y="407" text-anchor="middle" font-size="10" fill="#1a252f">有空闲对象</text>
+  <text x="107" y="419" text-anchor="middle" font-size="10" fill="#27ae60">← 优先分配</text>
+  <!-- full -->
+  <rect x="183" y="378" width="125" height="48" rx="4" fill="#d6eaf8" stroke="#2980b9"/>
+  <text x="245" y="393" text-anchor="middle" font-size="11" font-weight="bold" fill="#1a5276">full</text>
+  <text x="245" y="407" text-anchor="middle" font-size="10" fill="#1a252f">全部已分配</text>
+  <text x="245" y="419" text-anchor="middle" font-size="10" fill="#7f8c8d">等待释放</text>
+  <!-- free -->
+  <rect x="322" y="378" width="145" height="48" rx="4" fill="#fdedec" stroke="#e74c3c"/>
+  <text x="394" y="393" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0392b">free</text>
+  <text x="394" y="407" text-anchor="middle" font-size="10" fill="#1a252f">完全空闲</text>
+  <text x="394" y="419" text-anchor="middle" font-size="10" fill="#c0392b">→ 归还 Buddy System</text>
+
+  <!-- ===== 分配流程 ===== -->
+  <rect x="514" y="250" width="426" height="398" rx="8" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="727" y="270" text-anchor="middle" font-size="13" font-weight="bold" fill="#2980b9">kmem_cache_alloc() 分配路径</text>
+
+  <g font-size="11">
+    <!-- step 1 -->
+    <rect x="528" y="280" width="398" height="38" rx="5" fill="#d5f5e3" stroke="#27ae60"/>
+    <text x="727" y="297" text-anchor="middle" fill="#1a252f" font-weight="bold">① 查 per-CPU freelist（无锁最快路径）</text>
+    <text x="537" y="312" font-size="10" fill="#27ae60">命中 → 弹出对象，返回。约 10~30ns，无系统调用</text>
+
+    <line x1="727" y1="318" x2="727" y2="333" stroke="#555" stroke-width="1.2" marker-end="url(#arr)"/>
+
+    <!-- step 2 -->
+    <rect x="528" y="334" width="398" height="50" rx="5" fill="#fef9e7" stroke="#f39c12"/>
+    <text x="727" y="351" text-anchor="middle" fill="#1a252f" font-weight="bold">② per-CPU freelist 为空 → 查 partial slab</text>
+    <text x="537" y="367" font-size="10" fill="#e67e22">从 partial 链表取一个 slab</text>
+    <text x="537" y="381" font-size="10" fill="#e67e22">批量将 slab 中空闲对象填入 per-CPU freelist</text>
+
+    <line x1="727" y1="384" x2="727" y2="399" stroke="#555" stroke-width="1.2" marker-end="url(#arr)"/>
+
+    <!-- step 3 -->
+    <rect x="528" y="400" width="398" height="50" rx="5" fill="#fef5e7" stroke="#e67e22"/>
+    <text x="727" y="417" text-anchor="middle" fill="#1a252f" font-weight="bold">③ partial slab 也无 → 向 Buddy System 申请</text>
+    <text x="537" y="433" font-size="10" fill="#c0392b">alloc_pages() 申请新物理页（order 由对象大小决定）</text>
+    <text x="537" y="447" font-size="10" fill="#c0392b">初始化为新 slab，加入 partial 链表，再走步骤②</text>
+
+    <line x1="727" y1="450" x2="727" y2="465" stroke="#555" stroke-width="1.2" marker-end="url(#arr)"/>
+
+    <!-- step 4 -->
+    <rect x="528" y="466" width="398" height="38" rx="5" fill="#d5f5e3" stroke="#27ae60"/>
+    <text x="727" y="483" text-anchor="middle" fill="#1a252f" font-weight="bold">④ 返回已初始化的对象指针</text>
+    <text x="537" y="498" font-size="10" fill="#27ae60">若有 ctor，已在创建 slab 时调用，无需每次重复初始化</text>
+
+    <!-- release path -->
+    <rect x="528" y="516" width="398" height="66" rx="5" fill="#ebdef0" stroke="#8e44ad"/>
+    <text x="727" y="533" text-anchor="middle" fill="#6c3483" font-weight="bold">释放路径：kmem_cache_free()</text>
+    <text x="537" y="549" font-size="10" fill="#1a252f">① 放回 per-CPU freelist（无锁）</text>
+    <text x="537" y="563" font-size="10" fill="#1a252f">② per-CPU freelist 满 → 归还 slab 到 partial 链表</text>
+    <text x="537" y="577" font-size="10" fill="#8e44ad">③ slab 完全空闲 → free slab → 归还物理页给 Buddy System</text>
+
+    <!-- advantages -->
+    <rect x="528" y="594" width="398" height="44" rx="5" fill="#f4f6f7" stroke="#95a5a6" stroke-dasharray="4,3"/>
+    <text x="727" y="611" text-anchor="middle" fill="#2c3e50" font-size="11" font-weight="bold">Slab 的核心优势</text>
+    <text x="537" y="627" font-size="10" fill="#1a252f">① 无锁 per-CPU 路径 ② Cache Line 局部性好 ③ 避免外部碎片</text>
+    <text x="537" y="638" font-size="10" fill="#1a252f">④ ctor/dtor 复用 ⑤ 红区（redzone）检测越界写入（调试）</text>
+  </g>
+
+  <!-- ===== 底部：常见 kmem_cache 实例 ===== -->
+  <rect x="20" y="458" width="480" height="110" rx="8" fill="#f4f6f7" stroke="#7f8c8d" stroke-width="1.2"/>
+  <text x="260" y="476" text-anchor="middle" font-size="12" font-weight="bold" fill="#2c3e50">内核常见 kmem_cache 实例</text>
+  <g font-size="10">
+    <rect x="30" y="484" width="140" height="22" rx="3" fill="#d6eaf8" stroke="#2980b9"/>
+    <text x="100" y="498" text-anchor="middle" fill="#1a5276" font-weight="bold">task_struct cache</text>
+    <text x="100" y="510" text-anchor="middle" fill="#7f8c8d">~9KB/对象</text>
+
+    <rect x="180" y="484" width="140" height="22" rx="3" fill="#d5f5e3" stroke="#27ae60"/>
+    <text x="250" y="498" text-anchor="middle" fill="#1d8348" font-weight="bold">mm_struct cache</text>
+    <text x="250" y="510" text-anchor="middle" fill="#7f8c8d">~1KB/对象</text>
+
+    <rect x="330" y="484" width="140" height="22" rx="3" fill="#fef9e7" stroke="#f39c12"/>
+    <text x="400" y="498" text-anchor="middle" fill="#b7770d" font-weight="bold">dentry cache</text>
+    <text x="400" y="510" text-anchor="middle" fill="#7f8c8d">~192B/对象</text>
+
+    <rect x="30" y="516" width="140" height="22" rx="3" fill="#ebdef0" stroke="#8e44ad"/>
+    <text x="100" y="530" text-anchor="middle" fill="#6c3483" font-weight="bold">inode cache</text>
+    <text x="100" y="542" text-anchor="middle" fill="#7f8c8d">~600B/对象</text>
+
+    <rect x="180" y="516" width="140" height="22" rx="3" fill="#fdedec" stroke="#e74c3c"/>
+    <text x="250" y="530" text-anchor="middle" fill="#c0392b" font-weight="bold">vm_area_struct</text>
+    <text x="250" y="542" text-anchor="middle" fill="#7f8c8d">~208B/对象</text>
+
+    <rect x="330" y="516" width="140" height="22" rx="3" fill="#d6eaf8" stroke="#2980b9"/>
+    <text x="400" y="530" text-anchor="middle" fill="#1a5276" font-weight="bold">sock cache</text>
+    <text x="400" y="542" text-anchor="middle" fill="#7f8c8d">~2KB/对象</text>
+
+    <text x="260" y="560" text-anchor="middle" fill="#7f8c8d">查看：cat /proc/slabinfo  或  slabtop</text>
+  </g>
+
+  <!-- Buddy <-> Slab 关系箭头 -->
+  <text x="480" y="640" text-anchor="middle" font-size="11" fill="#2c3e50">
+    Buddy System → 以页为单位 → 提供物理连续页给 Slab → Slab 在页内切割为小对象 → kmalloc/kmem_cache_alloc 使用
+  </text>
+  <line x1="120" y1="453" x2="120" y2="462" stroke="#27ae60" stroke-width="1.2" stroke-dasharray="3,2" marker-end="url(#arr-g)"/>
+  <text x="20" y="656" font-size="10" fill="#7f8c8d">※ SLUB 是现代 Linux 对 Slab 的简化实现（默认），SLOB 是嵌入式轻量版，三者接口统一</text>
+</svg>

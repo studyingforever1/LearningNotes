@@ -1,0 +1,193 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="680" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <marker id="arrow-w" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#fff"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2980b9"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e67e22"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="960" height="680" fill="#f8f9fa" rx="12"/>
+  <text x="480" y="36" text-anchor="middle" font-size="21" font-weight="bold" fill="#1a1a2e">文件 I/O 三种路径对比：缓冲 I/O / mmap / Direct I/O</text>
+
+  <!-- ========== 列标题 ========== -->
+  <!-- 缓冲 I/O -->
+  <rect x="30" y="55" width="270" height="36" rx="6" fill="#2980b9"/>
+  <text x="165" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="white">缓冲 I/O（read/write）</text>
+
+  <!-- mmap -->
+  <rect x="345" y="55" width="270" height="36" rx="6" fill="#27ae60"/>
+  <text x="480" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="white">mmap（MAP_SHARED）</text>
+
+  <!-- Direct I/O -->
+  <rect x="660" y="55" width="270" height="36" rx="6" fill="#e67e22"/>
+  <text x="795" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="white">Direct I/O（O_DIRECT）</text>
+
+  <!-- ========== 应用层 ========== -->
+  <text x="20" y="118" font-size="11" font-weight="bold" fill="#888">应用层</text>
+  <!-- 缓冲IO: 用户缓冲区 -->
+  <rect x="30" y="100" width="270" height="44" rx="6" fill="#d6eaf8" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="165" y="120" text-anchor="middle" font-size="12" font-weight="bold" fill="#1a5276">用户缓冲区（User Buffer）</text>
+  <text x="165" y="137" text-anchor="middle" font-size="10" fill="#555">char buf[4096]  —  普通内存地址</text>
+
+  <!-- mmap: 虚拟地址 -->
+  <rect x="345" y="100" width="270" height="44" rx="6" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="480" y="120" text-anchor="middle" font-size="12" font-weight="bold" fill="#1a7a42">进程虚拟地址（直接指针）</text>
+  <text x="480" y="137" text-anchor="middle" font-size="10" fill="#555">char *p = mmap(...)  —  指向 Page Cache 物理页</text>
+
+  <!-- Direct IO: 对齐用户缓冲区 -->
+  <rect x="660" y="100" width="270" height="44" rx="6" fill="#fdebd0" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="795" y="120" text-anchor="middle" font-size="12" font-weight="bold" fill="#784212">对齐用户缓冲区</text>
+  <text x="795" y="137" text-anchor="middle" font-size="10" fill="#555">posix_memalign()  地址/长度/偏移须对齐块大小</text>
+
+  <!-- ========== CPU复制标注 ========== -->
+  <!-- 缓冲IO: 有复制 -->
+  <line x1="165" y1="144" x2="165" y2="188" stroke="#e74c3c" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+  <rect x="80" y="152" width="170" height="22" rx="10" fill="#e74c3c"/>
+  <text x="165" y="167" text-anchor="middle" font-size="10" font-weight="bold" fill="white">① copy_to/from_user（CPU复制）</text>
+
+  <!-- mmap: 无复制 -->
+  <line x1="480" y1="144" x2="480" y2="188" stroke="#27ae60" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+  <rect x="395" y="152" width="170" height="22" rx="10" fill="#27ae60"/>
+  <text x="480" y="167" text-anchor="middle" font-size="10" font-weight="bold" fill="white">直接操作 Page Cache（零复制）</text>
+
+  <!-- Direct IO: DMA直接 -->
+  <line x1="795" y1="144" x2="795" y2="188" stroke="#e67e22" stroke-width="2.5" marker-end="url(#arrow-orange)"/>
+  <rect x="705" y="152" width="180" height="22" rx="10" fill="#e67e22"/>
+  <text x="795" y="167" text-anchor="middle" font-size="10" font-weight="bold" fill="white">DMA 直接传输（绕过 Page Cache）</text>
+
+  <!-- ========== Page Cache 层 ========== -->
+  <text x="20" y="210" font-size="11" font-weight="bold" fill="#888">Page Cache</text>
+  <!-- 缓冲IO Page Cache -->
+  <rect x="30" y="192" width="270" height="44" rx="6" fill="#8e44ad" stroke="#5d2d7a" stroke-width="1.5"/>
+  <text x="165" y="212" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Page Cache</text>
+  <text x="165" y="230" text-anchor="middle" font-size="10" fill="#e8c8ff">文件页在内存中缓存；脏页异步回写</text>
+
+  <!-- mmap Page Cache（同一个格子，高亮边框） -->
+  <rect x="345" y="192" width="270" height="44" rx="6" fill="#8e44ad" stroke="#27ae60" stroke-width="3"/>
+  <text x="480" y="212" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Page Cache（进程虚拟地址直接映射）</text>
+  <text x="480" y="230" text-anchor="middle" font-size="10" fill="#e8c8ff">VMA → PTE → Page Cache 物理页，访问无内核参与</text>
+
+  <!-- Direct IO: 跳过 -->
+  <rect x="660" y="192" width="270" height="44" rx="6" fill="#bdc3c7" stroke="#95a5a6" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="795" y="212" text-anchor="middle" font-size="12" fill="#777">Page Cache</text>
+  <text x="795" y="230" text-anchor="middle" font-size="11" font-weight="bold" fill="#e74c3c">× 完全绕过，不读不写缓存</text>
+
+  <!-- ========== 箭头：PageCache→磁盘 ========== -->
+  <!-- 缓冲IO -->
+  <line x1="165" y1="236" x2="165" y2="300" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="195" y="275" font-size="10" fill="#555">按需读入 / 异步回写</text>
+
+  <!-- mmap -->
+  <line x1="480" y1="236" x2="480" y2="300" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="510" y="275" font-size="10" fill="#555">缺页时读入 / 写后置脏</text>
+
+  <!-- Direct IO: 用户缓冲区直接→磁盘 -->
+  <line x1="795" y1="236" x2="795" y2="300" stroke="#e67e22" stroke-width="2.5" marker-end="url(#arrow-orange)"/>
+  <text x="825" y="260" font-size="10" fill="#e67e22">DMA 直接读/写</text>
+  <text x="825" y="275" font-size="10" fill="#e67e22">不经过内核缓冲</text>
+
+  <!-- ========== 磁盘/块设备层 ========== -->
+  <text x="20" y="325" font-size="11" font-weight="bold" fill="#888">块设备</text>
+  <!-- 三列磁盘 -->
+  <rect x="30" y="304" width="270" height="44" rx="6" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <text x="165" y="330" text-anchor="middle" font-size="12" font-weight="bold" fill="#ecf0f1">磁盘 / SSD / NVMe</text>
+  <text x="165" y="344" text-anchor="middle" font-size="10" fill="#95a5a6">submit_bio → DMA → 写入存储介质</text>
+
+  <rect x="345" y="304" width="270" height="44" rx="6" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <text x="480" y="330" text-anchor="middle" font-size="12" font-weight="bold" fill="#ecf0f1">磁盘 / SSD / NVMe</text>
+  <text x="480" y="344" text-anchor="middle" font-size="10" fill="#95a5a6">缺页触发读；脏页刷盘写</text>
+
+  <rect x="660" y="304" width="270" height="44" rx="6" fill="#2c3e50" stroke="#e67e22" stroke-width="2"/>
+  <text x="795" y="330" text-anchor="middle" font-size="12" font-weight="bold" fill="#ecf0f1">磁盘 / SSD / NVMe</text>
+  <text x="795" y="344" text-anchor="middle" font-size="10" fill="#f39c12">DMA 直接与用户缓冲区交换数据</text>
+
+  <!-- ========== 特性对比表 ========== -->
+  <rect x="30" y="372" width="900" height="260" rx="8" fill="white" stroke="#ddd" stroke-width="1.5"/>
+  <text x="480" y="394" text-anchor="middle" font-size="14" font-weight="bold" fill="#2c3e50">特性对比</text>
+
+  <!-- 表头 -->
+  <rect x="30" y="403" width="900" height="28" rx="0" fill="#2c3e50"/>
+  <text x="145" y="422" text-anchor="middle" font-size="12" font-weight="bold" fill="white">特性</text>
+  <text x="365" y="422" text-anchor="middle" font-size="12" font-weight="bold" fill="white">缓冲 I/O</text>
+  <text x="560" y="422" text-anchor="middle" font-size="12" font-weight="bold" fill="white">mmap</text>
+  <text x="790" y="422" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Direct I/O</text>
+
+  <!-- 表格行 -->
+  <line x1="30" y1="431" x2="930" y2="431" stroke="#ddd" stroke-width="1"/>
+  <line x1="270" y1="403" x2="270" y2="632" stroke="#ddd" stroke-width="1"/>
+  <line x1="460" y1="403" x2="460" y2="632" stroke="#ddd" stroke-width="1"/>
+  <line x1="660" y1="403" x2="660" y2="632" stroke="#ddd" stroke-width="1"/>
+
+  <!-- 行数据 -->
+  <!-- CPU复制次数 -->
+  <rect x="30" y="431" width="900" height="32" fill="#f9f9f9"/>
+  <text x="145" y="452" text-anchor="middle" font-size="11" fill="#333">CPU 复制次数</text>
+  <text x="365" y="452" text-anchor="middle" font-size="11" fill="#e74c3c" font-weight="bold">1次（Page Cache↔用户缓冲区）</text>
+  <text x="560" y="452" text-anchor="middle" font-size="11" fill="#27ae60" font-weight="bold">0次</text>
+  <text x="790" y="452" text-anchor="middle" font-size="11" fill="#27ae60" font-weight="bold">0次</text>
+
+  <line x1="30" y1="463" x2="930" y2="463" stroke="#eee" stroke-width="1"/>
+  <!-- Page Cache -->
+  <rect x="30" y="463" width="900" height="32" fill="white"/>
+  <text x="145" y="484" text-anchor="middle" font-size="11" fill="#333">Page Cache 利用</text>
+  <text x="365" y="484" text-anchor="middle" font-size="11" fill="#2980b9">是（预读、热缓存）</text>
+  <text x="560" y="484" text-anchor="middle" font-size="11" fill="#2980b9">是（直接映射）</text>
+  <text x="790" y="484" text-anchor="middle" font-size="11" fill="#e74c3c">否（完全绕过）</text>
+
+  <line x1="30" y1="495" x2="930" y2="495" stroke="#eee" stroke-width="1"/>
+  <!-- 对齐要求 -->
+  <rect x="30" y="495" width="900" height="32" fill="#f9f9f9"/>
+  <text x="145" y="516" text-anchor="middle" font-size="11" fill="#333">对齐要求</text>
+  <text x="365" y="516" text-anchor="middle" font-size="11" fill="#27ae60">无</text>
+  <text x="560" y="516" text-anchor="middle" font-size="11" fill="#27ae60">无</text>
+  <text x="790" y="516" text-anchor="middle" font-size="11" fill="#e74c3c">必须（地址/长度/偏移均对齐）</text>
+
+  <line x1="30" y1="527" x2="930" y2="527" stroke="#eee" stroke-width="1"/>
+  <!-- 写落盘保证 -->
+  <rect x="30" y="527" width="900" height="32" fill="white"/>
+  <text x="145" y="548" text-anchor="middle" font-size="11" fill="#333">写落盘保证</text>
+  <text x="365" y="548" text-anchor="middle" font-size="11" fill="#888">无（需 fsync/O_SYNC）</text>
+  <text x="560" y="548" text-anchor="middle" font-size="11" fill="#888">无（需 msync）</text>
+  <text x="790" y="548" text-anchor="middle" font-size="11" fill="#e67e22">写即落盘（无缓冲）</text>
+
+  <line x1="30" y1="559" x2="930" y2="559" stroke="#eee" stroke-width="1"/>
+  <!-- 双重缓存 -->
+  <rect x="30" y="559" width="900" height="32" fill="#f9f9f9"/>
+  <text x="145" y="580" text-anchor="middle" font-size="11" fill="#333">双重缓存问题</text>
+  <text x="365" y="580" text-anchor="middle" font-size="11" fill="#e74c3c">有（数据库自带buf+Page Cache）</text>
+  <text x="560" y="580" text-anchor="middle" font-size="11" fill="#e74c3c">有</text>
+  <text x="790" y="580" text-anchor="middle" font-size="11" fill="#27ae60">无（绕过 Page Cache）</text>
+
+  <line x1="30" y1="591" x2="930" y2="591" stroke="#eee" stroke-width="1"/>
+  <!-- 典型场景 -->
+  <rect x="30" y="591" width="900" height="40" fill="white"/>
+  <text x="145" y="612" text-anchor="middle" font-size="11" fill="#333">典型场景</text>
+  <text x="365" y="608" text-anchor="middle" font-size="11" fill="#555">通用文件读写</text>
+  <text x="365" y="624" text-anchor="middle" font-size="11" fill="#555">日志、配置文件</text>
+  <text x="560" y="608" text-anchor="middle" font-size="11" fill="#555">大文件随机访问</text>
+  <text x="560" y="624" text-anchor="middle" font-size="11" fill="#555">共享内存、索引文件</text>
+  <text x="790" y="608" text-anchor="middle" font-size="11" fill="#555">MySQL InnoDB、PostgreSQL</text>
+  <text x="790" y="624" text-anchor="middle" font-size="11" fill="#555">Ceph OSD、高性能存储</text>
+
+  <line x1="30" y1="631" x2="930" y2="631" stroke="#ddd" stroke-width="1"/>
+
+  <!-- 底部说明 -->
+  <rect x="30" y="638" width="900" height="36" rx="4" fill="#ecf0f1"/>
+  <text x="480" y="654" text-anchor="middle" font-size="11" fill="#555">sendfile()：文件→socket，Page Cache 直接到网卡，用户空间零参与（Nginx静态文件核心）</text>
+  <text x="480" y="669" text-anchor="middle" font-size="11" fill="#555">splice()：内核管道间数据移动，零复制；io_uring：异步 I/O 框架，减少系统调用次数</text>
+</svg>

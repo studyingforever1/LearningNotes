@@ -1,0 +1,202 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 860" font-family="'Courier New', monospace">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#555"/>
+    </marker>
+    <marker id="arr-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#2980b9"/>
+    </marker>
+    <marker id="arr-o" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#e67e22"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="860" fill="#f8f9fa"/>
+
+  <text x="500" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#2c3e50">TCP 发送路径全流程（Java write → 网卡发出）</text>
+
+  <!-- ============ STEP 1: Java ByteBuffer ============ -->
+  <rect x="20" y="48" width="960" height="84" rx="8" fill="#d6eaf8" stroke="#2980b9" stroke-width="2"/>
+  <text x="30" y="66" font-size="12" font-weight="bold" fill="#1a5276">STEP 1  Java 用户代码</text>
+
+  <rect x="30" y="72" width="580" height="52" rx="4" fill="#fff" stroke="#2980b9" stroke-width="1"/>
+  <text x="38" y="89" font-size="11" fill="#1a252f">// Heap ByteBuffer（JVM 堆内）：触发额外一次 JVM堆→堆外 复制</text>
+  <text x="38" y="104" font-size="11" fill="#e74c3c">ByteBuffer buf = ByteBuffer.allocate(1460);          // ← 堆内，需额外复制</text>
+  <text x="38" y="118" font-size="11" fill="#27ae60">ByteBuffer buf = ByteBuffer.allocateDirect(1460);   // ← 堆外（mmap匿名），直接交内核，少一次复制</text>
+
+  <rect x="620" y="72" width="352" height="52" rx="4" fill="#fff" stroke="#2980b9" stroke-width="1"/>
+  <text x="628" y="89" font-size="11" fill="#1a252f">buf.put("GET / HTTP/1.1\r\n\r\n".getBytes());</text>
+  <text x="628" y="104" font-size="11" fill="#1a252f">buf.flip();</text>
+  <text x="628" y="118" font-size="11" fill="#1a252f">channel.write(buf);  // → JNI → write() syscall</text>
+
+  <line x1="500" y1="132" x2="500" y2="148" stroke="#2980b9" stroke-width="2" marker-end="url(#arr-b)"/>
+  <text x="510" y="143" font-size="10" fill="#2980b9">syscall: write(fd, buf, len)</text>
+
+  <!-- ============ STEP 2: tcp_sendmsg ============ -->
+  <rect x="20" y="150" width="960" height="110" rx="8" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="30" y="168" font-size="12" font-weight="bold" fill="#1a5276">STEP 2  内核 tcp_sendmsg()  —— 数据复制进 sk_buff</text>
+
+  <rect x="30" y="176" width="380" height="76" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="38" y="193" font-size="11" font-weight="bold" fill="#1a5276">复制路径</text>
+  <text x="38" y="209" font-size="10" fill="#1a252f">Heap ByteBuffer：</text>
+  <text x="38" y="223" font-size="10" fill="#e74c3c">  JVM堆 → 临时堆外buf → copy_from_user → sk_buff  （3次）</text>
+  <text x="38" y="237" font-size="10" fill="#1a252f">Direct ByteBuffer：</text>
+  <text x="38" y="250" font-size="10" fill="#27ae60">  堆外 mmap区 → copy_from_user → sk_buff           （1次）</text>
+
+  <rect x="420" y="176" width="290" height="76" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="428" y="193" font-size="11" font-weight="bold" fill="#1a5276">sk_buff 分配</text>
+  <text x="428" y="209" font-size="10" fill="#1a252f">alloc_skb(size, GFP_KERNEL)</text>
+  <text x="428" y="223" font-size="10" fill="#1a252f">从 skbuff_head_cache（slab）分配</text>
+  <text x="428" y="237" font-size="10" fill="#1a252f">预留 headroom 给各层协议头</text>
+  <text x="428" y="250" font-size="10" fill="#7f8c8d">（sk_buff控制头 ~240B + 数据页）</text>
+
+  <rect x="720" y="176" width="252" height="76" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="728" y="193" font-size="11" font-weight="bold" fill="#1a5276">发送缓冲区检查</text>
+  <text x="728" y="209" font-size="10" fill="#1a252f">sk_wmem_queued >= sk_sndbuf ?</text>
+  <text x="728" y="223" font-size="10" fill="#e74c3c">  是 → 阻塞（blocking）或 EAGAIN（NIO）</text>
+  <text x="728" y="237" font-size="10" fill="#27ae60">  否 → 继续，skb 加入 sk_write_queue</text>
+  <text x="728" y="250" font-size="10" fill="#7f8c8d">默认 sk_sndbuf=131072（128KB）</text>
+
+  <line x1="500" y1="260" x2="500" y2="276" stroke="#2980b9" stroke-width="2" marker-end="url(#arr-b)"/>
+
+  <!-- ============ STEP 3: TCP ============ -->
+  <rect x="20" y="278" width="960" height="130" rx="8" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="30" y="296" font-size="12" font-weight="bold" fill="#1a5276">STEP 3  TCP 层  —— 拥塞控制 / Nagle / 分片</text>
+
+  <rect x="30" y="304" width="220" height="96" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="40" y="320" font-size="11" font-weight="bold" fill="#1a5276">Nagle 算法</text>
+  <text x="40" y="336" font-size="10" fill="#1a252f">小包合并策略：</text>
+  <text x="40" y="350" font-size="10" fill="#1a252f">若有未ACK数据 AND</text>
+  <text x="40" y="364" font-size="10" fill="#1a252f">当前数据 &lt; MSS</text>
+  <text x="40" y="378" font-size="10" fill="#e67e22">→ 等待更多数据或ACK</text>
+  <text x="40" y="392" font-size="10" fill="#7f8c8d">TCP_NODELAY 可禁用</text>
+
+  <rect x="260" y="304" width="220" height="96" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="270" y="320" font-size="11" font-weight="bold" fill="#1a5276">拥塞控制</text>
+  <text x="270" y="336" font-size="10" fill="#1a252f">cwnd（拥塞窗口）</text>
+  <text x="270" y="350" font-size="10" fill="#1a252f">rwnd（对端接收窗口）</text>
+  <text x="270" y="364" font-size="10" fill="#1a252f">实发量=min(cwnd,rwnd)</text>
+  <text x="270" y="378" font-size="10" fill="#e67e22">慢启动→拥塞避免</text>
+  <text x="270" y="392" font-size="10" fill="#7f8c8d">CUBIC/BBR算法</text>
+
+  <rect x="490" y="304" width="240" height="96" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="500" y="320" font-size="11" font-weight="bold" fill="#1a5276">tcp_transmit_skb()</text>
+  <text x="500" y="336" font-size="10" fill="#1a252f">填充 TCP 头：</text>
+  <text x="500" y="350" font-size="10" fill="#1a252f">  seq / ack_seq / flags</text>
+  <text x="500" y="364" font-size="10" fill="#1a252f">  window / checksum</text>
+  <text x="500" y="378" font-size="10" fill="#1a252f">启动重传定时器</text>
+  <text x="500" y="392" font-size="10" fill="#7f8c8d">→ 交给 ip_queue_xmit()</text>
+
+  <rect x="740" y="304" width="232" height="96" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="750" y="320" font-size="11" font-weight="bold" fill="#1a5276">TSO（TCP Seg Offload）</text>
+  <text x="750" y="336" font-size="10" fill="#1a252f">若 NIC 支持 TSO：</text>
+  <text x="750" y="350" font-size="10" fill="#27ae60">  内核传大 skb（64KB）</text>
+  <text x="750" y="364" font-size="10" fill="#27ae60">  NIC 硬件自动按 MSS 分片</text>
+  <text x="750" y="378" font-size="10" fill="#1a252f">若不支持：</text>
+  <text x="750" y="392" font-size="10" fill="#e74c3c">  内核软件分片（性能低）</text>
+
+  <line x1="500" y1="408" x2="500" y2="424" stroke="#2980b9" stroke-width="2" marker-end="url(#arr-b)"/>
+
+  <!-- ============ STEP 4: IP ============ -->
+  <rect x="20" y="426" width="960" height="90" rx="8" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="30" y="444" font-size="12" font-weight="bold" fill="#1a5276">STEP 4  IP 层  ip_queue_xmit() / ip_output()</text>
+
+  <rect x="30" y="452" width="290" height="56" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="38" y="468" font-size="11" font-weight="bold" fill="#1a5276">路由查找</text>
+  <text x="38" y="484" font-size="10" fill="#1a252f">ip_route_output() 查路由表</text>
+  <text x="38" y="498" font-size="10" fill="#1a252f">确定出口网卡（dev）和下一跳</text>
+
+  <rect x="330" y="452" width="290" height="56" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="338" y="468" font-size="11" font-weight="bold" fill="#1a5276">IP 头填充 + Netfilter</text>
+  <text x="338" y="484" font-size="10" fill="#1a252f">src/dst IP, TTL=64, protocol=6(TCP)</text>
+  <text x="338" y="498" font-size="10" fill="#1a252f">iptables POSTROUTING 钩子（NAT/过滤）</text>
+
+  <rect x="630" y="452" width="342" height="56" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="638" y="468" font-size="11" font-weight="bold" fill="#1a5276">ARP / 邻居子系统</text>
+  <text x="638" y="484" font-size="10" fill="#1a252f">查 ARP 缓存找目标 MAC</text>
+  <text x="638" y="498" font-size="10" fill="#1a252f">未命中 → 发 ARP 请求，skb 暂存，待 ARP 应答后重发</text>
+
+  <line x1="500" y1="516" x2="500" y2="532" stroke="#2980b9" stroke-width="2" marker-end="url(#arr-b)"/>
+
+  <!-- ============ STEP 5: qdisc ============ -->
+  <rect x="20" y="534" width="960" height="90" rx="8" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="30" y="552" font-size="12" font-weight="bold" fill="#1a5276">STEP 5  网络设备层  dev_queue_xmit()  ——  qdisc 流量控制</text>
+
+  <rect x="30" y="560" width="280" height="56" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="38" y="576" font-size="11" font-weight="bold" fill="#1a5276">填充以太网帧头</text>
+  <text x="38" y="592" font-size="10" fill="#1a252f">src MAC + dst MAC + EtherType</text>
+  <text x="38" y="606" font-size="10" fill="#1a252f">dev_hard_header()  14 字节</text>
+
+  <rect x="320" y="560" width="310" height="56" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="328" y="576" font-size="11" font-weight="bold" fill="#1a5276">qdisc（流量控制队列）</text>
+  <text x="328" y="592" font-size="10" fill="#1a252f">默认：pfifo_fast（3个优先级 FIFO）</text>
+  <text x="328" y="606" font-size="10" fill="#1a252f">可配置：tbf/fq_codel/mq 等</text>
+
+  <rect x="640" y="560" width="332" height="56" rx="4" fill="#fff" stroke="#aed6f1" stroke-width="1"/>
+  <text x="648" y="576" font-size="11" font-weight="bold" fill="#1a5276">ndo_start_xmit()  驱动发送函数</text>
+  <text x="648" y="592" font-size="10" fill="#1a252f">将 skb 物理地址写入 TX Ring Buffer 描述符</text>
+  <text x="648" y="606" font-size="10" fill="#1a252f">写 NIC 寄存器（Tail pointer）通知网卡</text>
+
+  <line x1="500" y1="624" x2="500" y2="640" stroke="#e67e22" stroke-width="2" marker-end="url(#arr-o)"/>
+
+  <!-- ============ STEP 6: NIC TX ============ -->
+  <rect x="20" y="642" width="960" height="110" rx="8" fill="#fef5e7" stroke="#e67e22" stroke-width="2"/>
+  <text x="30" y="660" font-size="12" font-weight="bold" fill="#b7770d">STEP 6  NIC TX Ring Buffer + DMA  ——  硬件发送</text>
+
+  <!-- TX ring buffer -->
+  <rect x="30" y="668" width="500" height="76" rx="4" fill="#fff" stroke="#e67e22" stroke-width="1"/>
+  <text x="280" y="684" text-anchor="middle" font-size="11" font-weight="bold" fill="#b7770d">TX Ring Buffer（循环队列，NIC 和驱动共享）</text>
+
+  <!-- desc boxes -->
+  <g font-size="9">
+    <rect x="40" y="692" width="70" height="44" rx="2" fill="#27ae60"/>
+    <text x="75" y="707" text-anchor="middle" fill="white">desc[0]</text>
+    <text x="75" y="720" text-anchor="middle" fill="white">addr=skb1</text>
+    <text x="75" y="733" text-anchor="middle" fill="#d5f5e3">已发送</text>
+
+    <rect x="116" y="692" width="70" height="44" rx="2" fill="#27ae60"/>
+    <text x="151" y="707" text-anchor="middle" fill="white">desc[1]</text>
+    <text x="151" y="720" text-anchor="middle" fill="white">addr=skb2</text>
+    <text x="151" y="733" text-anchor="middle" fill="#d5f5e3">已发送</text>
+
+    <rect x="192" y="692" width="70" height="44" rx="2" fill="#e67e22"/>
+    <text x="227" y="707" text-anchor="middle" fill="white">desc[2]</text>
+    <text x="227" y="720" text-anchor="middle" fill="white">addr=skb3</text>
+    <text x="227" y="733" text-anchor="middle" fill="#fef9e7">发送中</text>
+
+    <rect x="268" y="692" width="70" height="44" rx="2" fill="#e74c3c"/>
+    <text x="303" y="707" text-anchor="middle" fill="white">desc[3]</text>
+    <text x="303" y="720" text-anchor="middle" fill="white">addr=skb4</text>
+    <text x="303" y="733" text-anchor="middle" fill="#fadbd8">待发送</text>
+
+    <rect x="344" y="692" width="70" height="44" rx="2" fill="#95a5a6"/>
+    <text x="379" y="707" text-anchor="middle" fill="white">desc[4]</text>
+    <text x="379" y="720" text-anchor="middle" fill="white">空</text>
+    <text x="379" y="733" text-anchor="middle" fill="#ecf0f1">空闲</text>
+
+    <text x="435" y="718" fill="#95a5a6" font-size="14">…</text>
+    <text x="462" y="718" fill="#95a5a6" font-size="12">（环形）</text>
+  </g>
+
+  <rect x="540" y="668" width="432" height="76" rx="4" fill="#fff" stroke="#e67e22" stroke-width="1"/>
+  <text x="756" y="684" text-anchor="middle" font-size="11" font-weight="bold" fill="#b7770d">DMA 发送流程</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="550" y="702">① 驱动将 skb->data 的物理地址(dma_addr_t)写入 TX desc</text>
+    <text x="550" y="716">② 更新 TDT（Tail Descriptor）寄存器，通知 NIC</text>
+    <text x="550" y="730">③ NIC DMA 引擎按 desc 顺序 DMA 读取数据，串行化发出</text>
+    <text x="550" y="744" fill="#27ae60">④ 发送完成 → 硬中断（TX interrupt）→ 驱动 kfree_skb()</text>
+  </g>
+
+  <!-- ============ STEP 7: ACK ============ -->
+  <rect x="20" y="762" width="960" height="86" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="30" y="780" font-size="12" font-weight="bold" fill="#1d8348">STEP 7  收到对端 ACK  —— 滑动窗口前移，释放 sk_buff</text>
+
+  <rect x="30" y="788" width="450" height="52" rx="4" fill="#fff" stroke="#27ae60" stroke-width="1"/>
+  <text x="38" y="804" font-size="11" fill="#1a252f">tcp_ack() → tcp_clean_rtx_queue()</text>
+  <text x="38" y="818" font-size="10" fill="#1a252f">从 sk_write_queue 移除已确认的 skb → kfree_skb()</text>
+  <text x="38" y="832" font-size="10" fill="#27ae60">sk_wmem_queued 减小 → 唤醒等待发送缓冲区的应用线程</text>
+
+  <rect x="490" y="788" width="482" height="52" rx="4" fill="#fff" stroke="#27ae60" stroke-width="1"/>
+  <text x="498" y="804" font-size="11" fill="#1a252f">滑动窗口向右移动（snd_una 增大）</text>
+  <text x="498" y="818" font-size="10" fill="#1a252f">cwnd 增大（拥塞避免阶段每 RTT +1 MSS）</text>
+  <text x="498" y="832" font-size="10" fill="#27ae60">可发送新数据：min(cwnd, rwnd) - (snd_nxt - snd_una)</text>
+</svg>

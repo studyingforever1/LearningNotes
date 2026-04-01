@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="640" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <marker id="arr-w" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="white"/>
+    </marker>
+    <marker id="arr-b" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2980b9"/>
+    </marker>
+    <marker id="arr-g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+    <marker id="arr-r" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+    </marker>
+  </defs>
+
+  <rect width="920" height="640" fill="#f8f9fa" rx="12"/>
+  <text x="460" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#1a1a2e">内存与网络交互：零拷贝技术对比</text>
+
+  <!-- ===== 左侧：传统4次拷贝 ===== -->
+  <rect x="20" y="55" width="270" height="560" rx="10" fill="#fdecea" stroke="#e74c3c" stroke-width="2"/>
+  <text x="155" y="80" text-anchor="middle" font-size="14" font-weight="bold" fill="#c0392b">传统方式（4次拷贝）</text>
+  <text x="155" y="98" text-anchor="middle" font-size="11" fill="#e74c3c">read() + write()</text>
+
+  <!-- 磁盘 -->
+  <rect x="45" y="112" width="220" height="42" rx="6" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <text x="155" y="137" text-anchor="middle" font-size="12" font-weight="bold" fill="#ecf0f1">磁盘 / 文件</text>
+
+  <!-- 1 DMA拷贝 -->
+  <text x="155" y="170" text-anchor="middle" font-size="10" fill="#e74c3c">① DMA 拷贝</text>
+  <line x1="155" y1="154" x2="155" y2="176" stroke="#e74c3c" stroke-width="2" marker-end="url(#arr-r)"/>
+
+  <!-- 内核缓冲区（PageCache） -->
+  <rect x="45" y="180" width="220" height="42" rx="6" fill="#8e44ad" stroke="#5d2d7a" stroke-width="1.5"/>
+  <text x="155" y="199" text-anchor="middle" font-size="12" font-weight="bold" fill="white">内核缓冲区</text>
+  <text x="155" y="215" text-anchor="middle" font-size="10" fill="#e8c8ff">Page Cache</text>
+
+  <!-- 2 CPU拷贝 -->
+  <text x="155" y="240" text-anchor="middle" font-size="10" fill="#e74c3c">② CPU 拷贝（内核→用户）</text>
+  <line x1="155" y1="222" x2="155" y2="246" stroke="#e74c3c" stroke-width="2" marker-end="url(#arr-r)"/>
+
+  <!-- 用户缓冲区 -->
+  <rect x="45" y="250" width="220" height="42" rx="6" fill="#e74c3c" stroke="#c0392b" stroke-width="1.5"/>
+  <text x="155" y="269" text-anchor="middle" font-size="12" font-weight="bold" fill="white">用户缓冲区</text>
+  <text x="155" y="285" text-anchor="middle" font-size="10" fill="#ffc8c8">read() 返回到此</text>
+
+  <!-- 3 CPU拷贝 -->
+  <text x="155" y="310" text-anchor="middle" font-size="10" fill="#e74c3c">③ CPU 拷贝（用户→内核）</text>
+  <line x1="155" y1="292" x2="155" y2="316" stroke="#e74c3c" stroke-width="2" marker-end="url(#arr-r)"/>
+
+  <!-- Socket缓冲区 -->
+  <rect x="45" y="320" width="220" height="42" rx="6" fill="#f39c12" stroke="#d68910" stroke-width="1.5"/>
+  <text x="155" y="339" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Socket 发送缓冲区</text>
+  <text x="155" y="355" text-anchor="middle" font-size="10" fill="#fff3cc">sk_buff</text>
+
+  <!-- 4 DMA拷贝 -->
+  <text x="155" y="380" text-anchor="middle" font-size="10" fill="#e74c3c">④ DMA 拷贝</text>
+  <line x1="155" y1="362" x2="155" y2="386" stroke="#e74c3c" stroke-width="2" marker-end="url(#arr-r)"/>
+
+  <!-- NIC -->
+  <rect x="45" y="390" width="220" height="42" rx="6" fill="#27ae60" stroke="#1a7a42" stroke-width="1.5"/>
+  <text x="155" y="409" text-anchor="middle" font-size="12" font-weight="bold" fill="white">网卡 (NIC)</text>
+  <text x="155" y="425" text-anchor="middle" font-size="10" fill="#c8f5d8">发送到网络</text>
+
+  <!-- 上下文切换说明 -->
+  <rect x="35" y="448" width="240" height="80" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="1"/>
+  <text x="155" y="468" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0392b">问题</text>
+  <text x="155" y="486" text-anchor="middle" font-size="10" fill="#555">• 4 次内存拷贝</text>
+  <text x="155" y="502" text-anchor="middle" font-size="10" fill="#555">• 4 次用户/内核态切换</text>
+  <text x="155" y="518" text-anchor="middle" font-size="10" fill="#555">• CPU 参与数据搬运，开销大</text>
+
+  <!-- ===== 中间：sendfile 零拷贝 ===== -->
+  <rect x="320" y="55" width="270" height="560" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <text x="455" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a7a42">sendfile 零拷贝</text>
+  <text x="455" y="96" text-anchor="middle" font-size="11" fill="#27ae60">Linux 2.1+，2次拷贝</text>
+
+  <rect x="345" y="112" width="220" height="42" rx="6" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <text x="455" y="137" text-anchor="middle" font-size="12" font-weight="bold" fill="#ecf0f1">磁盘 / 文件</text>
+
+  <text x="455" y="170" text-anchor="middle" font-size="10" fill="#27ae60">① DMA 拷贝</text>
+  <line x1="455" y1="154" x2="455" y2="176" stroke="#27ae60" stroke-width="2" marker-end="url(#arr-g)"/>
+
+  <rect x="345" y="180" width="220" height="42" rx="6" fill="#8e44ad" stroke="#5d2d7a" stroke-width="1.5"/>
+  <text x="455" y="199" text-anchor="middle" font-size="12" font-weight="bold" fill="white">内核缓冲区</text>
+  <text x="455" y="215" text-anchor="middle" font-size="10" fill="#e8c8ff">Page Cache</text>
+
+  <!-- 直接传描述符，不经过用户空间 -->
+  <text x="455" y="248" text-anchor="middle" font-size="10" fill="#27ae60">② 仅传页帧描述符（CPU拷贝）</text>
+  <text x="455" y="262" text-anchor="middle" font-size="9" fill="#888">（SG-DMA 可省略此步）</text>
+  <line x1="455" y1="222" x2="455" y2="270" stroke="#27ae60" stroke-width="2" marker-end="url(#arr-g)"/>
+
+  <!-- 用户空间标注为跳过 -->
+  <rect x="345" y="275" width="220" height="42" rx="6" fill="#bdc3c7" stroke="#95a5a6" stroke-width="1" stroke-dasharray="6,3"/>
+  <text x="455" y="296" text-anchor="middle" font-size="12" fill="#888">用户空间</text>
+  <text x="455" y="312" text-anchor="middle" font-size="10" fill="#aaa">（跳过，不经过）</text>
+
+  <text x="455" y="342" text-anchor="middle" font-size="10" fill="#27ae60">→ Socket 描述符</text>
+  <line x1="455" y1="317" x2="455" y2="346" stroke="#27ae60" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arr-g)"/>
+
+  <rect x="345" y="350" width="220" height="42" rx="6" fill="#f39c12" stroke="#d68910" stroke-width="1.5"/>
+  <text x="455" y="369" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Socket 发送缓冲区</text>
+  <text x="455" y="385" text-anchor="middle" font-size="10" fill="#fff3cc">持有 Page 引用</text>
+
+  <text x="455" y="410" text-anchor="middle" font-size="10" fill="#27ae60">③ SG-DMA 拷贝</text>
+  <line x1="455" y1="392" x2="455" y2="416" stroke="#27ae60" stroke-width="2" marker-end="url(#arr-g)"/>
+
+  <rect x="345" y="420" width="220" height="42" rx="6" fill="#27ae60" stroke="#1a7a42" stroke-width="1.5"/>
+  <text x="455" y="439" text-anchor="middle" font-size="12" font-weight="bold" fill="white">网卡 (NIC)</text>
+  <text x="455" y="455" text-anchor="middle" font-size="10" fill="#c8f5d8">scatter-gather DMA</text>
+
+  <rect x="335" y="477" width="240" height="80" rx="6" fill="#eafaf1" stroke="#27ae60" stroke-width="1"/>
+  <text x="455" y="497" text-anchor="middle" font-size="11" font-weight="bold" fill="#1a7a42">优势</text>
+  <text x="455" y="515" text-anchor="middle" font-size="10" fill="#555">• 2次拷贝（SG-DMA可1次）</text>
+  <text x="455" y="531" text-anchor="middle" font-size="10" fill="#555">• 2次上下文切换</text>
+  <text x="455" y="547" text-anchor="middle" font-size="10" fill="#555">• 适合：静态文件服务器、Nginx</text>
+
+  <!-- ===== 右侧：io_uring / mmap ===== -->
+  <rect x="620" y="55" width="280" height="560" rx="10" fill="#e8f4f8" stroke="#2980b9" stroke-width="2"/>
+  <text x="760" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a5276">io_uring 零拷贝</text>
+  <text x="760" y="96" text-anchor="middle" font-size="11" fill="#2980b9">Linux 5.1+，最新异步 I/O</text>
+
+  <!-- SQ/CQ Ring -->
+  <rect x="645" y="112" width="230" height="65" rx="6" fill="#2980b9" stroke="#1a5276" stroke-width="1.5"/>
+  <text x="760" y="133" text-anchor="middle" font-size="12" font-weight="bold" fill="white">共享内存 Ring Buffer</text>
+  <text x="760" y="152" text-anchor="middle" font-size="10" fill="#d0e8ff">SQ（提交队列）│ CQ（完成队列）</text>
+  <text x="760" y="168" text-anchor="middle" font-size="10" fill="#d0e8ff">用户/内核共享，无 syscall 开销</text>
+
+  <line x1="760" y1="177" x2="760" y2="200" stroke="#2980b9" stroke-width="2" marker-end="url(#arr-b)"/>
+
+  <rect x="645" y="205" width="230" height="55" rx="6" fill="#8e44ad" stroke="#5d2d7a" stroke-width="1.5"/>
+  <text x="760" y="228" text-anchor="middle" font-size="12" font-weight="bold" fill="white">内核异步执行 I/O</text>
+  <text x="760" y="246" text-anchor="middle" font-size="10" fill="#e8c8ff">不阻塞用户线程</text>
+
+  <line x1="760" y1="260" x2="760" y2="280" stroke="#2980b9" stroke-width="2" marker-end="url(#arr-b)"/>
+
+  <!-- 固定缓冲区 -->
+  <rect x="645" y="285" width="230" height="65" rx="6" fill="#16a085" stroke="#0e6655" stroke-width="1.5"/>
+  <text x="760" y="308" text-anchor="middle" font-size="12" font-weight="bold" fill="white">固定缓冲区</text>
+  <text x="760" y="326" text-anchor="middle" font-size="10" fill="#c8f5e8">io_uring_register_buffers()</text>
+  <text x="760" y="342" text-anchor="middle" font-size="10" fill="#c8f5e8">内存页常驻，避免重复 pin</text>
+
+  <line x1="760" y1="350" x2="760" y2="370" stroke="#2980b9" stroke-width="2" marker-end="url(#arr-b)"/>
+
+  <rect x="645" y="375" width="230" height="42" rx="6" fill="#27ae60" stroke="#1a7a42" stroke-width="1.5"/>
+  <text x="760" y="394" text-anchor="middle" font-size="12" font-weight="bold" fill="white">网卡 / 磁盘</text>
+  <text x="760" y="410" text-anchor="middle" font-size="10" fill="#c8f5d8">DMA 直接访问固定页</text>
+
+  <!-- sk_buff 说明框 -->
+  <rect x="635" y="430" width="250" height="110" rx="6" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <text x="760" y="452" text-anchor="middle" font-size="12" font-weight="bold" fill="#ecf0f1">sk_buff 结构</text>
+  <text x="645" y="472" font-size="10" fill="#95a5a6">head → [headroom][data][tailroom]</text>
+  <text x="645" y="488" font-size="10" fill="#95a5a6">           ↑      ↑      ↑</text>
+  <text x="645" y="504" font-size="10" fill="#95a5a6">         head   data   tail</text>
+  <text x="645" y="522" font-size="10" fill="#7f8c8d">len / protocol / sk / next...</text>
+
+  <!-- 延迟对比 -->
+  <rect x="20" y="568" width="880" height="52" rx="8" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <text x="460" y="590" text-anchor="middle" font-size="13" font-weight="bold" fill="white">拷贝次数对比</text>
+  <text x="155" y="610" text-anchor="middle" font-size="12" fill="#e74c3c">传统 read/write：4次拷贝</text>
+  <text x="455" y="610" text-anchor="middle" font-size="12" fill="#27ae60">sendfile：2次拷贝（SG-DMA: 1次）</text>
+  <text x="760" y="610" text-anchor="middle" font-size="12" fill="#2980b9">io_uring：近似零拷贝</text>
+</svg>

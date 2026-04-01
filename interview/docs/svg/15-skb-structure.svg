@@ -1,0 +1,261 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 780" font-family="'Courier New', monospace">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#555"/>
+    </marker>
+    <marker id="arr-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#2980b9"/>
+    </marker>
+    <marker id="arr-g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#27ae60"/>
+    </marker>
+    <marker id="arr-r" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#c0392b"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="780" fill="#f8f9fa"/>
+
+  <!-- Title -->
+  <text x="500" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#2c3e50">sk_buff 结构详解 + Socket 发送/接收队列</text>
+
+  <!-- ===== sk_buff structure (top left) ===== -->
+  <rect x="20" y="46" width="470" height="320" rx="8" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="255" y="65" text-anchor="middle" font-size="13" font-weight="bold" fill="#2980b9">struct sk_buff 内存布局</text>
+
+  <!-- sk_buff meta -->
+  <rect x="35" y="74" width="200" height="272" rx="5" fill="#d6eaf8" stroke="#2980b9" stroke-width="1"/>
+  <text x="135" y="91" text-anchor="middle" font-size="11" font-weight="bold" fill="#1a5276">sk_buff 控制字段</text>
+
+  <g font-size="10" fill="#1a252f">
+    <text x="44" y="108">next / prev     → 链表指针</text>
+    <text x="44" y="124">sk              → 所属 socket</text>
+    <text x="44" y="140">dev             → 网络设备</text>
+    <text x="44" y="156">len             → 数据总长度</text>
+    <text x="44" y="172">data_len        → 分片数据长</text>
+    <text x="44" y="188">protocol        → 协议类型</text>
+    <text x="44" y="204">ip_summed       → 校验和状态</text>
+    <text x="44" y="220">priority        → QoS 优先级</text>
+    <text x="44" y="236">truesize        → 占用内存总量</text>
+    <text x="44" y="252">cloned          → 是否克隆</text>
+    <text x="44" y="268">head   ─────────────────►</text>
+    <text x="44" y="284">data   ─────────────────►</text>
+    <text x="44" y="300">tail   ─────────────────►</text>
+    <text x="44" y="316">end    ─────────────────►</text>
+  </g>
+
+  <!-- data buffer -->
+  <rect x="245" y="245" width="230" height="92" rx="4" fill="#fff" stroke="#555" stroke-width="1"/>
+  <!-- headroom -->
+  <rect x="248" y="248" width="50" height="86" rx="2" fill="#fadbd8" stroke="#e74c3c" stroke-width="0.8"/>
+  <text x="273" y="290" text-anchor="middle" font-size="9" fill="#c0392b">headroom</text>
+  <text x="273" y="302" text-anchor="middle" font-size="9" fill="#c0392b">(for headers)</text>
+
+  <!-- data -->
+  <rect x="300" y="248" width="100" height="86" rx="2" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="350" y="285" text-anchor="middle" font-size="9" fill="#1d8348" font-weight="bold">data</text>
+  <text x="350" y="298" text-anchor="middle" font-size="9" fill="#1d8348">payload</text>
+
+  <!-- tailroom -->
+  <rect x="402" y="248" width="70" height="86" rx="2" fill="#fef9e7" stroke="#f39c12" stroke-width="0.8"/>
+  <text x="437" y="285" text-anchor="middle" font-size="9" fill="#b7770d">tailroom</text>
+
+  <!-- pointer arrows -->
+  <line x1="163" y1="268" x2="245" y2="258" stroke="#555" stroke-width="1" marker-end="url(#arr)"/>
+  <text x="248" y="256" font-size="9" fill="#c0392b">head</text>
+
+  <line x1="163" y1="284" x2="298" y2="264" stroke="#555" stroke-width="1" marker-end="url(#arr)"/>
+  <text x="302" y="262" font-size="9" fill="#27ae60">data</text>
+
+  <line x1="163" y1="300" x2="398" y2="275" stroke="#555" stroke-width="1" marker-end="url(#arr)"/>
+  <text x="402" y="274" font-size="9" fill="#b7770d">tail</text>
+
+  <line x1="163" y1="316" x2="468" y2="286" stroke="#555" stroke-width="1" marker-end="url(#arr)"/>
+  <text x="473" y="285" font-size="9" fill="#555">end</text>
+
+  <!-- 协议头添加说明 -->
+  <rect x="245" y="345" width="230" height="16" rx="2" fill="#f4f6f7"/>
+  <text x="360" y="357" text-anchor="middle" font-size="10" fill="#7f8c8d">▲ 每层向 headroom 前插入协议头（零拷贝）</text>
+
+  <!-- header layers -->
+  <rect x="245" y="365" width="230" height="48" rx="4" fill="#fff" stroke="#95a5a6"/>
+  <!-- eth -->
+  <rect x="248" y="368" width="35" height="42" rx="2" fill="#ebdef0" stroke="#8e44ad"/>
+  <text x="265" y="382" text-anchor="middle" font-size="8" fill="#6c3483">ETH</text>
+  <text x="265" y="393" text-anchor="middle" font-size="8" fill="#6c3483">14B</text>
+  <!-- ip -->
+  <rect x="285" y="368" width="35" height="42" rx="2" fill="#fadbd8" stroke="#e74c3c"/>
+  <text x="302" y="382" text-anchor="middle" font-size="8" fill="#c0392b">IP</text>
+  <text x="302" y="393" text-anchor="middle" font-size="8" fill="#c0392b">20B</text>
+  <!-- tcp -->
+  <rect x="322" y="368" width="35" height="42" rx="2" fill="#d6eaf8" stroke="#2980b9"/>
+  <text x="339" y="382" text-anchor="middle" font-size="8" fill="#1a5276">TCP</text>
+  <text x="339" y="393" text-anchor="middle" font-size="8" fill="#1a5276">20B</text>
+  <!-- data -->
+  <rect x="359" y="368" width="113" height="42" rx="2" fill="#d5f5e3" stroke="#27ae60"/>
+  <text x="415" y="387" text-anchor="middle" font-size="9" fill="#1d8348" font-weight="bold">Application Data</text>
+  <text x="415" y="400" text-anchor="middle" font-size="8" fill="#1d8348">≤ 1460B (MSS)</text>
+
+  <!-- ===== Socket send queue (top right) ===== -->
+  <rect x="505" y="46" width="475" height="200" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="742" y="65" text-anchor="middle" font-size="13" font-weight="bold" fill="#1d8348">Socket 发送队列 sk_write_queue</text>
+
+  <!-- socket struct -->
+  <rect x="520" y="74" width="140" height="158" rx="5" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="590" y="90" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d8348">struct sock</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="530" y="108">sk_sndbuf</text>
+    <text x="618" y="108" fill="#e67e22">= 131072 (128KB)</text>
+    <text x="530" y="122">sk_wmem_queued</text>
+    <text x="618" y="122" fill="#e74c3c">已用发送缓冲</text>
+    <text x="530" y="138">sk_send_head ──►</text>
+    <text x="530" y="154">sk_write_queue</text>
+    <text x="530" y="170">  .next ──────────►</text>
+    <text x="530" y="186">sk_rcvbuf</text>
+    <text x="618" y="186" fill="#e67e22">= 131072 (128KB)</text>
+    <text x="530" y="202">sk_receive_queue</text>
+    <text x="530" y="218">  .next ──────────►</text>
+  </g>
+
+  <!-- write queue skbs -->
+  <rect x="678" y="80" width="90" height="55" rx="4" fill="#fef9e7" stroke="#f39c12" stroke-width="1"/>
+  <text x="723" y="96" text-anchor="middle" font-size="10" font-weight="bold" fill="#b7770d">sk_buff ①</text>
+  <text x="723" y="110" text-anchor="middle" font-size="9" fill="#1a252f">seq: 1~1460</text>
+  <text x="723" y="123" text-anchor="middle" font-size="9" fill="#1a252f">已发送/未ACK</text>
+  <text x="723" y="136" text-anchor="middle" font-size="9" fill="#e74c3c">等待 ACK</text>
+
+  <rect x="778" y="80" width="90" height="55" rx="4" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="823" y="96" text-anchor="middle" font-size="10" font-weight="bold" fill="#1d8348">sk_buff ②</text>
+  <text x="823" y="110" text-anchor="middle" font-size="9" fill="#1a252f">seq: 1461~2920</text>
+  <text x="823" y="123" text-anchor="middle" font-size="9" fill="#1a252f">待发送</text>
+  <text x="823" y="136" text-anchor="middle" font-size="9" fill="#27ae60">in queue</text>
+
+  <rect x="878" y="80" width="90" height="55" rx="4" fill="#d6eaf8" stroke="#2980b9" stroke-width="1"/>
+  <text x="923" y="96" text-anchor="middle" font-size="10" font-weight="bold" fill="#1a5276">sk_buff ③</text>
+  <text x="923" y="110" text-anchor="middle" font-size="9" fill="#1a252f">seq: 2921~4380</text>
+  <text x="923" y="123" text-anchor="middle" font-size="9" fill="#1a252f">待发送</text>
+  <text x="923" y="136" text-anchor="middle" font-size="9" fill="#2980b9">in queue</text>
+
+  <!-- links -->
+  <line x1="660" y1="138" x2="676" y2="108" stroke="#27ae60" stroke-width="1.2" marker-end="url(#arr-g)"/>
+  <line x1="769" y1="107" x2="776" y2="107" stroke="#555" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="869" y1="107" x2="876" y2="107" stroke="#555" stroke-width="1.2" marker-end="url(#arr)"/>
+  <text x="970" y="107" font-size="12" fill="#95a5a6">…</text>
+
+  <!-- TCP window annotations -->
+  <rect x="678" y="145" width="190" height="20" rx="3" fill="#fadbd8" stroke="#e74c3c" stroke-width="0.8"/>
+  <text x="773" y="158" text-anchor="middle" font-size="9" fill="#c0392b">已发送未确认区（unACK window）→ 超时重传</text>
+
+  <rect x="778" y="166" width="190" height="20" rx="3" fill="#d5f5e3" stroke="#27ae60" stroke-width="0.8"/>
+  <text x="873" y="179" text-anchor="middle" font-size="9" fill="#1d8348">可发送区（congestion window + rwnd 控制）</text>
+
+  <!-- ===== Socket receive queue (bottom right) ===== -->
+  <rect x="505" y="256" width="475" height="110" rx="8" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="742" y="275" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a5276">Socket 接收队列 sk_receive_queue</text>
+
+  <!-- skbs in receive queue -->
+  <rect x="520" y="284" width="100" height="74" rx="4" fill="#d6eaf8" stroke="#2980b9" stroke-width="1"/>
+  <text x="570" y="300" text-anchor="middle" font-size="10" font-weight="bold" fill="#1a5276">sk_buff ①</text>
+  <text x="570" y="314" text-anchor="middle" font-size="9" fill="#1a252f">seq: 1~1460</text>
+  <text x="570" y="328" text-anchor="middle" font-size="9" fill="#27ae60">按序到达</text>
+  <text x="570" y="342" text-anchor="middle" font-size="9" fill="#555">等待 read()</text>
+
+  <rect x="630" y="284" width="100" height="74" rx="4" fill="#d6eaf8" stroke="#2980b9" stroke-width="1"/>
+  <text x="680" y="300" text-anchor="middle" font-size="10" font-weight="bold" fill="#1a5276">sk_buff ②</text>
+  <text x="680" y="314" text-anchor="middle" font-size="9" fill="#1a252f">seq: 1461~2920</text>
+  <text x="680" y="328" text-anchor="middle" font-size="9" fill="#27ae60">按序到达</text>
+  <text x="680" y="342" text-anchor="middle" font-size="9" fill="#555">等待 read()</text>
+
+  <line x1="621" y1="321" x2="628" y2="321" stroke="#555" stroke-width="1.2" marker-end="url(#arr)"/>
+  <text x="742" y="321" font-size="12" fill="#95a5a6">…</text>
+
+  <!-- out of order queue -->
+  <rect x="760" y="284" width="210" height="74" rx="4" fill="#ebdef0" stroke="#8e44ad" stroke-width="1"/>
+  <text x="865" y="300" text-anchor="middle" font-size="10" font-weight="bold" fill="#6c3483">乱序队列 out_of_order_queue</text>
+  <text x="865" y="316" text-anchor="middle" font-size="9" fill="#1a252f">收到 seq=4381（跳过了 2921~4380）</text>
+  <text x="865" y="330" text-anchor="middle" font-size="9" fill="#8e44ad">暂存此处，等缺口填补后</text>
+  <text x="865" y="344" text-anchor="middle" font-size="9" fill="#8e44ad">移入 sk_receive_queue</text>
+
+  <!-- ===== Bottom: sk_buff lifecycle ===== -->
+  <rect x="20" y="420" width="960" height="170" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="500" y="440" text-anchor="middle" font-size="13" font-weight="bold" fill="#b7770d">sk_buff 生命周期（发送方向）</text>
+
+  <!-- stages -->
+  <g font-size="10">
+    <!-- stage 1 -->
+    <rect x="35" y="450" width="150" height="64" rx="4" fill="#d5f5e3" stroke="#27ae60"/>
+    <text x="110" y="465" text-anchor="middle" font-weight="bold" fill="#1d8348">① 分配</text>
+    <text x="110" y="479" text-anchor="middle" fill="#1a252f">alloc_skb()</text>
+    <text x="110" y="493" text-anchor="middle" fill="#1a252f">从 skbuff_head_cache</text>
+    <text x="110" y="507" text-anchor="middle" fill="#1a252f">（slab 缓存）分配</text>
+
+    <line x1="186" y1="482" x2="198" y2="482" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- stage 2 -->
+    <rect x="200" y="450" width="150" height="64" rx="4" fill="#d6eaf8" stroke="#2980b9"/>
+    <text x="275" y="465" text-anchor="middle" font-weight="bold" fill="#1a5276">② 填充数据</text>
+    <text x="275" y="479" text-anchor="middle" fill="#1a252f">copy_from_user()</text>
+    <text x="275" y="493" text-anchor="middle" fill="#1a252f">用户数据→skb</text>
+    <text x="275" y="507" text-anchor="middle" fill="#1a252f">逐层添加协议头</text>
+
+    <line x1="351" y1="482" x2="363" y2="482" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- stage 3 -->
+    <rect x="365" y="450" width="150" height="64" rx="4" fill="#fef9e7" stroke="#f39c12"/>
+    <text x="440" y="465" text-anchor="middle" font-weight="bold" fill="#b7770d">③ 入队等待发送</text>
+    <text x="440" y="479" text-anchor="middle" fill="#1a252f">加入 sk_write_queue</text>
+    <text x="440" y="493" text-anchor="middle" fill="#1a252f">TCP 拥塞控制/</text>
+    <text x="440" y="507" text-anchor="middle" fill="#1a252f">Nagle 算法决策</text>
+
+    <line x1="516" y1="482" x2="528" y2="482" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- stage 4 -->
+    <rect x="530" y="450" width="150" height="64" rx="4" fill="#ebdef0" stroke="#8e44ad"/>
+    <text x="605" y="465" text-anchor="middle" font-weight="bold" fill="#6c3483">④ DMA 发送</text>
+    <text x="605" y="479" text-anchor="middle" fill="#1a252f">驱动写 TX Ring</text>
+    <text x="605" y="493" text-anchor="middle" fill="#1a252f">NIC DMA 读取</text>
+    <text x="605" y="507" text-anchor="middle" fill="#1a252f">skb 物理地址</text>
+
+    <line x1="681" y1="482" x2="693" y2="482" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- stage 5 -->
+    <rect x="695" y="450" width="150" height="64" rx="4" fill="#fadbd8" stroke="#e74c3c"/>
+    <text x="770" y="465" text-anchor="middle" font-weight="bold" fill="#c0392b">⑤ 等待 ACK</text>
+    <text x="770" y="479" text-anchor="middle" fill="#1a252f">skb 留在队列</text>
+    <text x="770" y="493" text-anchor="middle" fill="#1a252f">超时 → 重传</text>
+    <text x="770" y="507" text-anchor="middle" fill="#1a252f">收到 ACK →</text>
+
+    <line x1="846" y1="482" x2="858" y2="482" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- stage 6 -->
+    <rect x="860" y="450" width="110" height="64" rx="4" fill="#f4f6f7" stroke="#95a5a6"/>
+    <text x="915" y="465" text-anchor="middle" font-weight="bold" fill="#2c3e50">⑥ 释放</text>
+    <text x="915" y="479" text-anchor="middle" fill="#1a252f">kfree_skb()</text>
+    <text x="915" y="493" text-anchor="middle" fill="#1a252f">skb 归还</text>
+    <text x="915" y="507" text-anchor="middle" fill="#1a252f">slab 缓存</text>
+  </g>
+
+  <!-- ===== Bottom: clone/share note ===== -->
+  <rect x="20" y="600" width="960" height="100" rx="8" fill="#f4f6f7" stroke="#95a5a6" stroke-width="1"/>
+  <text x="500" y="618" text-anchor="middle" font-size="13" font-weight="bold" fill="#2c3e50">sk_buff 克隆与共享（零拷贝关键）</text>
+  <g font-size="11">
+    <text x="35" y="637" fill="#1a252f">skb_clone()：</text>
+    <text x="130" y="637" fill="#555">复制 sk_buff 控制头（~240B），但数据区域共享同一物理内存（引用计数+1）</text>
+    <text x="130" y="651" fill="#27ae60">→ TCP 重传时：克隆 skb，不复制数据，性能接近零开销</text>
+
+    <text x="35" y="667" fill="#1a252f">skb_copy()：</text>
+    <text x="130" y="667" fill="#555">完整复制控制头 + 数据（真正拷贝），用于需要修改数据内容的场景</text>
+
+    <text x="35" y="683" fill="#1a252f">skb_linearize()：</text>
+    <text x="130" y="683" fill="#555">将分散在多个页（page frags）的数据合并为连续内存，某些老驱动要求</text>
+  </g>
+
+  <!-- size note -->
+  <rect x="20" y="708" width="960" height="62" rx="8" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="500" y="724" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d8348">发送/接收缓冲区大小控制（直接影响吞吐量）</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="35" y="742">/proc/sys/net/core/wmem_default=212992  wmem_max=212992   → SO_SNDBUF 默认/上限</text>
+    <text x="35" y="756">/proc/sys/net/core/rmem_default=212992  rmem_max=212992   → SO_RCVBUF 默认/上限</text>
+    <text x="550" y="742">/proc/sys/net/ipv4/tcp_wmem="4096 87380 6291456"  → TCP 发送自动调优范围</text>
+    <text x="550" y="756">/proc/sys/net/ipv4/tcp_rmem="4096 87380 6291456"  → TCP 接收自动调优范围</text>
+  </g>
+</svg>

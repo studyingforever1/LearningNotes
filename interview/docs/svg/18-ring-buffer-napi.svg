@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 760" font-family="'Courier New', monospace">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#555"/>
+    </marker>
+    <marker id="arr-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#2980b9"/>
+    </marker>
+    <marker id="arr-g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#27ae60"/>
+    </marker>
+    <marker id="arr-o" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#e67e22"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="760" fill="#f8f9fa"/>
+
+  <text x="500" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#2c3e50">NIC Ring Buffer 结构 + NAPI 收发机制详解</text>
+
+  <!-- ===== TX Ring (left) ===== -->
+  <rect x="20" y="46" width="460" height="340" rx="8" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="250" y="65" text-anchor="middle" font-size="13" font-weight="bold" fill="#2980b9">TX Ring Buffer（发送环）</text>
+
+  <!-- ring visual -->
+  <!-- 绘制环形示意（用方块表示） -->
+  <text x="250" y="88" text-anchor="middle" font-size="11" fill="#555">Head（NIC 正在读取）→ … → Tail（驱动写入位置）</text>
+
+  <!-- desc blocks -->
+  <g font-size="10">
+    <!-- row 1 -->
+    <rect x="35" y="96" width="82" height="52" rx="3" fill="#27ae60" stroke="#1d8348"/>
+    <text x="76" y="113" text-anchor="middle" fill="white" font-weight="bold">desc[0]</text>
+    <text x="76" y="127" text-anchor="middle" fill="white">phys_addr</text>
+    <text x="76" y="140" text-anchor="middle" fill="#d5f5e3">DD=1已发</text>
+
+    <rect x="123" y="96" width="82" height="52" rx="3" fill="#27ae60" stroke="#1d8348"/>
+    <text x="164" y="113" text-anchor="middle" fill="white" font-weight="bold">desc[1]</text>
+    <text x="164" y="127" text-anchor="middle" fill="white">phys_addr</text>
+    <text x="164" y="140" text-anchor="middle" fill="#d5f5e3">DD=1已发</text>
+
+    <rect x="211" y="96" width="82" height="52" rx="3" fill="#e67e22" stroke="#d35400"/>
+    <text x="252" y="113" text-anchor="middle" fill="white" font-weight="bold">desc[2] ←Head</text>
+    <text x="252" y="127" text-anchor="middle" fill="white">phys_addr</text>
+    <text x="252" y="140" text-anchor="middle" fill="#fef9e7">DD=0发送中</text>
+
+    <rect x="299" y="96" width="82" height="52" rx="3" fill="#e74c3c" stroke="#c0392b"/>
+    <text x="340" y="113" text-anchor="middle" fill="white" font-weight="bold">desc[3]</text>
+    <text x="340" y="127" text-anchor="middle" fill="white">phys_addr</text>
+    <text x="340" y="140" text-anchor="middle" fill="#fadbd8">DD=0待发</text>
+
+    <rect x="387" y="96" width="68" height="52" rx="3" fill="#95a5a6" stroke="#7f8c8d"/>
+    <text x="421" y="113" text-anchor="middle" fill="white" font-weight="bold">desc[4]</text>
+    <text x="421" y="127" text-anchor="middle" fill="white">空</text>
+    <text x="421" y="140" text-anchor="middle" fill="#ecf0f1">←Tail</text>
+
+    <!-- ring wrap arrow -->
+    <path d="M 456 122 Q 468 90 35 122" fill="none" stroke="#2980b9" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-b)"/>
+    <text x="460" y="88" font-size="9" fill="#2980b9">环形循环</text>
+  </g>
+
+  <!-- desc structure detail -->
+  <rect x="35" y="160" width="430" height="100" rx="5" fill="#fff" stroke="#2980b9" stroke-width="1"/>
+  <text x="250" y="177" text-anchor="middle" font-size="11" font-weight="bold" fill="#2980b9">TX Descriptor 结构（以 Intel e1000 为例）</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="44" y="194">buffer_addr  [64 bit]  物理地址（DMA 用，跳过 MMU）</text>
+    <text x="44" y="210">length       [16 bit]  数据长度（字节）</text>
+    <text x="44" y="226">cmd          [8  bit]  EOP（帧结束）/ IFCS（插入FCS）/ RS（回写状态）</text>
+    <text x="44" y="242">status       [8  bit]  DD（Descriptor Done，NIC 发完后置1）</text>
+    <text x="44" y="258" fill="#27ae60">驱动通过 DD 位判断哪些 skb 已发送完毕，可 kfree_skb()</text>
+  </g>
+
+  <!-- TX flow -->
+  <rect x="35" y="270" width="430" height="106" rx="5" fill="#d6eaf8" stroke="#2980b9" stroke-width="1"/>
+  <text x="250" y="287" text-anchor="middle" font-size="11" font-weight="bold" fill="#2980b9">TX 完整流程</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="44" y="305">① 驱动 ndo_start_xmit()：skb→phys_addr 写入 desc[Tail]</text>
+    <text x="44" y="319">② 写 TDT 寄存器（Tail），NIC 感知到有新数据</text>
+    <text x="44" y="333">③ NIC DMA 从 desc[Head] 读数据，串行化发出，Head 推进</text>
+    <text x="44" y="347">④ NIC 发完一帧，将 desc.status.DD=1，触发 TX 中断</text>
+    <text x="44" y="361" fill="#27ae60">⑤ 驱动中断处理：扫描 DD=1 的 desc，kfree_skb()，回收资源</text>
+  </g>
+
+  <!-- ===== RX Ring (right) ===== -->
+  <rect x="520" y="46" width="460" height="340" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="750" y="65" text-anchor="middle" font-size="13" font-weight="bold" fill="#1d8348">RX Ring Buffer（接收环）</text>
+
+  <text x="750" y="88" text-anchor="middle" font-size="11" fill="#555">Head（NIC 写入位置）← … ← Tail（驱动补充空 sk_buff 位置）</text>
+
+  <g font-size="10">
+    <rect x="535" y="96" width="82" height="52" rx="3" fill="#27ae60" stroke="#1d8348"/>
+    <text x="576" y="113" text-anchor="middle" fill="white" font-weight="bold">desc[0]</text>
+    <text x="576" y="127" text-anchor="middle" fill="white">skb phys</text>
+    <text x="576" y="140" text-anchor="middle" fill="#d5f5e3">DD=1已接收</text>
+
+    <rect x="623" y="96" width="82" height="52" rx="3" fill="#e67e22" stroke="#d35400"/>
+    <text x="664" y="113" text-anchor="middle" fill="white" font-weight="bold">desc[1]←Head</text>
+    <text x="664" y="127" text-anchor="middle" fill="white">skb phys</text>
+    <text x="664" y="140" text-anchor="middle" fill="#fef9e7">DMA写入中</text>
+
+    <rect x="711" y="96" width="82" height="52" rx="3" fill="#95a5a6" stroke="#7f8c8d"/>
+    <text x="752" y="113" text-anchor="middle" fill="white" font-weight="bold">desc[2]</text>
+    <text x="752" y="127" text-anchor="middle" fill="white">skb phys</text>
+    <text x="752" y="140" text-anchor="middle" fill="#ecf0f1">空闲</text>
+
+    <rect x="799" y="96" width="82" height="52" rx="3" fill="#95a5a6" stroke="#7f8c8d"/>
+    <text x="840" y="113" text-anchor="middle" fill="white" font-weight="bold">desc[3]</text>
+    <text x="840" y="127" text-anchor="middle" fill="white">skb phys</text>
+    <text x="840" y="140" text-anchor="middle" fill="#ecf0f1">空闲←Tail</text>
+
+    <rect x="887" y="96" width="68" height="52" rx="3" fill="#27ae60" stroke="#1d8348"/>
+    <text x="921" y="113" text-anchor="middle" fill="white" font-weight="bold">desc[N]</text>
+    <text x="921" y="127" text-anchor="middle" fill="white">skb phys</text>
+    <text x="921" y="140" text-anchor="middle" fill="#d5f5e3">DD=1</text>
+
+    <path d="M 535 122 Q 523 90 956 122" fill="none" stroke="#27ae60" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-g)"/>
+    <text x="510" y="88" font-size="9" fill="#27ae60">环形循环</text>
+  </g>
+
+  <!-- desc structure detail -->
+  <rect x="535" y="160" width="430" height="100" rx="5" fill="#fff" stroke="#27ae60" stroke-width="1"/>
+  <text x="750" y="177" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d8348">RX Descriptor 结构</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="544" y="194">buffer_addr  [64 bit]  预分配的 sk_buff 数据区物理地址</text>
+    <text x="544" y="210">length       [16 bit]  NIC 实际写入的数据长度（帧大小）</text>
+    <text x="544" y="226">errors       [8  bit]  CRC错误/帧太长等错误标志</text>
+    <text x="544" y="242">status       [8  bit]  DD（数据就绪）/ EOP（帧结束）/ IXSM（忽略校验）</text>
+    <text x="544" y="258" fill="#27ae60">驱动通过 DD 位判断 NIC 是否写完，再调 netif_receive_skb()</text>
+  </g>
+
+  <!-- RX flow -->
+  <rect x="535" y="270" width="430" height="106" rx="5" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="750" y="287" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d8348">RX 完整流程</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="544" y="305">① 驱动初始化：alloc_skb() 预分配，dma_map_single() 得物理地址</text>
+    <text x="544" y="319">② 将物理地址写入 desc[Tail]，写 RDT 寄存器，告知 NIC 有空位</text>
+    <text x="544" y="333">③ NIC 收到帧：DMA 写入 desc[Head] 对应的 sk_buff 内存</text>
+    <text x="544" y="347">④ NIC 置 DD=1，更新 RDH，触发硬中断（或 NAPI 轮询发现）</text>
+    <text x="544" y="361" fill="#27ae60">⑤ 驱动 poll()：dma_unmap()，netif_receive_skb()，补充新 skb</text>
+  </g>
+
+  <!-- ===== NAPI mechanism ===== -->
+  <rect x="20" y="398" width="460" height="240" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="250" y="417" text-anchor="middle" font-size="13" font-weight="bold" fill="#b7770d">NAPI（New API）中断节流机制</text>
+
+  <rect x="35" y="426" width="430" height="60" rx="5" fill="#fff" stroke="#f39c12" stroke-width="1"/>
+  <text x="250" y="443" text-anchor="middle" font-size="11" font-weight="bold" fill="#b7770d">问题：高流量时每包一个中断 → 中断风暴</text>
+  <text x="44" y="459" font-size="10" fill="#1a252f">10Gbps 网卡，1500B 帧：约 800K pps → 每秒 80万次中断 → CPU 100% 处理中断</text>
+  <text x="44" y="475" font-size="10" fill="#e74c3c">中断处理开销 >> 实际数据处理，系统吞吐崩溃</text>
+
+  <rect x="35" y="496" width="430" height="130" rx="5" fill="#fff" stroke="#f39c12" stroke-width="1"/>
+  <text x="250" y="513" text-anchor="middle" font-size="11" font-weight="bold" fill="#b7770d">NAPI 解决方案：中断+轮询混合</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="44" y="531">① 第一个包到达 → 硬中断，关闭该网卡 RX 中断</text>
+    <text x="44" y="547">② 驱动将 napi_struct 加入 poll_list，触发 NET_RX_SOFTIRQ</text>
+    <text x="44" y="563">③ ksoftirqd / 硬中断末尾：调用 napi_poll()，批量取包（最多 budget 个）</text>
+    <text x="44" y="579">④ 取完 budget 或 Ring 清空 → 重新开启 RX 中断</text>
+    <text x="44" y="595" fill="#27ae60">⑤ 高流量时：中断只触发一次，轮询处理大量包，CPU效率最大化</text>
+    <text x="44" y="611" fill="#7f8c8d">   net.core.netdev_budget=300（每次软中断最多处理300包）</text>
+  </g>
+
+  <!-- ===== Memory regions ===== -->
+  <rect x="520" y="398" width="460" height="240" rx="8" fill="#ebdef0" stroke="#8e44ad" stroke-width="1.5"/>
+  <text x="750" y="417" text-anchor="middle" font-size="13" font-weight="bold" fill="#6c3483">DMA 内存区域与零拷贝</text>
+
+  <rect x="535" y="426" width="430" height="90" rx="5" fill="#fff" stroke="#8e44ad" stroke-width="1"/>
+  <text x="750" y="443" text-anchor="middle" font-size="11" font-weight="bold" fill="#6c3483">DMA 约束</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="544" y="461">DMA 使用物理地址，绕过 MMU，直接读写物理内存</text>
+    <text x="544" y="477">dma_alloc_coherent()：分配 DMA 安全的连续物理内存</text>
+    <text x="544" y="493">dma_map_single()：将已有内存映射为 DMA 地址（可能需要 bounce buffer）</text>
+    <text x="544" y="509" fill="#e74c3c">IOMMU：允许 DMA 使用虚拟地址，支持非连续物理内存（scatter-gather）</text>
+  </g>
+
+  <rect x="535" y="526" width="430" height="100" rx="5" fill="#fff" stroke="#8e44ad" stroke-width="1"/>
+  <text x="750" y="543" text-anchor="middle" font-size="11" font-weight="bold" fill="#6c3483">零拷贝技术对比</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="544" y="561">sendfile()：文件→socket，内核内传输，用户态零参与</text>
+    <text x="544" y="577">splice()：pipe 传递 sk_buff 引用，不复制数据</text>
+    <text x="544" y="593">io_uring：异步 I/O，提交/完成环，batch 系统调用</text>
+    <text x="544" y="609" fill="#27ae60">DPDK/XDP：完全绕过内核协议栈，用户态直接操作 Ring Buffer</text>
+    <text x="544" y="623" fill="#7f8c8d">Java DirectByteBuffer：堆外内存，少一次 JVM堆→内核的复制</text>
+  </g>
+
+  <!-- ===== Bottom: multi-queue ===== -->
+  <rect x="20" y="648" width="960" height="100" rx="8" fill="#f4f6f7" stroke="#95a5a6" stroke-width="1"/>
+  <text x="500" y="666" text-anchor="middle" font-size="13" font-weight="bold" fill="#2c3e50">多队列网卡（Multi-Queue）与 RSS / RPS</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="35" y="684">多队列网卡：每个 CPU 核心对应一组独立的 RX/TX Ring Buffer，消除锁竞争</text>
+    <text x="35" y="698">RSS（Receive Side Scaling）：NIC 硬件根据 5元组哈希（src_ip:port → dst_ip:port）将包分发到不同 RX 队列</text>
+    <text x="35" y="712">  → 同一 TCP 连接的包总在同一 CPU 处理，保证顺序，无锁</text>
+    <text x="35" y="726">RPS（Receive Packet Steering）：软件版 RSS，无多队列网卡时用 iptables mark 做 CPU 亲和</text>
+    <text x="35" y="740" fill="#27ae60">ethtool -L eth0 combined 8  → 设置 8 个队列（8核机器推荐1:1）</text>
+    <text x="550" y="740" fill="#27ae60">irqbalance / 手动 /proc/irq/N/smp_affinity 绑定 IRQ 到 CPU</text>
+  </g>
+</svg>

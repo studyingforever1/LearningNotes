@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="560" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <marker id="arr-blue" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2980b9"/>
+    </marker>
+    <marker id="arr-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+    </marker>
+    <marker id="arr-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="560" fill="#f8f9fa" rx="12"/>
+  <text x="430" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#1a1a2e">四级页表地址翻译 (x86-64)</text>
+
+  <!-- 虚拟地址分解 -->
+  <text x="430" y="72" text-anchor="middle" font-size="13" fill="#555">48 位有效虚拟地址</text>
+
+  <!-- 虚拟地址位域 -->
+  <rect x="50" y="82" width="116" height="38" rx="5" fill="#e74c3c" stroke="#c0392b" stroke-width="1.5"/>
+  <text x="108" y="99" text-anchor="middle" font-size="11" font-weight="bold" fill="white">PGD 索引</text>
+  <text x="108" y="113" text-anchor="middle" font-size="10" fill="#ffcccc">位 [47:39]  9bit</text>
+
+  <rect x="172" y="82" width="116" height="38" rx="5" fill="#e67e22" stroke="#ca6f1e" stroke-width="1.5"/>
+  <text x="230" y="99" text-anchor="middle" font-size="11" font-weight="bold" fill="white">PUD 索引</text>
+  <text x="230" y="113" text-anchor="middle" font-size="10" fill="#ffe8cc">位 [38:30]  9bit</text>
+
+  <rect x="294" y="82" width="116" height="38" rx="5" fill="#f39c12" stroke="#d68910" stroke-width="1.5"/>
+  <text x="352" y="99" text-anchor="middle" font-size="11" font-weight="bold" fill="white">PMD 索引</text>
+  <text x="352" y="113" text-anchor="middle" font-size="10" fill="#fff3cc">位 [29:21]  9bit</text>
+
+  <rect x="416" y="82" width="116" height="38" rx="5" fill="#27ae60" stroke="#1a7a42" stroke-width="1.5"/>
+  <text x="474" y="99" text-anchor="middle" font-size="11" font-weight="bold" fill="white">PTE 索引</text>
+  <text x="474" y="113" text-anchor="middle" font-size="10" fill="#c8f5d8">位 [20:12]  9bit</text>
+
+  <rect x="538" y="82" width="150" height="38" rx="5" fill="#2980b9" stroke="#1a5276" stroke-width="1.5"/>
+  <text x="613" y="99" text-anchor="middle" font-size="11" font-weight="bold" fill="white">页内偏移</text>
+  <text x="613" y="113" text-anchor="middle" font-size="10" fill="#d0e8ff">位 [11:0]  12bit = 4KB</text>
+
+  <!-- CR3说明 -->
+  <rect x="710" y="82" width="130" height="38" rx="5" fill="#8e44ad" stroke="#5d2d7a" stroke-width="1.5"/>
+  <text x="775" y="97" text-anchor="middle" font-size="11" font-weight="bold" fill="white">CR3 寄存器</text>
+  <text x="775" y="113" text-anchor="middle" font-size="10" fill="#e8c8ff">保存 PGD 物理地址</text>
+
+  <!-- 页表层次（竖排） -->
+  <!-- PGD -->
+  <rect x="60" y="165" width="110" height="130" rx="6" fill="#e74c3c" stroke="#c0392b" stroke-width="1.5"/>
+  <text x="115" y="185" text-anchor="middle" font-size="12" font-weight="bold" fill="white">PGD</text>
+  <text x="115" y="202" text-anchor="middle" font-size="10" fill="#ffcccc">页全局目录</text>
+  <rect x="72" y="212" width="86" height="18" rx="3" fill="#c0392b"/>
+  <text x="115" y="225" text-anchor="middle" font-size="10" fill="white">entry[idx]</text>
+  <rect x="72" y="234" width="86" height="18" rx="3" fill="#922b21" opacity="0.7"/>
+  <text x="115" y="247" text-anchor="middle" font-size="10" fill="#ffaaaa">…</text>
+  <rect x="72" y="256" width="86" height="18" rx="3" fill="#922b21" opacity="0.7"/>
+  <text x="115" y="269" text-anchor="middle" font-size="10" fill="#ffaaaa">…</text>
+
+  <!-- PUD -->
+  <rect x="220" y="165" width="110" height="130" rx="6" fill="#e67e22" stroke="#ca6f1e" stroke-width="1.5"/>
+  <text x="275" y="185" text-anchor="middle" font-size="12" font-weight="bold" fill="white">PUD</text>
+  <text x="275" y="202" text-anchor="middle" font-size="10" fill="#ffe8cc">页上级目录</text>
+  <rect x="232" y="212" width="86" height="18" rx="3" fill="#ca6f1e"/>
+  <text x="275" y="225" text-anchor="middle" font-size="10" fill="white">entry[idx]</text>
+  <rect x="232" y="234" width="86" height="18" rx="3" fill="#9a4e0a" opacity="0.7"/>
+  <text x="275" y="247" text-anchor="middle" font-size="10" fill="#ffe0bb">…</text>
+  <rect x="232" y="256" width="86" height="18" rx="3" fill="#9a4e0a" opacity="0.7"/>
+  <text x="275" y="269" text-anchor="middle" font-size="10" fill="#ffe0bb">…</text>
+
+  <!-- PMD -->
+  <rect x="380" y="165" width="110" height="130" rx="6" fill="#f39c12" stroke="#d68910" stroke-width="1.5"/>
+  <text x="435" y="185" text-anchor="middle" font-size="12" font-weight="bold" fill="white">PMD</text>
+  <text x="435" y="202" text-anchor="middle" font-size="10" fill="#fff3cc">页中间目录</text>
+  <rect x="392" y="212" width="86" height="18" rx="3" fill="#d68910"/>
+  <text x="435" y="225" text-anchor="middle" font-size="10" fill="white">entry[idx]</text>
+  <rect x="392" y="234" width="86" height="18" rx="3" fill="#a05c00" opacity="0.7"/>
+  <text x="435" y="247" text-anchor="middle" font-size="10" fill="#ffe9aa">…</text>
+  <rect x="392" y="256" width="86" height="18" rx="3" fill="#a05c00" opacity="0.7"/>
+  <text x="435" y="269" text-anchor="middle" font-size="10" fill="#ffe9aa">…</text>
+
+  <!-- PTE -->
+  <rect x="540" y="165" width="110" height="130" rx="6" fill="#27ae60" stroke="#1a7a42" stroke-width="1.5"/>
+  <text x="595" y="185" text-anchor="middle" font-size="12" font-weight="bold" fill="white">PTE</text>
+  <text x="595" y="202" text-anchor="middle" font-size="10" fill="#c8f5d8">页表项</text>
+  <rect x="552" y="212" width="86" height="18" rx="3" fill="#1a7a42"/>
+  <text x="595" y="225" text-anchor="middle" font-size="10" fill="white">entry[idx]</text>
+  <text x="595" y="210" font-size="9" fill="#a8e8be" text-anchor="middle">含：物理页帧号+标志位</text>
+  <rect x="552" y="234" width="86" height="18" rx="3" fill="#145a32" opacity="0.7"/>
+  <text x="595" y="247" text-anchor="middle" font-size="10" fill="#a8e8be">…</text>
+  <rect x="552" y="256" width="86" height="18" rx="3" fill="#145a32" opacity="0.7"/>
+  <text x="595" y="269" text-anchor="middle" font-size="10" fill="#a8e8be">…</text>
+
+  <!-- 物理内存 -->
+  <rect x="700" y="165" width="130" height="130" rx="6" fill="#2980b9" stroke="#1a5276" stroke-width="1.5"/>
+  <text x="765" y="192" text-anchor="middle" font-size="12" font-weight="bold" fill="white">物理内存页</text>
+  <text x="765" y="210" text-anchor="middle" font-size="10" fill="#d0e8ff">Page Frame</text>
+  <text x="765" y="228" text-anchor="middle" font-size="10" fill="#d0e8ff">4KB 对齐</text>
+  <rect x="712" y="238" width="106" height="45" rx="3" fill="#1a5276"/>
+  <text x="765" y="255" text-anchor="middle" font-size="10" fill="#b0d4f8">物理地址 =</text>
+  <text x="765" y="270" text-anchor="middle" font-size="10" fill="#b0d4f8">页帧号 × 4096</text>
+  <text x="765" y="285" text-anchor="middle" font-size="10" fill="#b0d4f8">+ 页内偏移</text>
+
+  <!-- 箭头：PGD→PUD→PMD→PTE→物理页 -->
+  <line x1="170" y1="221" x2="218" y2="221" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="330" y1="221" x2="378" y2="221" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="490" y1="221" x2="538" y2="221" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="650" y1="221" x2="698" y2="221" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- CR3到PGD -->
+  <line x1="775" y1="120" x2="775" y2="155" stroke="#8e44ad" stroke-width="1.5"/>
+  <line x1="775" y1="155" x2="115" y2="155" stroke="#8e44ad" stroke-width="1.5"/>
+  <line x1="115" y1="155" x2="115" y2="163" stroke="#8e44ad" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="445" y="150" text-anchor="middle" font-size="10" fill="#8e44ad">CR3 → PGD 物理基址</text>
+
+  <!-- TLB模块 -->
+  <rect x="60" y="330" width="780" height="90" rx="8" fill="#fef5e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="430" y="352" text-anchor="middle" font-size="13" font-weight="bold" fill="#8b4513">TLB（Translation Lookaside Buffer）缓存层</text>
+
+  <rect x="80" y="362" width="190" height="46" rx="5" fill="#f39c12" stroke="#d68910" stroke-width="1"/>
+  <text x="175" y="380" text-anchor="middle" font-size="11" font-weight="bold" fill="white">L1 iTLB（指令）</text>
+  <text x="175" y="398" text-anchor="middle" font-size="10" fill="#fff3cc">64 项，4KB 页，全相联</text>
+
+  <rect x="290" y="362" width="190" height="46" rx="5" fill="#f39c12" stroke="#d68910" stroke-width="1"/>
+  <text x="385" y="380" text-anchor="middle" font-size="11" font-weight="bold" fill="white">L1 dTLB（数据）</text>
+  <text x="385" y="398" text-anchor="middle" font-size="10" fill="#fff3cc">64 项，4KB 页，全相联</text>
+
+  <rect x="500" y="362" width="320" height="46" rx="5" fill="#e67e22" stroke="#ca6f1e" stroke-width="1"/>
+  <text x="660" y="380" text-anchor="middle" font-size="11" font-weight="bold" fill="white">L2 TLB（共享，更大）</text>
+  <text x="660" y="398" text-anchor="middle" font-size="10" fill="#ffe8cc">1024~4096 项，覆盖 4KB / 2MB 大页</text>
+
+  <!-- 缺页异常流程 -->
+  <rect x="60" y="448" width="780" height="88" rx="8" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="430" y="470" text-anchor="middle" font-size="13" font-weight="bold" fill="#8b0000">缺页异常 (Page Fault) 处理路径</text>
+
+  <text x="95" y="492" font-size="11" fill="#555">① CPU 访问虚拟地址</text>
+  <line x1="228" y1="487" x2="248" y2="487" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arr-red)"/>
+  <text x="255" y="492" font-size="11" fill="#555">② TLB Miss → 查页表</text>
+  <line x1="388" y1="487" x2="408" y2="487" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arr-red)"/>
+  <text x="415" y="492" font-size="11" fill="#555">③ PTE 无效 → #PF 异常</text>
+  <line x1="568" y1="487" x2="588" y2="487" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arr-red)"/>
+  <text x="595" y="492" font-size="11" fill="#555">④ 内核处理</text>
+
+  <text x="95" y="516" font-size="11" fill="#27ae60">→ 匿名页：分配物理页清零</text>
+  <text x="310" y="516" font-size="11" fill="#2980b9">→ 文件页：从 Page Cache 读取</text>
+  <text x="560" y="516" font-size="11" fill="#9b59b6">→ COW：复制页面取消共享</text>
+
+  <text x="95" y="530" font-size="10" fill="#888">建立 PTE 映射 → 更新 TLB → 返回用户态重试指令</text>
+</svg>

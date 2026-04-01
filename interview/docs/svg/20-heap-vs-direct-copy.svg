@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 820" font-family="'Courier New', monospace">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#555"/>
+    </marker>
+    <marker id="arr-r" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#c0392b"/>
+    </marker>
+    <marker id="arr-g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#27ae60"/>
+    </marker>
+    <marker id="arr-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#2980b9"/>
+    </marker>
+    <marker id="arr-o" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#e67e22"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="820" fill="#f8f9fa"/>
+  <text x="500" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#2c3e50">为什么 HeapByteBuffer 发送要多一次复制？</text>
+  <text x="500" y="46" text-anchor="middle" font-size="11" fill="#7f8c8d">核心原因：JVM GC 会移动堆内对象地址，而 DMA/内核 syscall 需要稳定的物理地址</text>
+
+  <!-- ===== 左列：HeapByteBuffer（多一次复制） ===== -->
+  <rect x="20" y="58" width="460" height="580" rx="8" fill="#fdedec" stroke="#e74c3c" stroke-width="2"/>
+  <text x="250" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#c0392b">❌ HeapByteBuffer（堆内）</text>
+  <text x="250" y="94" text-anchor="middle" font-size="11" fill="#e74c3c">ByteBuffer.allocate()  →  总共 3 次复制</text>
+
+  <!-- JVM Heap -->
+  <rect x="40" y="106" width="420" height="120" rx="6" fill="#fadbd8" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="250" y="124" text-anchor="middle" font-size="12" font-weight="bold" fill="#c0392b">JVM 堆（mmap 匿名区，GC 管理）</text>
+
+  <rect x="55" y="132" width="380" height="36" rx="4" fill="#fff" stroke="#e74c3c"/>
+  <text x="245" y="146" text-anchor="middle" font-size="11" fill="#1a252f">byte[] buf = "GET / HTTP/1.1".getBytes()</text>
+  <text x="245" y="160" text-anchor="middle" font-size="10" fill="#7f8c8d">虚拟地址：0x7f10_0000  →  物理地址：0x3A_8000</text>
+
+  <!-- GC problem box -->
+  <rect x="55" y="175" width="380" height="44" rx="4" fill="#e74c3c"/>
+  <text x="245" y="191" text-anchor="middle" font-size="11" fill="white" font-weight="bold">⚠ GC 随时可能移动这块内存！</text>
+  <text x="245" y="207" text-anchor="middle" font-size="10" fill="#fadbd8">物理地址从 0x3A_8000 变为 0x5B_2000</text>
+  <text x="245" y="220" text-anchor="middle" font-size="10" fill="#fadbd8">内核/DMA 持有旧地址 → 读到错误数据或崩溃</text>
+
+  <!-- arrow 1: heap → temp -->
+  <text x="250" y="246" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0392b">① 复制 1（Java 内部）</text>
+  <line x1="250" y1="252" x2="250" y2="272" stroke="#c0392b" stroke-width="2" marker-end="url(#arr-r)"/>
+  <text x="340" y="265" font-size="10" fill="#c0392b">JVM 内部临时 pin 或复制到堆外</text>
+
+  <!-- Temp off-heap -->
+  <rect x="40" y="274" width="420" height="58" rx="6" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="250" y="292" text-anchor="middle" font-size="12" font-weight="bold" fill="#b7770d">临时堆外缓冲区（JVM 内部分配，线程局部）</text>
+  <text x="250" y="308" text-anchor="middle" font-size="10" fill="#1a252f">地址固定，GC 不管理 → 内核可安全使用</text>
+  <text x="250" y="322" text-anchor="middle" font-size="10" fill="#7f8c8d">通常是线程级 DirectBuffer 缓存（避免每次 malloc）</text>
+
+  <!-- arrow 2: temp → kernel -->
+  <text x="250" y="348" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0392b">② 复制 2（copy_from_user）</text>
+  <line x1="250" y1="354" x2="250" y2="374" stroke="#c0392b" stroke-width="2" marker-end="url(#arr-r)"/>
+  <text x="380" y="367" font-size="10" fill="#2980b9">syscall: write(fd, ...)</text>
+
+  <!-- kernel sk_buff -->
+  <rect x="40" y="376" width="420" height="52" rx="6" fill="#d6eaf8" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="250" y="394" text-anchor="middle" font-size="12" font-weight="bold" fill="#1a5276">内核 sk_buff（内核内存，不可被 GC 动）</text>
+  <text x="250" y="410" text-anchor="middle" font-size="10" fill="#1a252f">copy_from_user(skb→data, tmp_buf, len)</text>
+  <text x="250" y="425" text-anchor="middle" font-size="10" fill="#7f8c8d">内核从这里构建 TCP/IP 包</text>
+
+  <!-- arrow 3: sk_buff → NIC -->
+  <text x="250" y="449" text-anchor="middle" font-size="11" font-weight="bold" fill="#555">③ 复制 3（DMA，无 CPU）</text>
+  <line x1="250" y1="455" x2="250" y2="475" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- NIC -->
+  <rect x="40" y="477" width="420" height="36" rx="6" fill="#2c3e50"/>
+  <text x="250" y="500" text-anchor="middle" font-size="12" fill="white" font-weight="bold">NIC TX Ring → 发出到网络</text>
+
+  <!-- summary box -->
+  <rect x="40" y="526" width="420" height="100" rx="5" fill="#fadbd8" stroke="#e74c3c" stroke-width="1"/>
+  <text x="250" y="542" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0392b">总结：3 次复制</text>
+  <text x="50" y="558" font-size="10" fill="#1a252f">① JVM Heap → 临时堆外buf    （CPU，~ns级，JVM自动）</text>
+  <text x="50" y="572" font-size="10" fill="#1a252f">② 临时堆外buf → 内核sk_buff  （CPU，copy_from_user）</text>
+  <text x="50" y="586" font-size="10" fill="#1a252f">③ 内核sk_buff → NIC          （DMA，无CPU参与）</text>
+  <text x="50" y="604" font-size="10" fill="#c0392b">为什么①不能省？</text>
+  <text x="50" y="618" font-size="10" fill="#1a252f">  GC 在 ① 和 ② 之间随时可能 Stop-The-World，移动对象</text>
+  <text x="50" y="632" font-size="10" fill="#1a252f">  必须先复制到 GC 不可触碰的区域，再交给内核</text>
+
+  <!-- ===== 右列：DirectByteBuffer（少一次复制） ===== -->
+  <rect x="520" y="58" width="460" height="580" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <text x="750" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d8348">✓ DirectByteBuffer（堆外）</text>
+  <text x="750" y="94" text-anchor="middle" font-size="11" fill="#27ae60">ByteBuffer.allocateDirect()  →  总共 2 次复制</text>
+
+  <!-- Direct buffer in mmap -->
+  <rect x="540" y="106" width="420" height="120" rx="6" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="750" y="124" text-anchor="middle" font-size="12" font-weight="bold" fill="#1d8348">堆外内存（mmap 匿名区，GC 不移动）</text>
+
+  <rect x="555" y="132" width="390" height="36" rx="4" fill="#fff" stroke="#27ae60"/>
+  <text x="750" y="147" text-anchor="middle" font-size="11" fill="#1a252f">DirectByteBuffer 内部 address 字段存物理地址</text>
+  <text x="750" y="161" text-anchor="middle" font-size="10" fill="#7f8c8d">虚拟地址：0x7f80_0000（固定，GC 不会移动）</text>
+
+  <!-- why GC doesn't move -->
+  <rect x="555" y="175" width="390" height="44" rx="4" fill="#27ae60"/>
+  <text x="750" y="191" text-anchor="middle" font-size="11" fill="white" font-weight="bold">✓ GC 不会移动这块内存</text>
+  <text x="750" y="207" text-anchor="middle" font-size="10" fill="#d5f5e3">在 JVM 堆外，属于 OS mmap 区域，GC 只管理元数据</text>
+  <text x="750" y="220" text-anchor="middle" font-size="10" fill="#d5f5e3">物理地址稳定，可以直接传给内核 → 省去第①步复制</text>
+
+  <!-- arrow: direct → kernel -->
+  <text x="750" y="248" text-anchor="middle" font-size="11" font-weight="bold" fill="#27ae60">① 复制 1（copy_from_user）</text>
+  <line x1="750" y1="254" x2="750" y2="274" stroke="#27ae60" stroke-width="2" marker-end="url(#arr-g)"/>
+  <text x="870" y="267" font-size="10" fill="#2980b9">syscall: write(fd, ...)</text>
+  <text x="560" y="267" font-size="10" fill="#27ae60">直接传地址，无需预复制</text>
+
+  <!-- kernel sk_buff -->
+  <rect x="540" y="276" width="420" height="70" rx="6" fill="#d6eaf8" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="750" y="294" text-anchor="middle" font-size="12" font-weight="bold" fill="#1a5276">内核 sk_buff</text>
+  <text x="750" y="310" text-anchor="middle" font-size="10" fill="#1a252f">copy_from_user(skb→data, direct_buf_addr, len)</text>
+  <text x="750" y="326" text-anchor="middle" font-size="10" fill="#7f8c8d">因为地址稳定，内核可以直接读取</text>
+  <text x="750" y="342" text-anchor="middle" font-size="10" fill="#7f8c8d">（理论上也可 zero-copy 通过 page pinning，但一般仍复制）</text>
+
+  <!-- arrow: sk_buff → NIC -->
+  <text x="750" y="366" text-anchor="middle" font-size="11" font-weight="bold" fill="#555">② 复制 2（DMA，无 CPU）</text>
+  <line x1="750" y1="372" x2="750" y2="392" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- NIC -->
+  <rect x="540" y="394" width="420" height="36" rx="6" fill="#2c3e50"/>
+  <text x="750" y="417" text-anchor="middle" font-size="12" fill="white" font-weight="bold">NIC TX Ring → 发出到网络</text>
+
+  <!-- summary box -->
+  <rect x="540" y="443" width="420" height="183" rx="5" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="750" y="459" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d8348">总结：2 次复制（省去第①步）</text>
+  <text x="550" y="475" font-size="10" fill="#1a252f">① DirectBuf → 内核 sk_buff   （CPU，copy_from_user）</text>
+  <text x="550" y="489" font-size="10" fill="#1a252f">② 内核 sk_buff → NIC           （DMA，无 CPU 参与）</text>
+
+  <text x="550" y="509" font-size="10" font-weight="bold" fill="#1d8348">DirectByteBuffer 的内存模型：</text>
+  <text x="550" y="523" font-size="10" fill="#1a252f">  JVM Heap 中只存一个小的 DirectByteBuffer 对象（~80B）</text>
+  <text x="550" y="537" font-size="10" fill="#1a252f">  对象内有 address 字段 → 指向堆外 mmap 内存的地址</text>
+  <text x="550" y="551" font-size="10" fill="#1a252f">  实际数据在堆外，GC 只回收 DirectByteBuffer 对象本身</text>
+  <text x="550" y="567" font-size="10" fill="#1a252f">  堆外内存通过 Cleaner（PhantomReference）回收</text>
+
+  <text x="550" y="587" font-size="10" font-weight="bold" fill="#e67e22">代价：</text>
+  <text x="550" y="601" font-size="10" fill="#1a252f">  分配/释放慢（mmap syscall）</text>
+  <text x="550" y="615" font-size="10" fill="#1a252f">  不受 GC 管理 → 需手动控制生命周期</text>
+  <text x="550" y="629" font-size="10" fill="#1a252f">  Netty 用 PooledByteBufAllocator 池化复用，避免频繁分配</text>
+
+  <!-- ===== 底部：两者物理内存对比 ===== -->
+  <rect x="20" y="650" width="960" height="154" rx="8" fill="#f4f6f7" stroke="#95a5a6" stroke-width="1.2"/>
+  <text x="500" y="668" text-anchor="middle" font-size="13" font-weight="bold" fill="#2c3e50">同在 mmap 区，为何行为不同？—— 关键在于 GC 是否管理</text>
+
+  <rect x="35" y="678" width="430" height="118" rx="5" fill="#fff" stroke="#e74c3c" stroke-width="1"/>
+  <text x="250" y="694" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0392b">JVM Heap（GC 管理的 mmap 区）</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="44" y="710">物理内存：0x3A_8000（某时刻）</text>
+    <text x="44" y="724">GC 运行时：移动对象，物理页对应的虚拟地址可能变化</text>
+    <text x="44" y="738" fill="#c0392b">内核拿到的是 syscall 时刻的地址快照</text>
+    <text x="44" y="752" fill="#c0392b">GC 移动后地址失效 → 内核读到脏数据或崩溃</text>
+    <text x="44" y="768" fill="#c0392b">所以必须先复制到 GC 不可移动的区域再交给内核</text>
+    <text x="44" y="784" fill="#7f8c8d">（理论上 JVM 可以在 syscall 期间 pin 住页，但实现复杂）</text>
+  </g>
+
+  <rect x="530" y="678" width="430" height="118" rx="5" fill="#fff" stroke="#27ae60" stroke-width="1"/>
+  <text x="745" y="694" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d8348">堆外内存（GC 不管理的 mmap 区）</text>
+  <g font-size="10" fill="#1a252f">
+    <text x="539" y="710">物理内存：0x7f80_0000（固定不变）</text>
+    <text x="539" y="724">GC 不会移动这块内存（不在 GC 管理的 heap 范围内）</text>
+    <text x="539" y="738" fill="#27ae60">地址在整个 syscall 过程中保持稳定</text>
+    <text x="539" y="752" fill="#27ae60">内核可以安全地 copy_from_user 直接读取</text>
+    <text x="539" y="766" fill="#27ae60">省去了"移出 GC 危险区"的那次复制</text>
+    <text x="539" y="784" fill="#7f8c8d">本质：不是"堆外更快"，是"GC 稳定性保证了可以省一步"</text>
+  </g>
+</svg>

@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" font-family="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <marker id="arr-w" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ecf0f1"/>
+    </marker>
+    <marker id="arr-b" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2980b9"/>
+    </marker>
+    <marker id="arr-y" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f39c12"/>
+    </marker>
+    <marker id="arr-g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="620" fill="#f8f9fa" rx="12"/>
+  <text x="450" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#1a1a2e">内存与 CPU 交互：Cache 层次与访问模型</text>
+
+  <!-- ====== CPU 封装 ====== -->
+  <rect x="20" y="58" width="560" height="340" rx="12" fill="#2c3e50" stroke="#1a252f" stroke-width="2.5"/>
+  <text x="300" y="82" text-anchor="middle" font-size="14" font-weight="bold" fill="#ecf0f1">CPU Package（双核示例）</text>
+
+  <!-- Core 0 -->
+  <rect x="40" y="95" width="240" height="190" rx="8" fill="#34495e" stroke="#7f8c8d" stroke-width="1.5"/>
+  <text x="160" y="115" text-anchor="middle" font-size="12" font-weight="bold" fill="#ecf0f1">Core 0</text>
+
+  <rect x="52" y="124" width="98" height="50" rx="5" fill="#e74c3c" stroke="#c0392b" stroke-width="1"/>
+  <text x="101" y="145" text-anchor="middle" font-size="11" font-weight="bold" fill="white">L1 I-Cache</text>
+  <text x="101" y="161" text-anchor="middle" font-size="10" fill="#ffc8c8">指令缓存 32KB</text>
+
+  <rect x="162" y="124" width="106" height="50" rx="5" fill="#e74c3c" stroke="#c0392b" stroke-width="1"/>
+  <text x="215" y="145" text-anchor="middle" font-size="11" font-weight="bold" fill="white">L1 D-Cache</text>
+  <text x="215" y="161" text-anchor="middle" font-size="10" fill="#ffc8c8">数据缓存 32KB</text>
+
+  <!-- iTLB / dTLB -->
+  <rect x="52" y="182" width="98" height="38" rx="4" fill="#c0392b" stroke="#922b21" stroke-width="1"/>
+  <text x="101" y="199" text-anchor="middle" font-size="10" fill="white">iTLB</text>
+  <text x="101" y="213" text-anchor="middle" font-size="9" fill="#ffc8c8">64项 全相联</text>
+
+  <rect x="162" y="182" width="106" height="38" rx="4" fill="#c0392b" stroke="#922b21" stroke-width="1"/>
+  <text x="215" y="199" text-anchor="middle" font-size="10" fill="white">dTLB</text>
+  <text x="215" y="213" text-anchor="middle" font-size="9" fill="#ffc8c8">64项 4路</text>
+
+  <rect x="52" y="230" width="216" height="40" rx="5" fill="#f39c12" stroke="#d68910" stroke-width="1.5"/>
+  <text x="160" y="247" text-anchor="middle" font-size="11" font-weight="bold" fill="white">L2 Cache (统一)</text>
+  <text x="160" y="263" text-anchor="middle" font-size="10" fill="#fff3cc">256KB  8路组相联  4ns</text>
+
+  <!-- Core 1 -->
+  <rect x="300" y="95" width="240" height="190" rx="8" fill="#34495e" stroke="#7f8c8d" stroke-width="1.5"/>
+  <text x="420" y="115" text-anchor="middle" font-size="12" font-weight="bold" fill="#ecf0f1">Core 1</text>
+
+  <rect x="312" y="124" width="98" height="50" rx="5" fill="#2980b9" stroke="#1a5276" stroke-width="1"/>
+  <text x="361" y="145" text-anchor="middle" font-size="11" font-weight="bold" fill="white">L1 I-Cache</text>
+  <text x="361" y="161" text-anchor="middle" font-size="10" fill="#d0e8ff">指令缓存 32KB</text>
+
+  <rect x="422" y="124" width="106" height="50" rx="5" fill="#2980b9" stroke="#1a5276" stroke-width="1"/>
+  <text x="475" y="145" text-anchor="middle" font-size="11" font-weight="bold" fill="white">L1 D-Cache</text>
+  <text x="475" y="161" text-anchor="middle" font-size="10" fill="#d0e8ff">数据缓存 32KB</text>
+
+  <rect x="312" y="182" width="98" height="38" rx="4" fill="#1a5276" stroke="#0d3050" stroke-width="1"/>
+  <text x="361" y="199" text-anchor="middle" font-size="10" fill="white">iTLB</text>
+  <text x="361" y="213" text-anchor="middle" font-size="9" fill="#d0e8ff">64项 全相联</text>
+
+  <rect x="422" y="182" width="106" height="38" rx="4" fill="#1a5276" stroke="#0d3050" stroke-width="1"/>
+  <text x="475" y="199" text-anchor="middle" font-size="10" fill="white">dTLB</text>
+  <text x="475" y="213" text-anchor="middle" font-size="9" fill="#d0e8ff">64项 4路</text>
+
+  <rect x="312" y="230" width="216" height="40" rx="5" fill="#2980b9" stroke="#1a5276" stroke-width="1.5"/>
+  <text x="420" y="247" text-anchor="middle" font-size="11" font-weight="bold" fill="white">L2 Cache (统一)</text>
+  <text x="420" y="263" text-anchor="middle" font-size="10" fill="#d0e8ff">256KB  8路组相联  4ns</text>
+
+  <!-- L3 Cache (共享) -->
+  <rect x="40" y="300" width="500" height="50" rx="6" fill="#8e44ad" stroke="#5d2d7a" stroke-width="2"/>
+  <text x="290" y="321" text-anchor="middle" font-size="13" font-weight="bold" fill="white">L3 Cache（所有核心共享）</text>
+  <text x="290" y="340" text-anchor="middle" font-size="11" fill="#e8c8ff">8 ~ 64 MB  16路组相联  ~10ns  MESI 协议维护一致性</text>
+
+  <!-- 延迟标注 -->
+  <text x="545" y="160" font-size="11" fill="#e74c3c" font-weight="bold">~1ns</text>
+  <text x="545" y="255" font-size="11" fill="#f39c12" font-weight="bold">~4ns</text>
+  <text x="545" y="330" font-size="11" fill="#8e44ad" font-weight="bold">~10ns</text>
+
+  <!-- 内存总线箭头 -->
+  <line x1="290" y1="350" x2="290" y2="376" stroke="#ecf0f1" stroke-width="2" marker-end="url(#arr-w)"/>
+  <text x="310" y="368" font-size="10" fill="#aaa">内存总线</text>
+
+  <!-- DRAM -->
+  <rect x="40" y="380" width="500" height="50" rx="6" fill="#1a252f" stroke="#0d1520" stroke-width="2"/>
+  <text x="290" y="401" text-anchor="middle" font-size="13" font-weight="bold" fill="#ecf0f1">DRAM 主内存</text>
+  <text x="290" y="420" text-anchor="middle" font-size="11" fill="#7f8c8d">~60~100ns  双通道 DDR4/DDR5</text>
+  <text x="545" y="410" font-size="11" fill="#ecf0f1" font-weight="bold">~100ns</text>
+
+  <!-- ====== 右侧面板 ====== -->
+  <!-- Cache Line -->
+  <rect x="600" y="58" width="280" height="135" rx="8" fill="#fef5e7" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="740" y="80" text-anchor="middle" font-size="13" font-weight="bold" fill="#8b4513">Cache Line = 64 字节</text>
+
+  <rect x="615" y="90" width="250" height="26" rx="4" fill="#e67e22" stroke="#d68910" stroke-width="1"/>
+  <text x="740" y="107" text-anchor="middle" font-size="10" font-weight="bold" fill="white">CL0: [0x00 ~ 0x3F]</text>
+
+  <rect x="615" y="120" width="250" height="26" rx="4" fill="#f39c12" stroke="#d68910" stroke-width="1" opacity="0.7"/>
+  <text x="740" y="137" text-anchor="middle" font-size="10" fill="white">CL1: [0x40 ~ 0x7F]</text>
+
+  <rect x="615" y="150" width="250" height="26" rx="4" fill="#f39c12" stroke="#d68910" stroke-width="1" opacity="0.5"/>
+  <text x="740" y="167" text-anchor="middle" font-size="10" fill="white">CL2: [0x80 ~ 0xBF]  ...</text>
+
+  <!-- False Sharing -->
+  <rect x="600" y="205" width="280" height="120" rx="8" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="740" y="226" text-anchor="middle" font-size="13" font-weight="bold" fill="#c0392b">False Sharing 问题</text>
+  <rect x="615" y="236" width="250" height="28" rx="4" fill="#e74c3c" stroke="#c0392b" stroke-width="1"/>
+  <text x="740" y="254" text-anchor="middle" font-size="10" fill="white">[Core0_var][Core1_var] ← 同一CL</text>
+
+  <text x="620" y="280" font-size="10" fill="#555">Core0 写 → Core1 的 CL 失效</text>
+  <text x="620" y="296" font-size="10" fill="#555">Core1 写 → Core0 的 CL 失效</text>
+  <text x="620" y="315" font-size="10" fill="#e74c3c">→ 性能下降！解法：填充对齐到 64B</text>
+
+  <!-- MESI 协议 -->
+  <rect x="600" y="337" width="280" height="130" rx="8" fill="#e8f4f8" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="740" y="358" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a5276">MESI 缓存一致性协议</text>
+  <rect x="615" y="368" width="55" height="26" rx="4" fill="#27ae60"/><text x="642" y="385" text-anchor="middle" font-size="11" fill="white">M 改</text>
+  <rect x="678" y="368" width="55" height="26" rx="4" fill="#2980b9"/><text x="705" y="385" text-anchor="middle" font-size="11" fill="white">E 独占</text>
+  <rect x="741" y="368" width="55" height="26" rx="4" fill="#f39c12"/><text x="768" y="385" text-anchor="middle" font-size="11" fill="white">S 共享</text>
+  <rect x="804" y="368" width="55" height="26" rx="4" fill="#e74c3c"/><text x="831" y="385" text-anchor="middle" font-size="11" fill="white">I 无效</text>
+
+  <text x="620" y="414" font-size="10" fill="#555">Modified：仅本核持有，已修改</text>
+  <text x="620" y="430" font-size="10" fill="#555">Exclusive：仅本核持有，未修改</text>
+  <text x="620" y="446" font-size="10" fill="#555">Shared：多核共享，只读</text>
+  <text x="620" y="462" font-size="10" fill="#555">Invalid：缓存行无效，需重取</text>
+
+  <!-- 内存屏障 -->
+  <rect x="600" y="478" width="280" height="115" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="740" y="500" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a7a42">内存屏障 (Memory Barrier)</text>
+  <rect x="615" y="510" width="250" height="22" rx="4" fill="#27ae60"/><text x="740" y="525" text-anchor="middle" font-size="11" fill="white">smp_mb()  全屏障（读+写）</text>
+  <rect x="615" y="536" width="250" height="22" rx="4" fill="#16a085"/><text x="740" y="551" text-anchor="middle" font-size="11" fill="white">smp_rmb() 读屏障</text>
+  <rect x="615" y="562" width="250" height="22" rx="4" fill="#1a7a42"/><text x="740" y="577" text-anchor="middle" font-size="11" fill="white">smp_wmb() 写屏障</text>
+
+  <!-- NUMA说明 -->
+  <rect x="20" y="450" width="560" height="150" rx="10" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <text x="300" y="474" text-anchor="middle" font-size="14" font-weight="bold" fill="#ecf0f1">NUMA 架构（Non-Uniform Memory Access）</text>
+
+  <rect x="40" y="486" width="240" height="60" rx="6" fill="#1a5276" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="160" y="508" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Socket 0</text>
+  <text x="160" y="526" text-anchor="middle" font-size="10" fill="#d0e8ff">Core 0~N + Local DRAM</text>
+  <text x="160" y="540" text-anchor="middle" font-size="10" fill="#b0d4f8">本地访问 ~60ns</text>
+
+  <rect x="340" y="486" width="220" height="60" rx="6" fill="#1a7a42" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="450" y="508" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Socket 1</text>
+  <text x="450" y="526" text-anchor="middle" font-size="10" fill="#c8f5d8">Core 0~N + Local DRAM</text>
+  <text x="450" y="540" text-anchor="middle" font-size="10" fill="#a8e8be">本地访问 ~60ns</text>
+
+  <line x1="280" y1="516" x2="338" y2="516" stroke="#f39c12" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+  <text x="309" y="510" text-anchor="middle" font-size="9" fill="#f39c12">QPI/UPI</text>
+  <text x="309" y="522" text-anchor="middle" font-size="9" fill="#f39c12">~120ns</text>
+
+  <text x="300" y="572" text-anchor="middle" font-size="11" fill="#95a5a6">跨 NUMA 访问延迟约为本地的 2 倍 → numactl 绑定优化</text>
+
+  <text x="300" y="592" text-anchor="middle" font-size="10" fill="#7f8c8d">numactl --membind=0 --cpunodebind=0 ./app</text>
+</svg>

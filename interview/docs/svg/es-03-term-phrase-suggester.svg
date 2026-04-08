@@ -1,0 +1,150 @@
+<svg viewBox="0 0 900 580" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="580" fill="#f8f9fa" rx="8"/>
+
+  <!-- 标题 -->
+  <rect x="0" y="0" width="900" height="50" fill="#f39c12" rx="8"/>
+  <rect x="0" y="40" width="900" height="10" fill="#f39c12"/>
+  <text x="450" y="32" text-anchor="middle" fill="white" font-size="19" font-weight="bold">Term Suggester vs Phrase Suggester — 拼写纠错原理</text>
+
+  <!-- ===== Term Suggester ===== -->
+  <rect x="20" y="65" width="415" height="490" rx="10" fill="white" stroke="#f39c12" stroke-width="2"/>
+  <rect x="20" y="65" width="415" height="38" rx="10" fill="#f39c12"/>
+  <rect x="20" y="91" width="415" height="12" fill="#f39c12"/>
+  <text x="227" y="90" text-anchor="middle" fill="white" font-size="15" font-weight="bold">Term Suggester（词项推荐）</text>
+
+  <!-- 核心原理 -->
+  <text x="35" y="125" fill="#2c3e50" font-size="12" font-weight="bold">核心原理：Levenshtein 编辑距离</text>
+
+  <!-- 编辑距离示例 -->
+  <rect x="35" y="135" width="385" height="100" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+
+  <!-- 从 elstc 到 elastic -->
+  <text x="50" y="158" fill="#555" font-size="12">"elstc"  →  "elastic"</text>
+  <text x="50" y="175" fill="#777" font-size="10">编辑操作：</text>
+
+  <!-- 操作步骤 -->
+  <rect x="50" y="182" width="35" height="18" rx="3" fill="#e74c3c"/>
+  <text x="67" y="195" text-anchor="middle" fill="white" font-size="9">插入</text>
+  <text x="90" y="196" fill="#555" font-size="10">'a' (位置3)：elstc → elastc</text>
+
+  <rect x="50" y="203" width="35" height="18" rx="3" fill="#3498db"/>
+  <text x="67" y="216" text-anchor="middle" fill="white" font-size="9">插入</text>
+  <text x="90" y="217" fill="#555" font-size="10">'i' (位置6)：elastc → elastic</text>
+
+  <text x="50" y="233" fill="#e67e22" font-size="11" font-weight="bold">编辑距离 = 2  （2次操作）</text>
+
+  <!-- 倒排索引扫描 -->
+  <text x="35" y="260" fill="#2c3e50" font-size="12" font-weight="bold">查询流程：扫描倒排索引</text>
+
+  <rect x="35" y="270" width="185" height="145" rx="8" fill="#d6eaf8" stroke="#3498db" stroke-width="1.5"/>
+  <text x="127" y="290" text-anchor="middle" fill="#2980b9" font-size="11" font-weight="bold">倒排索引词典</text>
+
+  <rect x="45" y="298" width="165" height="18" rx="3" fill="#e8f4fd"/>
+  <text x="52" y="311" fill="#555" font-size="10">elastic  (freq:1250)</text>
+
+  <rect x="45" y="320" width="165" height="18" rx="3" fill="#e8f4fd"/>
+  <text x="52" y="333" fill="#777" font-size="10">elastically  (freq:45)</text>
+
+  <rect x="45" y="342" width="165" height="18" rx="3" fill="#e8f4fd"/>
+  <text x="52" y="355" fill="#777" font-size="10">elasticity  (freq:89)</text>
+
+  <rect x="45" y="364" width="165" height="18" rx="3" fill="#ffeaa7" stroke="#f39c12" stroke-width="1"/>
+  <text x="52" y="377" fill="#e67e22" font-size="10">↓ 计算与"elstc"距离...</text>
+
+  <rect x="45" y="386" width="165" height="18" rx="3" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="52" y="399" fill="#27ae60" font-size="10">elastic → 距离=2 ✓</text>
+
+  <!-- 参数控制 -->
+  <rect x="235" y="270" width="185" height="145" rx="8" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="327" y="290" text-anchor="middle" fill="#27ae60" font-size="11" font-weight="bold">关键参数</text>
+
+  <text x="245" y="310" fill="#2c3e50" font-size="10" font-weight="bold">fuzziness:</text>
+  <text x="245" y="325" fill="#555" font-size="9">AUTO, 0, 1, 2</text>
+  <text x="245" y="338" fill="#777" font-size="9">允许的最大编辑距离</text>
+
+  <text x="245" y="358" fill="#2c3e50" font-size="10" font-weight="bold">suggest_mode:</text>
+  <text x="245" y="373" fill="#555" font-size="9">missing: 原词无匹配时</text>
+  <text x="245" y="386" fill="#555" font-size="9">popular: 更高频词</text>
+  <text x="245" y="399" fill="#555" font-size="9">always: 始终返回</text>
+
+  <!-- 返回示例 -->
+  <text x="35" y="435" fill="#2c3e50" font-size="12" font-weight="bold">返回结果示例</text>
+  <rect x="35" y="445" width="385" height="90" rx="8" fill="#f8f9fa" stroke="#ddd" stroke-width="1.5"/>
+  <text x="45" y="464" fill="#555" font-size="9" font-family="Consolas, monospace">"options": [</text>
+  <text x="45" y="478" fill="#27ae60" font-size="9" font-family="Consolas, monospace">  {"text":"elastic", "score":0.8, "freq":1250},</text>
+  <text x="45" y="492" fill="#555" font-size="9" font-family="Consolas, monospace">  {"text":"elasticity","score":0.6,"freq":89},</text>
+  <text x="45" y="506" fill="#555" font-size="9" font-family="Consolas, monospace">  {"text":"elastically","score":0.5,"freq":45}</text>
+  <text x="45" y="520" fill="#555" font-size="9" font-family="Consolas, monospace">]</text>
+  <text x="200" y="534" fill="#e67e22" font-size="10">score = 词频 × (1 - 编辑距离/词长)</text>
+
+  <!-- ===== Phrase Suggester ===== -->
+  <rect x="465" y="65" width="415" height="490" rx="10" fill="white" stroke="#27ae60" stroke-width="2"/>
+  <rect x="465" y="65" width="415" height="38" rx="10" fill="#27ae60"/>
+  <rect x="465" y="91" width="415" height="12" fill="#27ae60"/>
+  <text x="672" y="90" text-anchor="middle" fill="white" font-size="15" font-weight="bold">Phrase Suggester（短语推荐）</text>
+
+  <!-- 核心原理 -->
+  <text x="480" y="125" fill="#2c3e50" font-size="12" font-weight="bold">核心原理：N-gram 语言模型</text>
+
+  <!-- N-gram示例 -->
+  <rect x="480" y="135" width="385" height="100" rx="8" fill="#e8f8f5" stroke="#27ae60" stroke-width="1.5"/>
+
+  <text x="495" y="158" fill="#555" font-size="12">"java progamming"  →  "java programming"</text>
+  <text x="495" y="175" fill="#777" font-size="10">N-gram 分析（bigram示例）：</text>
+
+  <text x="495" y="193" fill="#2c3e50" font-size="10">原始bigram: [java, progamming]  → [java progamming]</text>
+  <text x="495" y="208" fill="#e74c3c" font-size="10">"java progamming" bigram在索引中频率极低</text>
+  <text x="495" y="223" fill="#27ae60" font-size="10">"java programming" bigram频率高 → 推荐候选</text>
+
+  <!-- 工作流程 -->
+  <text x="480" y="255" fill="#2c3e50" font-size="12" font-weight="bold">工作流程</text>
+
+  <!-- 流程步骤 -->
+  <rect x="480" y="265" width="110" height="50" rx="6" fill="#d6eaf8" stroke="#3498db" stroke-width="1.5"/>
+  <text x="535" y="284" text-anchor="middle" fill="#2980b9" font-size="10" font-weight="bold">词项分割</text>
+  <text x="535" y="299" text-anchor="middle" fill="#555" font-size="9">分词处理</text>
+  <text x="535" y="312" text-anchor="middle" fill="#777" font-size="9">每词单独纠错</text>
+
+  <line x1="590" y1="290" x2="607" y2="290" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="607" y="265" width="110" height="50" rx="6" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="662" y="284" text-anchor="middle" fill="#e67e22" font-size="10" font-weight="bold">候选生成</text>
+  <text x="662" y="299" text-anchor="middle" fill="#555" font-size="9">每词生成</text>
+  <text x="662" y="312" text-anchor="middle" fill="#777" font-size="9">多个候选词</text>
+
+  <line x1="717" y1="290" x2="734" y2="290" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="734" y="265" width="110" height="50" rx="6" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="789" y="284" text-anchor="middle" fill="#27ae60" font-size="10" font-weight="bold">短语评分</text>
+  <text x="789" y="299" text-anchor="middle" fill="#555" font-size="9">N-gram联合</text>
+  <text x="789" y="312" text-anchor="middle" fill="#777" font-size="9">概率计算</text>
+
+  <!-- 需要的前置条件 -->
+  <rect x="480" y="330" width="385" height="100" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="672" y="350" text-anchor="middle" fill="#e67e22" font-size="12" font-weight="bold">前提：需要 shingle 分析器</text>
+
+  <text x="495" y="370" fill="#555" font-size="9" font-family="Consolas, monospace">"analyzer": {</text>
+  <text x="495" y="383" fill="#555" font-size="9" font-family="Consolas, monospace">  "trigram": {</text>
+  <text x="495" y="396" fill="#555" font-size="9" font-family="Consolas, monospace">    "type": "custom",</text>
+  <text x="495" y="409" fill="#e74c3c" font-size="9" font-family="Consolas, monospace">    "tokenizer": "standard",</text>
+  <text x="495" y="422" fill="#e74c3c" font-size="9" font-family="Consolas, monospace">    "filter": ["lowercase","shingle"]</text>
+  <text x="655" y="383" fill="#555" font-size="9" font-family="Consolas, monospace">}}</text>
+
+  <!-- 高亮参数 -->
+  <rect x="480" y="445" width="385" height="90" rx="8" fill="#f8f9fa" stroke="#ddd" stroke-width="1.5"/>
+  <text x="672" y="463" text-anchor="middle" fill="#2c3e50" font-size="11" font-weight="bold">特有功能：高亮显示纠错词</text>
+
+  <text x="495" y="482" fill="#555" font-size="9" font-family="Consolas, monospace">"highlight": {</text>
+  <text x="495" y="496" fill="#555" font-size="9" font-family="Consolas, monospace">  "pre_tag": "&lt;em&gt;",</text>
+  <text x="495" y="510" fill="#555" font-size="9" font-family="Consolas, monospace">  "post_tag": "&lt;/em&gt;"</text>
+  <text x="495" y="524" fill="#555" font-size="9" font-family="Consolas, monospace">}</text>
+  <text x="620" y="490" fill="#27ae60" font-size="10">结果: "java &lt;em&gt;programming&lt;/em&gt;"</text>
+  <text x="620" y="506" fill="#777" font-size="9">被纠正的词自动高亮</text>
+  <text x="620" y="522" fill="#777" font-size="9">用于前端标红展示</text>
+</svg>

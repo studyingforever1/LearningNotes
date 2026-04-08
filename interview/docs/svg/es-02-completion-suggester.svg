@@ -1,0 +1,210 @@
+<svg viewBox="0 0 900 580" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="580" fill="#f8f9fa" rx="8"/>
+
+  <!-- 标题 -->
+  <rect x="0" y="0" width="900" height="50" fill="#e74c3c" rx="8"/>
+  <rect x="0" y="40" width="900" height="10" fill="#e74c3c"/>
+  <text x="450" y="32" text-anchor="middle" fill="white" font-size="19" font-weight="bold">Completion Suggester — FST 工作原理与自动补全流程</text>
+
+  <!-- 第一阶段：索引建立 -->
+  <rect x="20" y="65" width="400" height="230" rx="10" fill="white" stroke="#e74c3c" stroke-width="2"/>
+  <rect x="20" y="65" width="400" height="35" rx="10" fill="#e74c3c"/>
+  <rect x="20" y="88" width="400" height="12" fill="#e74c3c"/>
+  <text x="220" y="88" text-anchor="middle" fill="white" font-size="14" font-weight="bold">① 索引阶段：构建 FST 结构</text>
+
+  <!-- Mapping定义 -->
+  <rect x="35" y="110" width="175" height="170" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="122" y="130" text-anchor="middle" fill="#e67e22" font-size="12" font-weight="bold">Mapping 定义</text>
+  <text x="40" y="148" fill="#555" font-size="9" font-family="Consolas, monospace">"title": {</text>
+  <text x="40" y="161" fill="#555" font-size="9" font-family="Consolas, monospace">  "type": "text"</text>
+  <text x="40" y="174" fill="#555" font-size="9" font-family="Consolas, monospace">}</text>
+  <text x="40" y="194" fill="#e74c3c" font-size="9" font-family="Consolas, monospace">"suggest": {</text>
+  <text x="40" y="207" fill="#e74c3c" font-size="9" font-family="Consolas, monospace">  "type":"completion"</text>
+  <text x="40" y="220" fill="#e74c3c" font-size="9" font-family="Consolas, monospace">  "analyzer":"ik_max"</text>
+  <text x="40" y="233" fill="#e74c3c" font-size="9" font-family="Consolas, monospace">}</text>
+  <text x="40" y="255" fill="#555" font-size="9">completion类型字段</text>
+  <text x="40" y="268" fill="#555" font-size="9">专门用于Suggest</text>
+
+  <!-- FST结构示意 -->
+  <rect x="225" y="110" width="175" height="170" rx="8" fill="#fadbd8" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="312" y="130" text-anchor="middle" fill="#e74c3c" font-size="12" font-weight="bold">FST 前缀树</text>
+
+  <!-- FST节点图 -->
+  <!-- 根节点 -->
+  <circle cx="312" cy="155" r="12" fill="#e74c3c"/>
+  <text x="312" y="159" text-anchor="middle" fill="white" font-size="9">root</text>
+
+  <!-- j分支 -->
+  <line x1="305" y1="167" x2="265" y2="190" stroke="#555" stroke-width="1.5"/>
+  <circle cx="260" cy="195" r="10" fill="#f39c12"/>
+  <text x="260" y="199" text-anchor="middle" fill="white" font-size="9">j</text>
+  <text x="275" y="183" fill="#555" font-size="8">j</text>
+
+  <!-- e分支 -->
+  <line x1="319" y1="167" x2="355" y2="190" stroke="#555" stroke-width="1.5"/>
+  <circle cx="360" cy="195" r="10" fill="#3498db"/>
+  <text x="360" y="199" text-anchor="middle" fill="white" font-size="9">e</text>
+  <text x="345" y="183" fill="#555" font-size="8">e</text>
+
+  <!-- j->a -->
+  <line x1="260" y1="205" x2="240" y2="220" stroke="#555" stroke-width="1.5"/>
+  <circle cx="235" cy="228" r="10" fill="#f39c12"/>
+  <text x="235" y="232" text-anchor="middle" fill="white" font-size="9">a</text>
+  <text x="241" y="215" fill="#555" font-size="8">a</text>
+
+  <!-- j->a->va -->
+  <line x1="235" y1="238" x2="235" y2="255" stroke="#555" stroke-width="1.5"/>
+  <circle cx="235" cy="262" r="10" fill="#27ae60"/>
+  <text x="235" y="266" text-anchor="middle" fill="white" font-size="9">va</text>
+
+  <!-- e->l -->
+  <line x1="360" y1="205" x2="375" y2="222" stroke="#555" stroke-width="1.5"/>
+  <circle cx="380" cy="230" r="10" fill="#3498db"/>
+  <text x="380" y="234" text-anchor="middle" fill="white" font-size="9">l</text>
+  <text x="365" y="217" fill="#555" font-size="8">l</text>
+
+  <!-- e->l->astic -->
+  <line x1="380" y1="240" x2="380" y2="257" stroke="#555" stroke-width="1.5"/>
+  <circle cx="380" cy="264" r="10" fill="#27ae60"/>
+  <text x="380" y="268" text-anchor="middle" fill="white" font-size="8">astic</text>
+
+  <!-- 终止标记 -->
+  <text x="230" y="285" fill="#27ae60" font-size="8">★java</text>
+  <text x="365" y="285" fill="#27ae60" font-size="8">★elastic</text>
+
+  <!-- 第二阶段：查询 -->
+  <rect x="480" y="65" width="400" height="230" rx="10" fill="white" stroke="#3498db" stroke-width="2"/>
+  <rect x="480" y="65" width="400" height="35" rx="10" fill="#3498db"/>
+  <rect x="480" y="88" width="400" height="12" fill="#3498db"/>
+  <text x="680" y="88" text-anchor="middle" fill="white" font-size="14" font-weight="bold">② 查询阶段：前缀匹配遍历</text>
+
+  <!-- 查询请求 -->
+  <rect x="495" y="110" width="175" height="170" rx="8" fill="#d6eaf8" stroke="#3498db" stroke-width="1.5"/>
+  <text x="582" y="130" text-anchor="middle" fill="#2980b9" font-size="12" font-weight="bold">查询 DSL</text>
+  <text x="500" y="148" fill="#555" font-size="9" font-family="Consolas, monospace">"suggest": {</text>
+  <text x="500" y="161" fill="#555" font-size="9" font-family="Consolas, monospace">  "my-suggest": {</text>
+  <text x="500" y="174" fill="#e74c3c" font-size="9" font-family="Consolas, monospace">    "prefix":"jav"</text>
+  <text x="500" y="187" fill="#555" font-size="9" font-family="Consolas, monospace">    "completion":{</text>
+  <text x="500" y="200" fill="#555" font-size="9" font-family="Consolas, monospace">      "field":"suggest"</text>
+  <text x="500" y="213" fill="#555" font-size="9" font-family="Consolas, monospace">      "size": 5</text>
+  <text x="500" y="226" fill="#555" font-size="9" font-family="Consolas, monospace">    }</text>
+  <text x="500" y="239" fill="#555" font-size="9" font-family="Consolas, monospace">  }</text>
+  <text x="500" y="252" fill="#555" font-size="9" font-family="Consolas, monospace">}</text>
+  <text x="500" y="272" fill="#777" font-size="9">前缀"jav"触发匹配</text>
+
+  <!-- 匹配结果 -->
+  <rect x="685" y="110" width="175" height="170" rx="8" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="772" y="130" text-anchor="middle" fill="#27ae60" font-size="12" font-weight="bold">匹配结果</text>
+
+  <rect x="695" y="140" width="155" height="22" rx="4" fill="#27ae60"/>
+  <text x="703" y="155" fill="white" font-size="11">1. java spring boot</text>
+
+  <rect x="695" y="167" width="155" height="22" rx="4" fill="#58d68d"/>
+  <text x="703" y="182" fill="white" font-size="11">2. java 多线程</text>
+
+  <rect x="695" y="194" width="155" height="22" rx="4" fill="#82e0aa"/>
+  <text x="703" y="209" fill="#2c3e50" font-size="11">3. java 设计模式</text>
+
+  <rect x="695" y="221" width="155" height="22" rx="4" fill="#abebc6"/>
+  <text x="703" y="236" fill="#2c3e50" font-size="11">4. java 面试题</text>
+
+  <rect x="695" y="248" width="155" height="22" rx="4" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="703" y="263" fill="#2c3e50" font-size="11">5. java 虚拟机</text>
+
+  <text x="690" y="285" fill="#27ae60" font-size="9">按权重(weight)排序</text>
+
+  <!-- 连接两个阶段 -->
+  <line x1="420" y1="180" x2="478" y2="180" stroke="#555" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrow)"/>
+  <text x="449" y="170" text-anchor="middle" fill="#555" font-size="10">已建立</text>
+  <text x="449" y="185" text-anchor="middle" fill="#555" font-size="10">FST</text>
+
+  <!-- 第三阶段：完整流程图 -->
+  <rect x="20" y="310" width="860" height="255" rx="10" fill="white" stroke="#9b59b6" stroke-width="2"/>
+  <rect x="20" y="310" width="860" height="35" rx="10" fill="#9b59b6"/>
+  <rect x="20" y="333" width="860" height="12" fill="#9b59b6"/>
+  <text x="450" y="333" text-anchor="middle" fill="white" font-size="14" font-weight="bold">③ 完整搜索推荐流程</text>
+
+  <!-- 流程步骤 -->
+  <!-- Step 1 -->
+  <rect x="40" y="360" width="120" height="65" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
+  <text x="100" y="380" text-anchor="middle" fill="#e67e22" font-size="11" font-weight="bold">用户输入</text>
+  <text x="100" y="396" text-anchor="middle" fill="#555" font-size="10">"jav"</text>
+  <text x="100" y="411" text-anchor="middle" fill="#777" font-size="9">前缀触发</text>
+
+  <line x1="160" y1="392" x2="188" y2="392" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 2 -->
+  <rect x="188" y="360" width="120" height="65" rx="8" fill="#d6eaf8" stroke="#3498db" stroke-width="2"/>
+  <text x="248" y="380" text-anchor="middle" fill="#2980b9" font-size="11" font-weight="bold">FST内存查询</text>
+  <text x="248" y="396" text-anchor="middle" fill="#555" font-size="10">前缀匹配遍历</text>
+  <text x="248" y="411" text-anchor="middle" fill="#777" font-size="9">O(前缀长度)</text>
+
+  <line x1="308" y1="392" x2="336" y2="392" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 3 -->
+  <rect x="336" y="360" width="120" height="65" rx="8" fill="#fadbd8" stroke="#e74c3c" stroke-width="2"/>
+  <text x="396" y="380" text-anchor="middle" fill="#e74c3c" font-size="11" font-weight="bold">获取Doc ID</text>
+  <text x="396" y="396" text-anchor="middle" fill="#555" font-size="10">FST叶节点</text>
+  <text x="396" y="411" text-anchor="middle" fill="#777" font-size="9">存储文档引用</text>
+
+  <line x1="456" y1="392" x2="484" y2="392" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 4 -->
+  <rect x="484" y="360" width="120" height="65" rx="8" fill="#d5f5e3" stroke="#27ae60" stroke-width="2"/>
+  <text x="544" y="380" text-anchor="middle" fill="#27ae60" font-size="11" font-weight="bold">权重排序</text>
+  <text x="544" y="396" text-anchor="middle" fill="#555" font-size="10">按weight字段</text>
+  <text x="544" y="411" text-anchor="middle" fill="#777" font-size="9">取TopN</text>
+
+  <line x1="604" y1="392" x2="632" y2="392" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 5 -->
+  <rect x="632" y="360" width="120" height="65" rx="8" fill="#e8daef" stroke="#9b59b6" stroke-width="2"/>
+  <text x="692" y="380" text-anchor="middle" fill="#9b59b6" font-size="11" font-weight="bold">返回候选</text>
+  <text x="692" y="396" text-anchor="middle" fill="#555" font-size="10">推荐词列表</text>
+  <text x="692" y="411" text-anchor="middle" fill="#777" font-size="9">含score/text</text>
+
+  <line x1="752" y1="392" x2="780" y2="392" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 6 -->
+  <rect x="780" y="360" width="85" height="65" rx="8" fill="#2c3e50" stroke="#1a252f" stroke-width="2"/>
+  <text x="822" y="380" text-anchor="middle" fill="white" font-size="11" font-weight="bold">UI展示</text>
+  <text x="822" y="396" text-anchor="middle" fill="#ccc" font-size="10">下拉列表</text>
+  <text x="822" y="411" text-anchor="middle" fill="#aaa" font-size="9">实时更新</text>
+
+  <!-- 性能特性说明 -->
+  <rect x="40" y="445" width="820" height="100" rx="8" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="450" y="465" text-anchor="middle" fill="#2c3e50" font-size="13" font-weight="bold">Completion Suggester 核心特性</text>
+
+  <!-- 特性1 -->
+  <rect x="55" y="475" width="185" height="55" rx="6" fill="#fadbd8"/>
+  <text x="147" y="492" text-anchor="middle" fill="#e74c3c" font-size="11" font-weight="bold">FST常驻内存</text>
+  <text x="147" y="507" text-anchor="middle" fill="#555" font-size="10">数据存Segment，索引加载</text>
+  <text x="147" y="520" text-anchor="middle" fill="#555" font-size="10">时FST整体载入内存</text>
+
+  <!-- 特性2 -->
+  <rect x="255" y="475" width="185" height="55" rx="6" fill="#d6eaf8"/>
+  <text x="347" y="492" text-anchor="middle" fill="#2980b9" font-size="11" font-weight="bold">毫秒级响应</text>
+  <text x="347" y="507" text-anchor="middle" fill="#555" font-size="10">查询复杂度O(prefix_len)</text>
+  <text x="347" y="520" text-anchor="middle" fill="#555" font-size="10">与数据量无关</text>
+
+  <!-- 特性3 -->
+  <rect x="455" y="475" width="185" height="55" rx="6" fill="#d5f5e3"/>
+  <text x="547" y="492" text-anchor="middle" fill="#27ae60" font-size="11" font-weight="bold">支持权重排序</text>
+  <text x="547" y="507" text-anchor="middle" fill="#555" font-size="10">写入时指定weight</text>
+  <text x="547" y="520" text-anchor="middle" fill="#555" font-size="10">热门词优先展示</text>
+
+  <!-- 特性4 -->
+  <rect x="655" y="475" width="185" height="55" rx="6" fill="#e8daef"/>
+  <text x="747" y="492" text-anchor="middle" fill="#9b59b6" font-size="11" font-weight="bold">支持多输入格式</text>
+  <text x="747" y="507" text-anchor="middle" fill="#555" font-size="10">input数组定义</text>
+  <text x="747" y="520" text-anchor="middle" fill="#555" font-size="10">多同义词触发同一结果</text>
+</svg>

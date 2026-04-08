@@ -1,0 +1,126 @@
+<svg viewBox="0 0 960 660" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4a90d9"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="960" height="660" fill="#f8f9fa" rx="8"/>
+
+  <!-- 标题 -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">Elasticsearch 集群整体架构</text>
+
+  <!-- 客户端 -->
+  <rect x="30" y="70" width="130" height="60" rx="10" fill="#3498db" stroke="#2980b9" stroke-width="2"/>
+  <text x="95" y="97" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Client</text>
+  <text x="95" y="117" text-anchor="middle" fill="white" font-size="11">REST / Transport</text>
+
+  <!-- 集群虚框 -->
+  <rect x="200" y="60" width="740" height="580" rx="12" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="570" y="84" text-anchor="middle" fill="#7f8c8d" font-size="13" font-style="italic">ES Cluster（my-cluster）</text>
+
+  <!-- Coordinating Node -->
+  <rect x="220" y="95" width="160" height="100" rx="10" fill="#8e44ad" stroke="#7d3c98" stroke-width="2"/>
+  <text x="300" y="120" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Coordinating Node</text>
+  <text x="300" y="140" text-anchor="middle" fill="white" font-size="11">路由 / 聚合结果</text>
+  <text x="300" y="158" text-anchor="middle" fill="white" font-size="10" opacity="0.85">仅路由，不存数据</text>
+  <text x="300" y="173" text-anchor="middle" fill="#f1c40f" font-size="10">node.roles: []</text>
+
+  <!-- Master Node -->
+  <rect x="420" y="95" width="160" height="100" rx="10" fill="#e67e22" stroke="#ca6f1e" stroke-width="2"/>
+  <text x="500" y="120" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Master Node ★</text>
+  <text x="500" y="140" text-anchor="middle" fill="white" font-size="11">集群状态管理</text>
+  <text x="500" y="158" text-anchor="middle" fill="white" font-size="10" opacity="0.85">索引创建/分片分配</text>
+  <text x="500" y="173" text-anchor="middle" fill="#f1c40f" font-size="10">node.roles: [master]</text>
+
+  <!-- Ingest Node -->
+  <rect x="620" y="95" width="160" height="100" rx="10" fill="#16a085" stroke="#138d75" stroke-width="2"/>
+  <text x="700" y="120" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Ingest Node</text>
+  <text x="700" y="140" text-anchor="middle" fill="white" font-size="11">数据预处理管道</text>
+  <text x="700" y="158" text-anchor="middle" fill="white" font-size="10" opacity="0.85">Pipeline / Processor</text>
+  <text x="700" y="173" text-anchor="middle" fill="#f1c40f" font-size="10">node.roles: [ingest]</text>
+
+  <!-- Data Node 1 -->
+  <rect x="220" y="240" width="180" height="200" rx="10" fill="#27ae60" stroke="#229954" stroke-width="2"/>
+  <text x="310" y="265" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Data Node 1</text>
+  <text x="310" y="283" text-anchor="middle" fill="white" font-size="10">node.roles: [data]</text>
+  <!-- Shards -->
+  <rect x="235" y="295" width="70" height="35" rx="5" fill="#1e8449" stroke="#17693b" stroke-width="1"/>
+  <text x="270" y="317" text-anchor="middle" fill="white" font-size="11" font-weight="bold">P0</text>
+  <rect x="315" y="295" width="70" height="35" rx="5" fill="#1e8449" stroke="#17693b" stroke-width="1"/>
+  <text x="350" y="317" text-anchor="middle" fill="white" font-size="11" font-weight="bold">P1</text>
+  <rect x="235" y="340" width="70" height="35" rx="5" fill="#5d6d7e" stroke="#4d5d6e" stroke-width="1"/>
+  <text x="270" y="362" text-anchor="middle" fill="white" font-size="11">R2</text>
+  <rect x="315" y="340" width="70" height="35" rx="5" fill="#5d6d7e" stroke="#4d5d6e" stroke-width="1"/>
+  <text x="350" y="362" text-anchor="middle" fill="white" font-size="11">R3</text>
+  <text x="310" y="400" text-anchor="middle" fill="white" font-size="10">P=Primary  R=Replica</text>
+  <text x="310" y="416" text-anchor="middle" fill="white" font-size="10" opacity="0.85">Lucene Segment 存储</text>
+
+  <!-- Data Node 2 -->
+  <rect x="430" y="240" width="180" height="200" rx="10" fill="#27ae60" stroke="#229954" stroke-width="2"/>
+  <text x="520" y="265" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Data Node 2</text>
+  <text x="520" y="283" text-anchor="middle" fill="white" font-size="10">node.roles: [data]</text>
+  <rect x="445" y="295" width="70" height="35" rx="5" fill="#1e8449" stroke="#17693b" stroke-width="1"/>
+  <text x="480" y="317" text-anchor="middle" fill="white" font-size="11" font-weight="bold">P2</text>
+  <rect x="525" y="295" width="70" height="35" rx="5" fill="#1e8449" stroke="#17693b" stroke-width="1"/>
+  <text x="560" y="317" text-anchor="middle" fill="white" font-size="11" font-weight="bold">P3</text>
+  <rect x="445" y="340" width="70" height="35" rx="5" fill="#5d6d7e" stroke="#4d5d6e" stroke-width="1"/>
+  <text x="480" y="362" text-anchor="middle" fill="white" font-size="11">R0</text>
+  <rect x="525" y="340" width="70" height="35" rx="5" fill="#5d6d7e" stroke="#4d5d6e" stroke-width="1"/>
+  <text x="560" y="362" text-anchor="middle" fill="white" font-size="11">R1</text>
+  <text x="520" y="400" text-anchor="middle" fill="white" font-size="10">P=Primary  R=Replica</text>
+  <text x="520" y="416" text-anchor="middle" fill="white" font-size="10" opacity="0.85">Lucene Segment 存储</text>
+
+  <!-- Data Node 3 -->
+  <rect x="640" y="240" width="180" height="200" rx="10" fill="#27ae60" stroke="#229954" stroke-width="2"/>
+  <text x="730" y="265" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Data Node 3</text>
+  <text x="730" y="283" text-anchor="middle" fill="white" font-size="10">node.roles: [data]</text>
+  <rect x="655" y="295" width="70" height="35" rx="5" fill="#5d6d7e" stroke="#4d5d6e" stroke-width="1"/>
+  <text x="690" y="317" text-anchor="middle" fill="white" font-size="11">R0</text>
+  <rect x="735" y="295" width="70" height="35" rx="5" fill="#5d6d7e" stroke="#4d5d6e" stroke-width="1"/>
+  <text x="770" y="317" text-anchor="middle" fill="white" font-size="11">R1</text>
+  <rect x="655" y="340" width="70" height="35" rx="5" fill="#1e8449" stroke="#17693b" stroke-width="1"/>
+  <text x="690" y="362" text-anchor="middle" fill="white" font-size="11" font-weight="bold">P4</text>
+  <rect x="735" y="340" width="70" height="35" rx="5" fill="#5d6d7e" stroke="#4d5d6e" stroke-width="1"/>
+  <text x="770" y="362" text-anchor="middle" fill="white" font-size="11">R2</text>
+  <text x="730" y="400" text-anchor="middle" fill="white" font-size="10">P=Primary  R=Replica</text>
+  <text x="730" y="416" text-anchor="middle" fill="white" font-size="10" opacity="0.85">Lucene Segment 存储</text>
+
+  <!-- 集群状态说明 -->
+  <rect x="220" y="465" width="600" height="110" rx="10" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <text x="520" y="488" text-anchor="middle" fill="#f1c40f" font-size="13" font-weight="bold">Cluster State（由 Master 维护并广播）</text>
+  <text x="240" y="510" fill="white" font-size="11">• 索引元数据：mapping、settings、aliases</text>
+  <text x="240" y="528" fill="white" font-size="11">• 分片路由表：每个分片在哪个节点（RoutingTable）</text>
+  <text x="240" y="546" fill="white" font-size="11">• 节点信息：集群中所有存活节点列表</text>
+  <text x="540" y="510" fill="white" font-size="11">• 模板（Index Templates）</text>
+  <text x="540" y="528" fill="white" font-size="11">• 持久化任务（Persistent Tasks）</text>
+  <text x="540" y="546" fill="white" font-size="11">• 集群版本号（version 单调递增）</text>
+
+  <!-- Client → Coordinating 箭头 -->
+  <line x1="160" y1="100" x2="218" y2="130" stroke="#3498db" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <text x="182" y="107" fill="#3498db" font-size="10">请求</text>
+
+  <!-- Coordinating ↔ Data Nodes -->
+  <line x1="300" y1="195" x2="310" y2="238" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="310" y1="238" x2="300" y2="195" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Master ↔ Data Nodes -->
+  <line x1="500" y1="195" x2="500" y2="238" stroke="#e67e22" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 图例 -->
+  <rect x="220" y="592" width="16" height="14" rx="3" fill="#1e8449"/>
+  <text x="242" y="604" fill="#2c3e50" font-size="11">Primary Shard（主分片）</text>
+  <rect x="390" y="592" width="16" height="14" rx="3" fill="#5d6d7e"/>
+  <text x="412" y="604" fill="#2c3e50" font-size="11">Replica Shard（副本分片）</text>
+  <rect x="570" y="592" width="16" height="14" rx="3" fill="#e67e22"/>
+  <text x="592" y="604" fill="#2c3e50" font-size="11">Active Master</text>
+</svg>

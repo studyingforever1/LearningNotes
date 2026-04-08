@@ -1,0 +1,150 @@
+<svg viewBox="0 0 960 580" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#27ae60"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3498db"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="580" fill="#f8f9fa" rx="8"/>
+
+  <!-- 标题 -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">深度分页方案对比与 PIT+Search After 原理</text>
+
+  <!-- Scroll 流程 -->
+  <rect x="20" y="62" width="295" height="280" rx="8" fill="#fef9e7" stroke="#f9e79f" stroke-width="1.5"/>
+  <text x="167" y="84" text-anchor="middle" fill="#d4ac0d" font-size="13" font-weight="bold">Scroll API 工作流程</text>
+
+  <rect x="35" y="94" width="265" height="45" rx="6" fill="#e67e22" stroke="#ca6f1e" stroke-width="1.5"/>
+  <text x="167" y="117" text-anchor="middle" fill="white" font-size="11">① 初始化：创建快照 + 返回 scroll_id</text>
+
+  <line x1="167" y1="139" x2="167" y2="157" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="35" y="157" width="265" height="45" rx="6" fill="#e67e22" stroke="#ca6f1e" stroke-width="1.5"/>
+  <text x="167" y="177" text-anchor="middle" fill="white" font-size="11">② 携带 scroll_id 取下一批数据</text>
+  <text x="167" y="193" text-anchor="middle" fill="white" font-size="10">GET /_search/scroll { scroll_id }</text>
+
+  <line x1="167" y1="202" x2="167" y2="220" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="35" y="220" width="265" height="45" rx="6" fill="#e67e22" stroke="#ca6f1e" stroke-width="1.5"/>
+  <text x="167" y="240" text-anchor="middle" fill="white" font-size="11">③ 循环直到 hits 为空</text>
+  <text x="167" y="256" text-anchor="middle" fill="white" font-size="10">（快照不反映新增/删除文档）</text>
+
+  <line x1="167" y1="265" x2="167" y2="283" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="35" y="283" width="265" height="45" rx="6" fill="#c0392b" stroke="#a93226" stroke-width="1.5"/>
+  <text x="167" y="303" text-anchor="middle" fill="white" font-size="11">④ DELETE /_search/scroll 释放资源</text>
+  <text x="167" y="319" text-anchor="middle" fill="#f1c40f" font-size="10">⚠ 不释放会占用堆内存直到超时</text>
+
+  <!-- Search After 流程 -->
+  <rect x="330" y="62" width="295" height="280" rx="8" fill="#eaf2ff" stroke="#aed6f1" stroke-width="1.5"/>
+  <text x="477" y="84" text-anchor="middle" fill="#2980b9" font-size="13" font-weight="bold">Search After 工作流程</text>
+
+  <rect x="345" y="94" width="265" height="45" rx="6" fill="#3498db" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="477" y="114" text-anchor="middle" fill="white" font-size="11">① 第一页：带 sort 字段查询</text>
+  <text x="477" y="130" text-anchor="middle" fill="white" font-size="10">sort: [{"_score": "desc"}, {"id": "asc"}]</text>
+
+  <line x1="477" y1="139" x2="477" y2="157" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="345" y="157" width="265" height="45" rx="6" fill="#3498db" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="477" y="177" text-anchor="middle" fill="white" font-size="11">② 从响应中取最后一条的 sort 值</text>
+  <text x="477" y="193" text-anchor="middle" fill="#f1c40f" font-size="10">sort_values = hits[-1].sort</text>
+
+  <line x1="477" y1="202" x2="477" y2="220" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="345" y="220" width="265" height="45" rx="6" fill="#3498db" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="477" y="240" text-anchor="middle" fill="white" font-size="11">③ 下一页：使用 search_after 参数</text>
+  <text x="477" y="256" text-anchor="middle" fill="#f1c40f" font-size="10">"search_after": sort_values</text>
+
+  <line x1="477" y1="265" x2="477" y2="283" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="345" y="283" width="265" height="45" rx="6" fill="#2980b9" stroke="#1f618d" stroke-width="1.5"/>
+  <text x="477" y="303" text-anchor="middle" fill="white" font-size="11">④ 循环重复 ②③ 步骤</text>
+  <text x="477" y="319" text-anchor="middle" fill="white" font-size="10">无状态，每次查询独立执行</text>
+
+  <!-- PIT + Search After 流程 -->
+  <rect x="640" y="62" width="300" height="280" rx="8" fill="#eafaf1" stroke="#a9dfbf" stroke-width="1.5"/>
+  <text x="790" y="84" text-anchor="middle" fill="#27ae60" font-size="13" font-weight="bold">PIT + Search After（推荐）</text>
+
+  <rect x="655" y="94" width="270" height="40" rx="6" fill="#27ae60" stroke="#229954" stroke-width="1.5"/>
+  <text x="790" y="114" text-anchor="middle" fill="white" font-size="11">① POST /index/_pit?keep_alive=1m</text>
+  <text x="790" y="128" text-anchor="middle" fill="white" font-size="10">返回 pit_id（冻结数据视图）</text>
+
+  <line x1="790" y1="134" x2="790" y2="150" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="655" y="150" width="270" height="55" rx="6" fill="#27ae60" stroke="#229954" stroke-width="1.5"/>
+  <text x="790" y="170" text-anchor="middle" fill="white" font-size="11">② 查询时携带 pit + search_after</text>
+  <text x="790" y="186" text-anchor="middle" fill="white" font-size="10">{ "pit": {"id": pit_id},</text>
+  <text x="790" y="200" text-anchor="middle" fill="white" font-size="10">  "search_after": [...] }</text>
+
+  <line x1="790" y1="205" x2="790" y2="221" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="655" y="221" width="270" height="40" rx="6" fill="#27ae60" stroke="#229954" stroke-width="1.5"/>
+  <text x="790" y="241" text-anchor="middle" fill="white" font-size="11">③ 响应中返回新的 pit_id</text>
+  <text x="790" y="255" text-anchor="middle" fill="white" font-size="10">（pit_id 每次请求后自动刷新）</text>
+
+  <line x1="790" y1="261" x2="790" y2="277" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="655" y="277" width="270" height="40" rx="6" fill="#229954" stroke="#1e8449" stroke-width="1.5"/>
+  <text x="790" y="297" text-anchor="middle" fill="white" font-size="11">④ 结束时 DELETE /_pit 释放</text>
+  <text x="790" y="311" text-anchor="middle" fill="#f1c40f" font-size="10">keep_alive 到期自动清理</text>
+
+  <!-- 对比表格 -->
+  <rect x="20" y="355" width="920" height="205" rx="8" fill="white" stroke="#bdc3c7" stroke-width="1.5"/>
+  <text x="480" y="377" text-anchor="middle" fill="#2c3e50" font-size="13" font-weight="bold">方案对比总结</text>
+
+  <!-- 表头 -->
+  <rect x="20" y="383" width="920" height="30" rx="0" fill="#2c3e50"/>
+  <text x="120" y="403" text-anchor="middle" fill="white" font-size="11" font-weight="bold">方案</text>
+  <text x="270" y="403" text-anchor="middle" fill="white" font-size="11" font-weight="bold">性能</text>
+  <text x="410" y="403" text-anchor="middle" fill="white" font-size="11" font-weight="bold">实时性</text>
+  <text x="560" y="403" text-anchor="middle" fill="white" font-size="11" font-weight="bold">随机跳页</text>
+  <text x="700" y="403" text-anchor="middle" fill="white" font-size="11" font-weight="bold">适用场景</text>
+  <text x="870" y="403" text-anchor="middle" fill="white" font-size="11" font-weight="bold">推荐度</text>
+
+  <!-- from+size 行 -->
+  <rect x="20" y="413" width="920" height="35" fill="#fdecea"/>
+  <text x="120" y="435" text-anchor="middle" fill="#2c3e50" font-size="11">from + size</text>
+  <text x="270" y="435" text-anchor="middle" fill="#e74c3c" font-size="11">差（O(n×shards)）</text>
+  <text x="410" y="435" text-anchor="middle" fill="#27ae60" font-size="11">实时</text>
+  <text x="560" y="435" text-anchor="middle" fill="#27ae60" font-size="11">支持</text>
+  <text x="700" y="435" text-anchor="middle" fill="#555" font-size="11">浅翻页（&lt;1000条）</text>
+  <text x="870" y="435" text-anchor="middle" fill="#e74c3c" font-size="11">★☆☆☆☆</text>
+
+  <!-- Scroll 行 -->
+  <rect x="20" y="448" width="920" height="35" fill="#fef9e7"/>
+  <text x="120" y="470" text-anchor="middle" fill="#2c3e50" font-size="11">Scroll API</text>
+  <text x="270" y="470" text-anchor="middle" fill="#27ae60" font-size="11">好（快照遍历）</text>
+  <text x="410" y="470" text-anchor="middle" fill="#e74c3c" font-size="11">非实时（快照）</text>
+  <text x="560" y="470" text-anchor="middle" fill="#e74c3c" font-size="11">不支持</text>
+  <text x="700" y="470" text-anchor="middle" fill="#555" font-size="11">数据导出、离线批量处理</text>
+  <text x="870" y="470" text-anchor="middle" fill="#e67e22" font-size="11">★★★☆☆</text>
+
+  <!-- Search After 行 -->
+  <rect x="20" y="483" width="920" height="35" fill="#eaf2ff"/>
+  <text x="120" y="505" text-anchor="middle" fill="#2c3e50" font-size="11">Search After</text>
+  <text x="270" y="505" text-anchor="middle" fill="#27ae60" font-size="11">好（游标翻页）</text>
+  <text x="410" y="505" text-anchor="middle" fill="#27ae60" font-size="11">实时</text>
+  <text x="560" y="505" text-anchor="middle" fill="#e74c3c" font-size="11">不支持</text>
+  <text x="700" y="505" text-anchor="middle" fill="#555" font-size="11">顺序翻页场景</text>
+  <text x="870" y="505" text-anchor="middle" fill="#3498db" font-size="11">★★★★☆</text>
+
+  <!-- PIT 行 -->
+  <rect x="20" y="518" width="920" height="35" fill="#eafaf1"/>
+  <text x="120" y="540" text-anchor="middle" fill="#2c3e50" font-size="11">PIT + Search After</text>
+  <text x="270" y="540" text-anchor="middle" fill="#27ae60" font-size="11">好（轻量快照）</text>
+  <text x="410" y="540" text-anchor="middle" fill="#27ae60" font-size="11">一致性翻页视图</text>
+  <text x="560" y="540" text-anchor="middle" fill="#e74c3c" font-size="11">不支持</text>
+  <text x="700" y="540" text-anchor="middle" fill="#555" font-size="11">深度分页首选（ES 7.10+）</text>
+  <text x="870" y="540" text-anchor="middle" fill="#27ae60" font-size="11">★★★★★</text>
+
+  <line x1="20" y1="553" x2="940" y2="553" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="480" y="570" text-anchor="middle" fill="#7f8c8d" font-size="10">注：PIT = Point In Time，ES 7.10 引入；深度分页场景请优先选用 PIT + Search After</text>
+</svg>

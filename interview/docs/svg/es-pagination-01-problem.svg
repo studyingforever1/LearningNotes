@@ -1,0 +1,119 @@
+<svg viewBox="0 0 960 620" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3498db"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="620" fill="#f8f9fa" rx="8"/>
+
+  <!-- 标题 -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">深度分页问题：from+size 的性能陷阱</text>
+
+  <!-- 查询示例 -->
+  <rect x="20" y="65" width="440" height="200" rx="8" fill="#eaf2ff" stroke="#aed6f1" stroke-width="1.5"/>
+  <text x="240" y="86" text-anchor="middle" fill="#2980b9" font-size="13" font-weight="bold">查询请求</text>
+  <rect x="35" y="94" width="410" height="90" rx="6" fill="#2c3e50"/>
+  <text x="55" y="114" fill="#f1c40f" font-size="12">GET /index/_search</text>
+  <text x="55" y="132" fill="white" font-size="12">{</text>
+  <text x="70" y="150" fill="#aed6f1" font-size="12">"from": 9990,  // 从第 9990 条开始</text>
+  <text x="70" y="168" fill="#aed6f1" font-size="12">"size": 10     // 取 10 条</text>
+  <text x="55" y="186" fill="white" font-size="12">}</text>
+
+  <text x="240" y="215" text-anchor="middle" fill="#c0392b" font-size="12" font-weight="bold">⚠ 看似只取 10 条，实际要取回 10000 条！</text>
+  <text x="240" y="235" text-anchor="middle" fill="#555" font-size="11">每个分片返回 from+size = 10000 条数据到协调节点</text>
+  <text x="240" y="252" text-anchor="middle" fill="#555" font-size="11">协调节点排序后丢弃前 9990 条，只保留最后 10 条</text>
+
+  <!-- 流程图 -->
+  <rect x="480" y="65" width="460" height="200" rx="8" fill="#fef9e7" stroke="#f9e79f" stroke-width="1.5"/>
+  <text x="710" y="86" text-anchor="middle" fill="#d4ac0d" font-size="13" font-weight="bold">from+size 执行流程</text>
+
+  <!-- 协调节点 -->
+  <rect x="635" y="96" width="150" height="45" rx="8" fill="#8e44ad" stroke="#7d3c98" stroke-width="2"/>
+  <text x="710" y="118" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Coordinating Node</text>
+  <text x="710" y="132" text-anchor="middle" fill="white" font-size="10">from=9990, size=10</text>
+
+  <!-- 分片 -->
+  <rect x="500" y="167" width="120" height="50" rx="6" fill="#27ae60" stroke="#229954" stroke-width="1.5"/>
+  <text x="560" y="187" text-anchor="middle" fill="white" font-size="11">Shard 0</text>
+  <text x="560" y="203" text-anchor="middle" fill="#f1c40f" font-size="10">返回 10000 条</text>
+
+  <rect x="635" y="167" width="120" height="50" rx="6" fill="#27ae60" stroke="#229954" stroke-width="1.5"/>
+  <text x="695" y="187" text-anchor="middle" fill="white" font-size="11">Shard 1</text>
+  <text x="695" y="203" text-anchor="middle" fill="#f1c40f" font-size="10">返回 10000 条</text>
+
+  <rect x="770" y="167" width="120" height="50" rx="6" fill="#27ae60" stroke="#229954" stroke-width="1.5"/>
+  <text x="830" y="187" text-anchor="middle" fill="white" font-size="11">Shard 2</text>
+  <text x="830" y="203" text-anchor="middle" fill="#f1c40f" font-size="10">返回 10000 条</text>
+
+  <!-- 箭头 -->
+  <line x1="710" y1="141" x2="560" y2="165" stroke="#e67e22" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="710" y1="141" x2="710" y2="165" stroke="#e67e22" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="710" y1="141" x2="830" y2="165" stroke="#e67e22" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="560" y1="217" x2="700" y2="238" stroke="#3498db" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="710" y1="217" x2="710" y2="238" stroke="#3498db" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="830" y1="217" x2="720" y2="238" stroke="#3498db" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+
+  <text x="710" y="255" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">协调节点合并 30000 条 → 排序 → 取 10 条</text>
+
+  <!-- 性能影响 -->
+  <rect x="20" y="278" width="920" height="145" rx="8" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="480" y="300" text-anchor="middle" fill="#e74c3c" font-size="13" font-weight="bold">性能影响（3 个分片，from=9990，size=10）</text>
+
+  <rect x="35" y="308" width="280" height="100" rx="6" fill="white" stroke="#f5b7b1" stroke-width="1"/>
+  <text x="175" y="328" text-anchor="middle" fill="#e74c3c" font-size="11" font-weight="bold">内存消耗（协调节点）</text>
+  <text x="50" y="346" fill="#555" font-size="10">• 每分片返回 10000 条 Doc 元数据</text>
+  <text x="50" y="362" fill="#555" font-size="10">• 3 分片 × 10000 = 30000 条元数据</text>
+  <text x="50" y="378" fill="#555" font-size="10">• 堆内存峰值 ≈ 30000 × 200B = 6MB</text>
+  <text x="50" y="394" fill="#c0392b" font-size="10">  （越深分页，内存消耗越大）</text>
+
+  <rect x="340" y="308" width="280" height="100" rx="6" fill="white" stroke="#f5b7b1" stroke-width="1"/>
+  <text x="480" y="328" text-anchor="middle" fill="#e74c3c" font-size="11" font-weight="bold">网络 / CPU 开销</text>
+  <text x="355" y="346" fill="#555" font-size="10">• 每分片需排序 from+size 条数据</text>
+  <text x="355" y="362" fill="#555" font-size="10">• 网络传输 30000 条文档 ID+分数</text>
+  <text x="355" y="378" fill="#555" font-size="10">• 协调节点再次全局排序</text>
+  <text x="355" y="394" fill="#c0392b" font-size="10">  O((from+size) × shards × log N)</text>
+
+  <rect x="645" y="308" width="280" height="100" rx="6" fill="white" stroke="#f5b7b1" stroke-width="1"/>
+  <text x="785" y="328" text-anchor="middle" fill="#e74c3c" font-size="11" font-weight="bold">ES 默认限制</text>
+  <text x="660" y="346" fill="#555" font-size="10">• index.max_result_window = 10000</text>
+  <text x="660" y="362" fill="#555" font-size="10">• from + size 超过 10000 直接报错</text>
+  <text x="660" y="378" fill="#555" font-size="10">• 可调大，但会带来更严重的性能问题</text>
+  <text x="660" y="394" fill="#c0392b" font-size="10">  ⚠ 强烈不建议修改此限制</text>
+
+  <!-- 三种方案对比 -->
+  <rect x="20" y="435" width="920" height="165" rx="8" fill="#eafaf1" stroke="#a9dfbf" stroke-width="1.5"/>
+  <text x="480" y="456" text-anchor="middle" fill="#27ae60" font-size="13" font-weight="bold">三种深度分页方案概览</text>
+
+  <rect x="35" y="464" width="270" height="120" rx="6" fill="white" stroke="#a9dfbf" stroke-width="1"/>
+  <text x="170" y="484" text-anchor="middle" fill="#e67e22" font-size="12" font-weight="bold">Scroll API</text>
+  <text x="50" y="502" fill="#555" font-size="10">• 快照式遍历，不反映实时变更</text>
+  <text x="50" y="518" fill="#555" font-size="10">• 适合数据导出、批量处理</text>
+  <text x="50" y="534" fill="#555" font-size="10">• scroll_id 占用堆内存</text>
+  <text x="50" y="550" fill="#c0392b" font-size="10">• 不适合实时用户翻页</text>
+  <text x="50" y="568" fill="#555" font-size="10">• ES 8.x 已废弃，推荐 PIT</text>
+
+  <rect x="325" y="464" width="270" height="120" rx="6" fill="white" stroke="#a9dfbf" stroke-width="1"/>
+  <text x="460" y="484" text-anchor="middle" fill="#3498db" font-size="12" font-weight="bold">Search After</text>
+  <text x="340" y="502" fill="#555" font-size="10">• 游标式翻页，性能稳定</text>
+  <text x="340" y="518" fill="#555" font-size="10">• 无内存快照开销</text>
+  <text x="340" y="534" fill="#555" font-size="10">• 每次返回下一页的 sort 值</text>
+  <text x="340" y="550" fill="#c0392b" font-size="10">• 不支持随机跳页（只能顺序翻）</text>
+  <text x="340" y="568" fill="#27ae60" font-size="10">• 推荐：配合 PIT 使用</text>
+
+  <rect x="615" y="464" width="310" height="120" rx="6" fill="white" stroke="#a9dfbf" stroke-width="1"/>
+  <text x="770" y="484" text-anchor="middle" fill="#8e44ad" font-size="12" font-weight="bold">PIT + Search After（推荐）</text>
+  <text x="630" y="502" fill="#555" font-size="10">• Point In Time：冻结快照视图</text>
+  <text x="630" y="518" fill="#555" font-size="10">• 结合 search_after 游标翻页</text>
+  <text x="630" y="534" fill="#555" font-size="10">• 翻页过程中数据增删不影响结果</text>
+  <text x="630" y="550" fill="#27ae60" font-size="10">• ES 7.10+ 推荐方案</text>
+  <text x="630" y="568" fill="#555" font-size="10">• 比 Scroll 轻量，比单纯 search_after 更稳定</text>
+</svg>

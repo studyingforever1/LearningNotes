@@ -1,0 +1,104 @@
+<svg viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="560" fill="#f8f9fa" rx="8"/>
+
+  <!-- 标题 -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">脑裂（Split-Brain）问题与防护</text>
+
+  <!-- 左侧：脑裂发生 -->
+  <rect x="20" y="65" width="440" height="350" rx="8" fill="#fdecea" stroke="#e74c3c" stroke-width="2"/>
+  <text x="240" y="90" text-anchor="middle" fill="#e74c3c" font-size="14" font-weight="bold">❌ 脑裂场景（5节点，minimum_master_nodes=1）</text>
+
+  <!-- 网络分区线 -->
+  <line x1="240" y1="105" x2="240" y2="395" stroke="#e74c3c" stroke-width="3" stroke-dasharray="10,5"/>
+  <text x="240" y="395" text-anchor="middle" fill="#e74c3c" font-size="11" font-weight="bold">网络分区</text>
+
+  <!-- 左分区 -->
+  <rect x="30" y="115" width="195" height="265" rx="8" fill="white" stroke="#c0392b" stroke-width="1.5"/>
+  <text x="127" y="135" text-anchor="middle" fill="#c0392b" font-size="12" font-weight="bold">分区 A（2节点）</text>
+
+  <rect x="45" y="145" width="160" height="80" rx="8" fill="#e74c3c" stroke="#c0392b" stroke-width="2"/>
+  <text x="125" y="168" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Master-1 ★</text>
+  <text x="125" y="186" text-anchor="middle" fill="white" font-size="10">认为自己是 Master</text>
+  <text x="125" y="204" text-anchor="middle" fill="#f1c40f" font-size="10">写入数据 v1→v2</text>
+
+  <rect x="45" y="240" width="160" height="60" rx="8" fill="#3498db" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="125" y="260" text-anchor="middle" fill="white" font-size="12">Node 2</text>
+  <text x="125" y="278" text-anchor="middle" fill="white" font-size="10">跟随 Master-1</text>
+
+  <text x="127" y="320" text-anchor="middle" fill="#c0392b" font-size="10">写入操作正常进行</text>
+  <text x="127" y="338" text-anchor="middle" fill="#c0392b" font-size="10">index_a 数据更新</text>
+  <text x="127" y="356" text-anchor="middle" fill="#c0392b" font-size="10">状态版本：v=10</text>
+  <text x="127" y="374" text-anchor="middle" fill="#c0392b" font-size="10">（与分区B不一致！）</text>
+
+  <!-- 右分区 -->
+  <rect x="250" y="115" width="195" height="265" rx="8" fill="white" stroke="#c0392b" stroke-width="1.5"/>
+  <text x="347" y="135" text-anchor="middle" fill="#c0392b" font-size="12" font-weight="bold">分区 B（3节点）</text>
+
+  <rect x="265" y="145" width="160" height="80" rx="8" fill="#e74c3c" stroke="#c0392b" stroke-width="2"/>
+  <text x="345" y="168" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Master-2 ★</text>
+  <text x="345" y="186" text-anchor="middle" fill="white" font-size="10">重新选出的 Master</text>
+  <text x="345" y="204" text-anchor="middle" fill="#f1c40f" font-size="10">写入数据 v1→v3</text>
+
+  <rect x="265" y="240" width="160" height="60" rx="8" fill="#3498db" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="345" y="260" text-anchor="middle" fill="white" font-size="12">Node 4、5</text>
+  <text x="345" y="278" text-anchor="middle" fill="white" font-size="10">跟随 Master-2</text>
+
+  <text x="347" y="320" text-anchor="middle" fill="#c0392b" font-size="10">写入操作正常进行</text>
+  <text x="347" y="338" text-anchor="middle" fill="#c0392b" font-size="10">index_a 数据更新</text>
+  <text x="347" y="356" text-anchor="middle" fill="#c0392b" font-size="10">状态版本：v=8</text>
+  <text x="347" y="374" text-anchor="middle" fill="#c0392b" font-size="10">（与分区A不一致！）</text>
+
+  <text x="240" y="415" text-anchor="middle" fill="#c0392b" font-size="12" font-weight="bold">⚠ 网络恢复后：数据冲突，无法自动合并！</text>
+
+  <!-- 右侧：防护方案 -->
+  <rect x="480" y="65" width="460" height="350" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <text x="710" y="90" text-anchor="middle" fill="#27ae60" font-size="14" font-weight="bold">✓ 防护方案对比</text>
+
+  <!-- ES 6.x 方案 -->
+  <rect x="495" y="100" width="430" height="140" rx="6" fill="white" stroke="#a9dfbf" stroke-width="1.5"/>
+  <text x="710" y="120" text-anchor="middle" fill="#2c3e50" font-size="12" font-weight="bold">ES 5/6.x：minimum_master_nodes</text>
+
+  <rect x="510" y="130" width="195" height="95" rx="6" fill="#f5f5f5" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="607" y="150" text-anchor="middle" fill="#e74c3c" font-size="11" font-weight="bold">❌ 错误配置</text>
+  <text x="607" y="168" text-anchor="middle" fill="#555" font-size="10">minimum_master_nodes: 1</text>
+  <text x="607" y="184" text-anchor="middle" fill="#555" font-size="10">5 节点集群</text>
+  <text x="607" y="202" text-anchor="middle" fill="#e74c3c" font-size="10">→ 脑裂可能发生</text>
+
+  <rect x="715" y="130" width="195" height="95" rx="6" fill="#f5f5f5" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="812" y="150" text-anchor="middle" fill="#27ae60" font-size="11" font-weight="bold">✓ 正确配置</text>
+  <text x="812" y="168" text-anchor="middle" fill="#555" font-size="10">minimum_master_nodes: 3</text>
+  <text x="812" y="184" text-anchor="middle" fill="#555" font-size="10">（N/2 + 1 = 5/2+1=3）</text>
+  <text x="812" y="202" text-anchor="middle" fill="#27ae60" font-size="10">→ 分区A不足 3 票，停写</text>
+
+  <!-- ES 7.x 方案 -->
+  <rect x="495" y="255" width="430" height="145" rx="6" fill="white" stroke="#a9dfbf" stroke-width="1.5"/>
+  <text x="710" y="275" text-anchor="middle" fill="#2c3e50" font-size="12" font-weight="bold">ES 7.x+：Voting Configuration（自动管理）</text>
+
+  <text x="510" y="295" fill="#555" font-size="11">• initial_master_nodes 仅首次启动时使用，之后自动管理</text>
+  <text x="510" y="313" fill="#555" font-size="11">• VotingConfiguration 动态跟踪 master-eligible 节点集合</text>
+  <text x="510" y="331" fill="#555" font-size="11">• 选主 / 状态变更均需获得 VotingConfig 中过半数节点同意</text>
+  <text x="510" y="349" fill="#555" font-size="11">• 节点缩容时自动从 VotingConfig 移除，防止永久阻塞</text>
+  <text x="510" y="367" fill="#27ae60" font-size="11" font-weight="bold">• 无需手动计算 minimum_master_nodes，彻底消除配置错误</text>
+
+  <!-- 底部总结 -->
+  <rect x="20" y="430" width="920" height="110" rx="8" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <text x="480" y="452" text-anchor="middle" fill="#f1c40f" font-size="13" font-weight="bold">关键结论</text>
+  <text x="40" y="472" fill="white" font-size="11">• 脑裂根源：网络分区后两个子集群各自独立选出 Master，导致数据状态出现两条不同演化路径</text>
+  <text x="40" y="490" fill="white" font-size="11">• ES 6.x 防护：配置 minimum_master_nodes = N/2+1（N=master-eligible 节点数），少数分区无法选主</text>
+  <text x="40" y="508" fill="white" font-size="11">• ES 7.x 防护：Zen2 + VotingConfiguration 自动管理，结合 Two-Phase Commit 发布状态，从架构上消除脑裂</text>
+  <text x="40" y="526" fill="white" font-size="11">• 最佳实践：生产环境 master-eligible 节点数为奇数（3 或 5），与 data 节点分离部署</text>
+</svg>

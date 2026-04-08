@@ -1,0 +1,167 @@
+<svg viewBox="0 0 960 700" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e67e22"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#27ae60"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="700" fill="#f8f9fa" rx="8"/>
+
+  <!-- 标题 -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">ES 7.x Zen2 选主流程（基于 Raft 思想）</text>
+
+  <!-- 阶段标注 -->
+  <!-- Phase 1: 发现 -->
+  <rect x="20" y="62" width="920" height="160" rx="8" fill="#eaf2ff" stroke="#aed6f1" stroke-width="1.5"/>
+  <text x="40" y="83" fill="#2980b9" font-size="13" font-weight="bold">Phase 1: 节点发现（Discovery）</text>
+
+  <!-- 节点 A -->
+  <rect x="40" y="90" width="130" height="110" rx="10" fill="#3498db" stroke="#2980b9" stroke-width="2"/>
+  <text x="105" y="113" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Node A</text>
+  <text x="105" y="131" text-anchor="middle" fill="white" font-size="10">master-eligible</text>
+  <text x="105" y="149" text-anchor="middle" fill="#f1c40f" font-size="10">clusterUUID: null</text>
+  <text x="105" y="167" text-anchor="middle" fill="white" font-size="10">启动，广播 ping</text>
+  <text x="105" y="183" text-anchor="middle" fill="#f1c40f" font-size="10">seed_hosts 探测</text>
+
+  <!-- 节点 B -->
+  <rect x="220" y="90" width="130" height="110" rx="10" fill="#3498db" stroke="#2980b9" stroke-width="2"/>
+  <text x="285" y="113" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Node B</text>
+  <text x="285" y="131" text-anchor="middle" fill="white" font-size="10">master-eligible</text>
+  <text x="285" y="149" text-anchor="middle" fill="#f1c40f" font-size="10">clusterUUID: null</text>
+  <text x="285" y="167" text-anchor="middle" fill="white" font-size="10">收到 ping 响应</text>
+  <text x="285" y="183" text-anchor="middle" fill="white" font-size="10">加入候选列表</text>
+
+  <!-- 节点 C -->
+  <rect x="400" y="90" width="130" height="110" rx="10" fill="#3498db" stroke="#2980b9" stroke-width="2"/>
+  <text x="465" y="113" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Node C</text>
+  <text x="465" y="131" text-anchor="middle" fill="white" font-size="10">master-eligible</text>
+  <text x="465" y="149" text-anchor="middle" fill="#f1c40f" font-size="10">clusterUUID: null</text>
+  <text x="465" y="167" text-anchor="middle" fill="white" font-size="10">收到 ping 响应</text>
+  <text x="465" y="183" text-anchor="middle" fill="white" font-size="10">加入候选列表</text>
+
+  <!-- ping 箭头 -->
+  <line x1="170" y1="145" x2="218" y2="145" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="350" y1="145" x2="398" y2="145" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="194" y="138" text-anchor="middle" fill="#555" font-size="10">ping</text>
+  <text x="374" y="138" text-anchor="middle" fill="#555" font-size="10">ping</text>
+
+  <!-- 说明 -->
+  <text x="590" y="100" fill="#2c3e50" font-size="12">seed_hosts 配置示例：</text>
+  <rect x="585" y="108" width="330" height="90" rx="6" fill="#2c3e50"/>
+  <text x="600" y="126" fill="#f1c40f" font-size="11">discovery.seed_hosts:</text>
+  <text x="615" y="144" fill="white" font-size="11">- "node-a:9300"</text>
+  <text x="615" y="162" fill="white" font-size="11">- "node-b:9300"</text>
+  <text x="615" y="180" fill="white" font-size="11">- "node-c:9300"</text>
+
+  <!-- Phase 2: 投票 -->
+  <rect x="20" y="235" width="920" height="185" rx="8" fill="#eafaf1" stroke="#a9dfbf" stroke-width="1.5"/>
+  <text x="40" y="256" fill="#27ae60" font-size="13" font-weight="bold">Phase 2: 投票选举（Voting）</text>
+
+  <!-- Voting Round -->
+  <rect x="40" y="265" width="560" height="140" rx="8" fill="white" stroke="#a9dfbf" stroke-width="1"/>
+
+  <!-- Node A candidate -->
+  <rect x="55" y="278" width="110" height="115" rx="8" fill="#e67e22" stroke="#ca6f1e" stroke-width="2"/>
+  <text x="110" y="298" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Node A</text>
+  <text x="110" y="314" text-anchor="middle" fill="white" font-size="10">发起 StartJoin</text>
+  <text x="110" y="330" text-anchor="middle" fill="white" font-size="10">请求（term=1）</text>
+  <text x="110" y="348" text-anchor="middle" fill="#f1c40f" font-size="10">自投一票</text>
+  <text x="110" y="364" text-anchor="middle" fill="white" font-size="9">收到 B、C 的</text>
+  <text x="110" y="378" text-anchor="middle" fill="white" font-size="9">Join 响应</text>
+
+  <!-- Node B vote -->
+  <rect x="190" y="278" width="110" height="115" rx="8" fill="#3498db" stroke="#2980b9" stroke-width="2"/>
+  <text x="245" y="298" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Node B</text>
+  <text x="245" y="314" text-anchor="middle" fill="white" font-size="10">收到 StartJoin</text>
+  <text x="245" y="330" text-anchor="middle" fill="white" font-size="10">比较 term 和</text>
+  <text x="245" y="346" text-anchor="middle" fill="white" font-size="10">lastAcceptedTerm</text>
+  <text x="245" y="364" text-anchor="middle" fill="#f1c40f" font-size="10">发送 Join(A)</text>
+
+  <!-- Node C vote -->
+  <rect x="325" y="278" width="110" height="115" rx="8" fill="#3498db" stroke="#2980b9" stroke-width="2"/>
+  <text x="380" y="298" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Node C</text>
+  <text x="380" y="314" text-anchor="middle" fill="white" font-size="10">收到 StartJoin</text>
+  <text x="380" y="330" text-anchor="middle" fill="white" font-size="10">比较 term 和</text>
+  <text x="380" y="346" text-anchor="middle" fill="white" font-size="10">lastAcceptedTerm</text>
+  <text x="380" y="364" text-anchor="middle" fill="#f1c40f" font-size="10">发送 Join(A)</text>
+
+  <!-- Quorum 判断 -->
+  <rect x="455" y="278" width="130" height="115" rx="8" fill="#8e44ad" stroke="#7d3c98" stroke-width="2"/>
+  <text x="520" y="298" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Quorum 判断</text>
+  <text x="520" y="318" text-anchor="middle" fill="white" font-size="10">需要过半票数</text>
+  <text x="520" y="336" text-anchor="middle" fill="#f1c40f" font-size="12" font-weight="bold">3/2+1 = 2 票</text>
+  <text x="520" y="354" text-anchor="middle" fill="white" font-size="10">A 获得 3 票</text>
+  <text x="520" y="372" text-anchor="middle" fill="#2ecc71" font-size="11" font-weight="bold">✓ 选主成功</text>
+
+  <!-- 箭头 -->
+  <line x1="165" y1="336" x2="188" y2="336" stroke="#e67e22" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+  <line x1="300" y1="336" x2="323" y2="336" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="435" y1="336" x2="453" y2="336" stroke="#27ae60" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+
+  <!-- 规则说明 -->
+  <rect x="620" y="265" width="300" height="140" rx="6" fill="#2c3e50"/>
+  <text x="770" y="285" text-anchor="middle" fill="#f1c40f" font-size="12" font-weight="bold">投票规则（Zen2）</text>
+  <text x="635" y="303" fill="white" font-size="10">• term 大的候选人优先</text>
+  <text x="635" y="320" fill="white" font-size="10">• term 相同时，lastAccepted-</text>
+  <text x="645" y="337" fill="white" font-size="10">  Version 大的优先</text>
+  <text x="635" y="354" fill="white" font-size="10">• 每个节点每轮只能投一票</text>
+  <text x="635" y="371" fill="white" font-size="10">• 需要 VotingConfiguration</text>
+  <text x="645" y="388" fill="white" font-size="10">  中过半数节点投票</text>
+
+  <!-- Phase 3: 发布 -->
+  <rect x="20" y="432" width="920" height="180" rx="8" fill="#fef9e7" stroke="#f9e79f" stroke-width="1.5"/>
+  <text x="40" y="453" fill="#d4ac0d" font-size="13" font-weight="bold">Phase 3: 集群状态发布（Publish Cluster State）</text>
+
+  <!-- Master Node -->
+  <rect x="40" y="462" width="150" height="130" rx="10" fill="#e67e22" stroke="#ca6f1e" stroke-width="2"/>
+  <text x="115" y="483" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Master Node A ★</text>
+  <text x="115" y="500" text-anchor="middle" fill="white" font-size="10">①生成新 ClusterState</text>
+  <text x="115" y="518" text-anchor="middle" fill="white" font-size="10">  （version 递增）</text>
+  <text x="115" y="536" text-anchor="middle" fill="white" font-size="10">②广播 PublishReq</text>
+  <text x="115" y="554" text-anchor="middle" fill="white" font-size="10">③收到过半 Ack 后</text>
+  <text x="115" y="572" text-anchor="middle" fill="white" font-size="10">  发送 Commit</text>
+
+  <!-- Data Nodes -->
+  <rect x="240" y="462" width="120" height="130" rx="10" fill="#27ae60" stroke="#229954" stroke-width="2"/>
+  <text x="300" y="483" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Node B</text>
+  <text x="300" y="503" text-anchor="middle" fill="white" font-size="10">收到 PublishReq</text>
+  <text x="300" y="521" text-anchor="middle" fill="white" font-size="10">写入 pending</text>
+  <text x="300" y="539" text-anchor="middle" fill="#f1c40f" font-size="10">回 Ack</text>
+  <text x="300" y="558" text-anchor="middle" fill="white" font-size="10">收到 Commit</text>
+  <text x="300" y="576" text-anchor="middle" fill="white" font-size="10">应用 ClusterState</text>
+
+  <rect x="380" y="462" width="120" height="130" rx="10" fill="#27ae60" stroke="#229954" stroke-width="2"/>
+  <text x="440" y="483" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Node C</text>
+  <text x="440" y="503" text-anchor="middle" fill="white" font-size="10">收到 PublishReq</text>
+  <text x="440" y="521" text-anchor="middle" fill="white" font-size="10">写入 pending</text>
+  <text x="440" y="539" text-anchor="middle" fill="#f1c40f" font-size="10">回 Ack</text>
+  <text x="440" y="558" text-anchor="middle" fill="white" font-size="10">收到 Commit</text>
+  <text x="440" y="576" text-anchor="middle" fill="white" font-size="10">应用 ClusterState</text>
+
+  <!-- PublishReq arrows -->
+  <line x1="190" y1="527" x2="238" y2="527" stroke="#e67e22" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+  <line x1="190" y1="540" x2="378" y2="527" stroke="#e67e22" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+  <line x1="300" y1="539" x2="192" y2="545" stroke="#27ae60" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <line x1="440" y1="539" x2="192" y2="550" stroke="#27ae60" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+
+  <!-- Two-phase说明 -->
+  <rect x="550" y="462" width="370" height="130" rx="6" fill="#2c3e50"/>
+  <text x="735" y="482" text-anchor="middle" fill="#f1c40f" font-size="12" font-weight="bold">Two-Phase Commit 保证一致性</text>
+  <text x="565" y="502" fill="white" font-size="10">① Master 生成新状态，序列化后广播（Publish）</text>
+  <text x="565" y="520" fill="white" font-size="10">② 各节点写 pending 状态，回 Ack</text>
+  <text x="565" y="538" fill="white" font-size="10">③ Master 收到 quorum Ack → 广播 Commit</text>
+  <text x="565" y="556" fill="white" font-size="10">④ 各节点将 pending → applied，生效</text>
+  <text x="565" y="574" fill="#e74c3c" font-size="10">⚠ 若 Master 宕机在②③之间，新 Master</text>
+  <text x="575" y="590" fill="#e74c3c" font-size="10">   从节点收集最新 pending 状态重新发布</text>
+</svg>

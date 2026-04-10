@@ -9,7 +9,7 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.stereotype.Component;
 
 @Component
-@Aspect
+//@Aspect
 public class MyAspectj {
 
     @Pointcut("execution(* com.zcq.demo.tx.*.*.* (..))")

@@ -1,5 +1,6 @@
 package com.zcq.demo.tx;
 
+import com.zcq.demo.tx.service.LazyBean;
 import com.zcq.demo.tx.service.MyService;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -7,10 +8,12 @@ import static org.springframework.cglib.core.DebuggingClassWriter.DEBUG_LOCATION
 
 public class TxTest {
     public static void main(String[] args) {
-        configAop();
+//        configAop();
         AnnotationConfigApplicationContext ac = new AnnotationConfigApplicationContext("com.zcq.demo.tx");
         MyService bean = ac.getBean(MyService.class);
         bean.query();
+//        LazyBean bean = ac.getBean(LazyBean.class);
+//        bean.test();
 
 //        MyService myServiceSon = new MyServiceSon();
 //        myServiceSon.query();

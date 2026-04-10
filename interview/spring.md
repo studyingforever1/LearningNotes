@@ -550,7 +550,7 @@ public void someMethod() {
 }
 ```
 
-## Spring Data JPA
+
 
 
 

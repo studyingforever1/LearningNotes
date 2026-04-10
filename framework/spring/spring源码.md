@@ -16334,6 +16334,9 @@ public class TestObjenesis {
 
 `@Lazy` 注解用于控制 Bean 的加载时机。在 Spring 中，默认情况下，所有单例 Bean 在应用上下文启动时就会被创建和初始化。使用 `@Lazy` 注解可以将 Bean 的创建延迟到第一次被使用时
 
+- `@Lazy` 加在类上 → 延迟创建这个 Bean
+- `@Lazy` 加在属性上 → 延迟注入这个依赖（注入代理）
+
 **@DependsOn**
 
 `@DependsOn` 注解用于指定一个 Bean 依赖于其他一个或多个 Bean。当使用该注解时，Spring 会确保在创建被注解的 Bean 之前，先创建并初始化它所依赖的 Bean。

@@ -1,6 +1,7 @@
 package com.zcq.demo.tx.config;
 
 import com.mysql.cj.jdbc.MysqlDataSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
@@ -11,8 +12,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
 
-@Configuration
-//@EnableAspectJAutoProxy
+@Configuration(proxyBeanMethods = false)
+@EnableAspectJAutoProxy
 @EnableTransactionManagement
 public class JdbcConfig {
     @Bean

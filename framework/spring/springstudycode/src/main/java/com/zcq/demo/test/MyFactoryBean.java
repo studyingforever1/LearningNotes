@@ -27,4 +27,10 @@ public class MyFactoryBean implements FactoryBean<Test> {
     public Class<?> getObjectType() {
         return Test.class;
     }
+
+    @Resource
+    public void test(String key){
+    }
+
+
 }

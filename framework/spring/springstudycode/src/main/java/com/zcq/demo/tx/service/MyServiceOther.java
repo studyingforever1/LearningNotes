@@ -15,12 +15,11 @@ public class MyServiceOther {
 
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public void query(){
-        jdbcTemplate.query("select * from gamer", (rs, rowNum) -> {
-            System.out.println(rs.getString("name"));
+    public void query() {
+        jdbcTemplate.query("select * from s1", (rs, rowNum) -> {
+            System.out.println(rs.getString("id"));
             return null;
         });
-        update();
     }
 
     @Transactional

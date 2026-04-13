@@ -1810,6 +1810,36 @@ public abstract class AbstractRequestAttributesScope implements Scope {
 
 
 
+### @SessionScope和@RequestScope
+
+```java
+@Component
+@SessionScope // 代表当前类在注入其他对象时的作用域是session
+@RequestScope // 代表当前类在注入其他对象时的作用域是request
+public class UserSessionInfo {
+    private String username;
+    private String token;
+    // getter/setter...
+}
+```
+
+```java
+@Component
+public class OrderService {
+
+    @Autowired
+    private UserSessionInfo userSessionInfo; // ✅ 注入的是代理对象
+    
+    public void createOrder() {
+        // 每次调用时，代理会根据当前请求的 Session
+        // 自动路由到对应用户的真实 UserSessionInfo 实例
+        String user = userSessionInfo.getUsername();
+    }
+}
+```
+
+
+
 
 
 ## 参数校验
@@ -1823,6 +1853,7 @@ public abstract class AbstractRequestAttributesScope implements Scope {
 @Import(PrimaryDefaultValidatorPostProcessor.class)
 public final class ValidationAutoConfiguration {
 
+    //处理@Valid注解
 	@Bean
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 	@ConditionalOnMissingBean(Validator.class)
@@ -1855,6 +1886,35 @@ public final class ValidationAutoConfiguration {
 }
 ```
 
+### @Valid 和 @Validated
+
+两者都依赖 `ValidationAutoConfiguration` 装配的组件，校验注解相同都是`jakarta.validation`下的注解，但使用场景不同：
+
+|          | `@Valid`                          | `@Validated`                   |
+| -------- | --------------------------------- | ------------------------------ |
+| 来源     | Jakarta EE 标准                   | Spring 扩展                    |
+| 用途     | Controller 参数校验、嵌套对象校验 | Service 方法级校验、分组校验   |
+| 分组支持 | ❌                                 | ✅                              |
+| 嵌套校验 | ✅（`@Valid` 级联）                | ❌                              |
+| 处理者   | `MethodArgumentNotValidException` | `ConstraintViolationException` |
+
+```java
+启动阶段
+  └── ValidationAutoConfiguration
+        ├── LocalValidatorFactoryBean（全局 Validator 实例）
+        └── MethodValidationPostProcessor（BeanPostProcessor）
+                └── 扫描所有 @Validated 的 Bean，生成 AOP 代理
+
+请求阶段（Controller）
+  └── @Valid 触发 → HandlerMethodArgumentResolver
+        └── 调用 LocalValidatorFactoryBean.validate()
+              └── 违反约束 → MethodArgumentNotValidException
+
+方法调用阶段（Service）
+  └── @Validated 代理拦截 → MethodValidationInterceptor
+        └── 调用 Validator 校验参数/返回值
+              └── 违反约束 → ConstraintViolationException
+```
 
 
 
@@ -1864,12 +1924,398 @@ public final class ValidationAutoConfiguration {
 
 
 
+## 优雅停机
+
+1. 注册`JVM`关闭钩子函数，注册`WebServerGracefulShutdownLifecycle`到容器中，启动`DefaultLifecycleProcessor`
+2. `JVM`关闭回调钩子函数，触发`DefaultLifecycleProcessor`的`stopBeans`，处理所有的生命周期`Bean`
+3. 利用`WebServerGracefulShutdownLifecycle`调用`GracefulShutdown`优雅关闭`Tomcat`的链接
+
+### SpringApplication
+
+```java
+public class SpringApplication {
+	//刷新容器前，注册JVM关闭钩子函数
+    private void refreshContext(ConfigurableApplicationContext context) {
+		if (this.properties.isRegisterShutdownHook()) {
+			shutdownHook.registerApplicationContext(context);
+		}
+		refresh(context);
+	}
+}
+```
+
+### SpringApplicationShutdownHook
+
+```java
+class SpringApplicationShutdownHook implements Runnable {
+	private final Handlers handlers = new Handlers();
+
+	private final Set<ConfigurableApplicationContext> contexts = new LinkedHashSet<>();
+
+	private final Set<ConfigurableApplicationContext> closedContexts = Collections.newSetFromMap(new WeakHashMap<>());
+    
+    //设置JVM关闭钩子函数，将当前容器放入集合中
+	void registerApplicationContext(ConfigurableApplicationContext context) {
+         //设置JVM关闭钩子函数
+		addRuntimeShutdownHookIfNecessary();
+		synchronized (SpringApplicationShutdownHook.class) {
+			assertNotInProgress();
+			context.addApplicationListener(this.contextCloseListener);
+             //放入集合中
+			this.contexts.add(context);
+		}
+	}
+
+	private void addRuntimeShutdownHookIfNecessary() {
+		if (this.shutdownHookAdditionEnabled && this.shutdownHookAdded.compareAndSet(false, true)) {
+			addRuntimeShutdownHook();
+		}
+	}
+	//设置JVM关闭钩子函数
+	void addRuntimeShutdownHook() {
+		Runtime.getRuntime().addShutdownHook(new Thread(this, "SpringApplicationShutdownHook"));
+	}
+    
+    //当JVM关闭时，调用此方法
+    @Override
+	public void run() {
+		Set<ConfigurableApplicationContext> contexts;
+		Set<ConfigurableApplicationContext> closedContexts;
+		List<Handler> handlers;
+		synchronized (SpringApplicationShutdownHook.class) {
+			this.inProgress = true;
+			contexts = new LinkedHashSet<>(this.contexts);
+			closedContexts = new LinkedHashSet<>(this.closedContexts);
+			handlers = new ArrayList<>(this.handlers.getActions());
+			Collections.reverse(handlers);
+		}
+         //调用closeAndWait
+		contexts.forEach(this::closeAndWait);
+		closedContexts.forEach(this::closeAndWait);
+		handlers.forEach(Handler::run);
+	}
+    //关闭容器并且等待
+    private void closeAndWait(ConfigurableApplicationContext context) {
+		if (!context.isActive()) {
+			return;
+		}
+         //关闭容器
+		context.close();
+		try {
+             //等待最多TIMEOUT时间
+			int waited = 0;
+			while (context.isActive()) {
+				if (waited > TIMEOUT) {
+					throw new TimeoutException();
+				}
+				Thread.sleep(SLEEP);
+				waited += SLEEP;
+			}
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			logger.warn("Interrupted waiting for application context " + context + " to become inactive");
+		}
+		catch (TimeoutException ex) {
+			logger.warn("Timed out waiting for application context " + context + " to become inactive", ex);
+		}
+	}
+}
+```
+
+### AbstractApplicationContext
+
+```java
+public abstract class AbstractApplicationContext extends DefaultResourceLoader
+		implements ConfigurableApplicationContext {
+
+    @Override
+	public void close() {
+		if (isStartupShutdownThreadStuck()) {
+			this.active.set(false);
+			return;
+		}
+
+		this.startupShutdownLock.lock();
+		try {
+			this.startupShutdownThread = Thread.currentThread();
+			//调用doClose方法关闭容器
+			doClose();
+
+             //容器关闭完成移除JVM的钩子
+			// If we registered a JVM shutdown hook, we don't need it anymore now:
+			// We've already explicitly closed the context.
+			if (this.shutdownHook != null) {
+				try {
+					Runtime.getRuntime().removeShutdownHook(this.shutdownHook);
+				}
+				catch (IllegalStateException ex) {
+					// ignore - VM is already shutting down
+				}
+			}
+		}
+		finally {
+			this.startupShutdownThread = null;
+			this.startupShutdownLock.unlock();
+		}
+	}
+
+	protected void doClose() {
+		// Check whether an actual close attempt is necessary...
+		if (this.active.get() && this.closed.compareAndSet(false, true)) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Closing " + this);
+			}
+
+			try {
+                 //发布关闭容器事件
+				// Publish shutdown event.
+				publishEvent(new ContextClosedEvent(this));
+			}
+			catch (Throwable ex) {
+				logger.warn("Exception thrown from ApplicationListener handling ContextClosedEvent", ex);
+			}
+			//处理生命周期Bean 优雅关闭在此
+			// Stop all Lifecycle beans, to avoid delays during individual destruction.
+			if (this.lifecycleProcessor != null) {
+				try {
+					this.lifecycleProcessor.onClose();
+				}
+				catch (Throwable ex) {
+					logger.warn("Exception thrown from LifecycleProcessor on context close", ex);
+				}
+			}
+			//销毁所有bean
+			// Destroy all cached singletons in the context's BeanFactory.
+			destroyBeans();
+			//关闭beanFactory
+			// Close the state of this context itself.
+			closeBeanFactory();
+
+			// Let subclasses do some final clean-up if they wish...
+			onClose();
+
+			// Reset common introspection caches to avoid class reference leaks.
+			resetCommonCaches();
+
+			// Reset local application listeners to pre-refresh state.
+			if (this.earlyApplicationListeners != null) {
+				this.applicationListeners.clear();
+				this.applicationListeners.addAll(this.earlyApplicationListeners);
+			}
+
+			// Reset internal delegates.
+			this.applicationEventMulticaster = null;
+			this.messageSource = null;
+			this.lifecycleProcessor = null;
+
+			// Switch to inactive.
+			this.active.set(false);
+		}
+	}
+}
+```
+
+### DefaultLifecycleProcessor
+
+```java
+public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactoryAware {
+
+    //关闭
+	@Override
+	public void onClose() {
+		stopBeans(false);
+		this.running = false;
+	}
+
+	private void stopBeans(boolean pauseableOnly) {
+         //获取所有的LifecycleBean
+		Map<String, Lifecycle> lifecycleBeans = getLifecycleBeans();
+		Map<Integer, LifecycleGroup> phases = new TreeMap<>(Comparator.reverseOrder());
+		//按照不同优先级分组
+		lifecycleBeans.forEach((beanName, bean) -> {
+			int shutdownPhase = getPhase(bean);
+			phases.computeIfAbsent(
+					shutdownPhase, phase -> new LifecycleGroup(phase, lifecycleBeans, false, pauseableOnly))
+						.add(beanName, bean);
+		});
+		//遍历所有LifecycleBean，优先级小的先执行
+		if (!phases.isEmpty()) {
+			phases.values().forEach(LifecycleGroup::stop);
+		}
+	}
+    //在容器中获取所有的LifecycleBean
+    protected Map<String, Lifecycle> getLifecycleBeans() {
+		ConfigurableListableBeanFactory beanFactory = getBeanFactory();
+		Map<String, Lifecycle> beans = new LinkedHashMap<>();
+		String[] beanNames = beanFactory.getBeanNamesForType(Lifecycle.class, false, false);
+		for (String beanName : beanNames) {
+			String beanNameToRegister = BeanFactoryUtils.transformedBeanName(beanName);
+			boolean isFactoryBean = beanFactory.isFactoryBean(beanNameToRegister);
+			String beanNameToCheck = (isFactoryBean ? BeanFactory.FACTORY_BEAN_PREFIX + beanName : beanName);
+			if ((beanFactory.containsSingleton(beanNameToRegister) &&
+					(!isFactoryBean || matchesBeanType(Lifecycle.class, beanNameToCheck, beanFactory))) ||
+					matchesBeanType(SmartLifecycle.class, beanNameToCheck, beanFactory)) {
+				Object bean = beanFactory.getBean(beanNameToCheck);
+				if (bean != this && bean instanceof Lifecycle lifecycle) {
+					beans.put(beanNameToRegister, lifecycle);
+				}
+			}
+		}
+		return beans;
+	}
+}
+```
+
+### WebServerGracefulShutdownLifecycle
+
+在`onRefresh`方法启动`Tomcat`后如果当前的策略是`server.shutdown=graceful`，那么这个`LifecycleBean`才有效
+
+```java
+public final class WebServerGracefulShutdownLifecycle implements SmartLifecycle {
+    //tomcat
+    private final WebServer webServer;
+    
+	@Override
+	public void stop(Runnable callback) {
+		this.running = false;
+        //优雅关闭
+		this.webServer.shutDownGracefully((result) -> callback.run());
+	}
+    
+    //优先级
+    @Override
+	public int getPhase() {
+		return WebServerApplicationContext.GRACEFUL_SHUTDOWN_PHASE;
+	}
+}
+```
+
+### TomcatWebServer
+
+```java
+public class TomcatWebServer implements WebServer {
+    
+	@Override
+	public void shutDownGracefully(GracefulShutdownCallback callback) {
+         //如果没设置优雅关闭
+		if (this.gracefulShutdown == null) {
+			callback.shutdownComplete(GracefulShutdownResult.IMMEDIATE);
+			return;
+		}
+         //优雅关闭
+		this.gracefulShutdown.shutDownGracefully(callback);
+	}
+    
+}
+```
+
+### GracefulShutdown
+
+```java
+final class GracefulShutdown {
+
+	private final Tomcat tomcat;
+
+	private volatile boolean aborted;
+    
+    //优雅关闭
+    void shutDownGracefully(GracefulShutdownCallback callback) {
+		logger.info("Commencing graceful shutdown. Waiting for active requests to complete");
+		CountDownLatch shutdownUnderway = new CountDownLatch(1);
+         //新建线程优雅关闭
+		new Thread(() -> doShutdown(callback, shutdownUnderway), "tomcat-shutdown").start();
+		try {
+             //等待优雅关闭
+			shutdownUnderway.await();
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+		}
+	}
+	
+    //优雅关闭
+	private void doShutdown(GracefulShutdownCallback callback, CountDownLatch shutdownUnderway) {
+		try {
+             //获取tomcat中的所有Connector
+			List<Connector> connectors = getConnectors();
+             //关闭Connector
+			connectors.forEach(this::close);
+             //优雅关闭完成 countDown-1
+			shutdownUnderway.countDown();
+             //当前线程等待tomcat引擎关闭
+			awaitInactiveOrAborted();
+			if (this.aborted) {
+				logger.info("Graceful shutdown aborted with one or more requests still active");
+				callback.shutdownComplete(GracefulShutdownResult.REQUESTS_ACTIVE);
+			}
+			else {
+				logger.info("Graceful shutdown complete");
+				callback.shutdownComplete(GracefulShutdownResult.IDLE);
+			}
+		}
+		finally {
+			shutdownUnderway.countDown();
+		}
+	}
+}
+```
 
 
 
 
 
 
+
+## SmartLifecycle
+
+`SmartLifecycle` 是 Spring Framework 中的一个**生命周期管理接口**，用于**控制 Bean 的启动和关闭顺序，并支持自动启动和异步关闭**。它是 `Lifecycle` 的增强版。
+
+```java
+public interface SmartLifecycle extends Lifecycle, Phased {
+
+    int DEFAULT_PHASE = Integer.MAX_VALUE;
+    //容器启动时是否自动启动
+	default boolean isAutoStartup() {
+		return true;
+	}
+    //是否可以stop
+	default boolean isPauseable() {
+		return true;
+	}
+    
+    default void stop(Runnable callback) {
+		stop();
+		callback.run();
+	}
+    
+    //优先级
+    @Override
+	default int getPhase() {
+		return DEFAULT_PHASE;
+	}
+}
+```
+
+
+
+## SpringBoot自动装配
+
+核心思想：**约定优于配置（Convention over Configuration）**
+
+1. 依赖管理
+
+    **Spring 时代**，需要手动管理每个依赖及其版本，还要处理兼容性问题，**Spring Boot 时代**，一个 starter 搞定
+
+2. 自动配置
+
+   **Spring 时代**，需要手写大量配置类/XML，**Spring Boot 时代**，只需 `application.yml`，Spring Boot 读取配置后，通过 **`@EnableAutoConfiguration`** 自动创建好 `DataSource`、`SqlSessionFactory` 等 Bean，你完全不用手写。
+
+3. 内嵌容器
+
+   **Spring 时代**，必须单独安装 Tomcat，项目打成 `war` 包
+
+   **Spring Boot 时代**，Tomcat 直接内嵌，一个 `main` 方法启动
 
 
 

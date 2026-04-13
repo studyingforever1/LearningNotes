@@ -1,16 +1,30 @@
 package com.zcq.springbootcodestudy.controller;
 
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.convert.ApplicationConversionService;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.convert.TypeDescriptor;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDateTime;
 
 @SpringBootApplication
 //@ServletComponentScan
 public class SpringbootcodestudyApplication {
 
+
+    @NotNull
     public static void main(String[] args) {
         SpringApplication.run(SpringbootcodestudyApplication.class, args);
     }
+
+
+
+
 
 
 //    @Bean

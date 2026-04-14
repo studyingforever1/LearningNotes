@@ -2319,7 +2319,14 @@ public interface SmartLifecycle extends Lifecycle, Phased {
 
 
 
+## SpringMVC自动装配
 
+<img src="./images/image-20260414100621882.png" alt="image-20260414100621882" style="zoom:50%;" />
+
+```java
+org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration //负责DispatcherServlet的bean创建和DispatcherServletRegistrationBean的创建
+org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration //负责九大组件的自定义创建
+```
 
 
 

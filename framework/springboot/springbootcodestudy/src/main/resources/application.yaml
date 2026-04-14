@@ -5,5 +5,4 @@ spring:
         cachecontrol:
           cache-private: false
 
-debug: true
 

@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 public class SpringbootcodestudyApplication {
 
 
-    @NotNull
     public static void main(String[] args) {
         SpringApplication.run(SpringbootcodestudyApplication.class, args);
     }

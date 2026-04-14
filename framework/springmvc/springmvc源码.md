@@ -8670,7 +8670,34 @@ If-Unmodified-Since: Tue, 04 Nov 2025 12:00:00 GMT
 `getParameterMap()`可以获取到
 
 - URL 查询参数（query string）
+
+  ```http
+  GET /hello?name=张三&age=18 HTTP/1.1
+  Host: localhost:8080
+  ```
+
+- `application/x-www-form-urlencoded` 请求体
+
+  ```http
+  POST /hello HTTP/1.1
+  Host: localhost:8080
+  Content-Type: application/x-www-form-urlencoded
+  
+  name=张三&age=18
+  ```
+
 - multipart 表单的文本字段（文件字段（`file`）不会进入参数 map）
+
+  ```http
+  POST /test
+  Content-Type: multipart/form-data; boundary=----Boundary
+  
+  ------Boundary
+  Content-Disposition: form-data; name="textField"
+  
+  hello
+  ------Boundary--
+  ```
 
 `getParts()`
 
@@ -8679,6 +8706,24 @@ If-Unmodified-Since: Tue, 04 Nov 2025 12:00:00 GMT
   - 包括文本字段
   - 包括文件字段（MultipartFile 对应的部分）
 - 返回的 `Collection<Part>` **不可修改**，修改集合不会影响原请求
+
+```http
+POST /test
+Content-Type: multipart/form-data; boundary=----Boundary
+
+------Boundary
+Content-Disposition: form-data; name="textField"
+
+hello
+------Boundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+文件内容
+------Boundary--
+```
+
+
 
 
 

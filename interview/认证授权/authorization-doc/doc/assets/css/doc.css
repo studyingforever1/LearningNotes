@@ -1,0 +1,96 @@
+html, body {
+    margin: 0; /* 移除默认的外边距 */
+    padding: 0; /* 移除默认的内边距 */
+    overflow: hidden; /* 隐藏滚动条并阻止滚动 */
+    height: 100%; /* 设置高度为100% */
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+/* 左侧菜单样式 */
+.left {
+    width: 200px;
+    background-color: #34495e; /* 深蓝色背景 */
+    color: #ecf0f1; /* 浅灰色文字 */
+    padding: 10px; /* 内边距 */
+    overflow: hidden; /* 隐藏滚动条 */
+}
+
+.project-name {
+    font-size: 20px; /* 字体大小 */
+    text-align: center; /* 文本居中 */
+    margin-bottom: 20px; /* 与下方内容的间距 */
+    font-weight: bold; /* 字体加粗 */
+    padding: 10px 0; /* 上下内边距 */
+    border-bottom: 2px solid #2980b9; /* 底部边框 */
+}
+
+.left ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow-y: auto; /* 当内容超出时，垂直方向显示滚动条 */
+}
+
+/* 自定义滚动条的样式 */
+.left ul::-webkit-scrollbar {
+    width: 5px; /* 滚动条的宽度 */
+}
+.left ul::-webkit-scrollbar-track {
+    background: #f1f1f1; /* 滚动条的背景色 */
+}
+.left ul::-webkit-scrollbar-thumb {
+    background: #888; /* 滚动条的颜色 */
+}
+.left ul::-webkit-scrollbar-thumb:hover {
+    background: #555; /* 滚动条hover时的颜色 */
+}
+
+.left li a {
+    font-size: 14px; /* 字体大小 */
+    display: block;
+    color: #ecf0f1;
+    padding: 10px;
+    text-decoration: none;
+    border-radius: 5px; /* 圆角边框 */
+    transition: background-color 0.3s; /* 平滑过渡效果 */
+}
+
+/* 鼠标悬停效果 */
+.left li a:hover {
+    background-color: #2980b9; /* 悬停时的背景颜色 */
+}
+
+/* 子菜单样式 */
+.left ul ul {
+    padding-left: 20px; /* 子菜单的左内边距 */
+}
+
+.left ul ul li a {
+    background-color: #3b4c5a; /* 子菜单项背景颜色 */
+}
+
+.left ul li a.active {
+    background-color: #2980b9; /* 选中项的背景颜色 */
+    color: yellow; /* 选中项的文字颜色 */
+}
+
+.right {
+    flex-grow: 1;
+    height: 100%;
+    display: flex; /* 使iframe在右侧div内居中显示 */
+    justify-content: center; /* 水平居中 */
+    align-items: center; /* 垂直居中 */
+}
+
+.right iframe {
+    width: 100%; /* iframe宽度占右侧div的80% */
+    height: 100vh; /* iframe高度为视口高度的80% */
+    border: 2px solid #fff; /* 设置iframe边框颜色 */
+    border-radius: 10px; /* 设置iframe边框圆角 */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* 设置iframe阴影效果 */
+}

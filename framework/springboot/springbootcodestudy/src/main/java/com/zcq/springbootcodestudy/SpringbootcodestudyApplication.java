@@ -1,16 +1,7 @@
-package com.zcq.springbootcodestudy.controller;
+package com.zcq.springbootcodestudy;
 
-import jakarta.annotation.PreDestroy;
-import jakarta.annotation.Resource;
-import jakarta.validation.constraints.NotNull;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.convert.ApplicationConversionService;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.convert.TypeDescriptor;
-import org.springframework.format.annotation.DateTimeFormat;
-
-import java.time.LocalDateTime;
 
 @SpringBootApplication
 //@ServletComponentScan
@@ -22,10 +13,6 @@ public class SpringbootcodestudyApplication {
     }
 
 
-
-
-
-
 //    @Bean
 //    public ServletRegistrationBean<MyServlet> getServletRegistrationBean(){
 //        ServletRegistrationBean<MyServlet> bean = new ServletRegistrationBean<>(new MyServlet());
@@ -34,3 +21,4 @@ public class SpringbootcodestudyApplication {
 //    }
 
 }
+

@@ -1,0 +1,17 @@
+spring:
+  elasticsearch:
+    uris: https://10.1.24.136:9200
+    username: elastic
+    password: 6081O0VdwHJF-SdsLNTy
+    # 连接 / 读取超时（毫秒）
+    connection-timeout: 5s
+    socket-timeout: 30s
+  main:
+    banner-mode: off
+
+server:
+  port: 8080
+logging:
+  level:
+    org.springframework.data.elasticsearch: DEBUG
+    tracer: TRACE

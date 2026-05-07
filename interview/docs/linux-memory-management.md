@@ -459,7 +459,7 @@ ip link set eth0 txqueuelen 10000
 
 ### 5.6 零拷贝技术对比
 
-![零拷贝技术对比](./svg/05-network-zerocopy.svg)
+![](./svg/mmap_zero_copy_principle.svg)
 
 ```
 ┌──────────────────┬───────────┬──────────────────────────────────────┐

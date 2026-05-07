@@ -8,6 +8,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.CharsetUtil;
 
+import java.util.concurrent.TimeUnit;
+
 public class HelloNetty {
     public static void main(String[] args) {
         new NettyServer(8888).serverStart();
@@ -25,9 +27,11 @@ class NettyServer {
 
     public void serverStart() {
         //新建group
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        NioEventLoopGroup bossGroup = new NioEventLoopGroup(1);
+        NioEventLoopGroup workerGroup = new NioEventLoopGroup();
         ServerBootstrap b = new ServerBootstrap();
+
+//        bossGroup.scheduleAtFixedRate(()-> System.out.println("执行了"),1,1,TimeUnit.SECONDS);
 
         //初始化
         b.group(bossGroup, workerGroup)

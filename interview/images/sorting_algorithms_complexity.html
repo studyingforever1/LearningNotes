@@ -1,0 +1,113 @@
+
+<style>
+h2.sr-only { position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0) }
+.tbl { width:100%;border-collapse:collapse;font-size:13px }
+.tbl th { font-weight:500;font-size:12px;color:var(--color-text-secondary);padding:8px 10px;text-align:left;border-bottom:0.5px solid var(--color-border-secondary) }
+.tbl td { padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);vertical-align:middle }
+.tbl tr:last-child td { border-bottom:none }
+.tbl tr:hover td { background:var(--color-background-secondary) }
+.name { font-weight:500;color:var(--color-text-primary);white-space:nowrap }
+.badge { display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;white-space:nowrap }
+.b-green  { background:var(--color-background-success);color:var(--color-text-success) }
+.b-amber  { background:var(--color-background-warning);color:var(--color-text-warning) }
+.b-red    { background:var(--color-background-danger);color:var(--color-text-danger) }
+.b-blue   { background:var(--color-background-info);color:var(--color-text-info) }
+.tag { display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;background:var(--color-background-secondary);color:var(--color-text-secondary);border:0.5px solid var(--color-border-tertiary) }
+.stable { color:var(--color-text-success);font-size:13px }
+.unstable { color:var(--color-text-danger);font-size:13px }
+.section-head td { background:var(--color-background-secondary);font-size:11px;font-weight:500;color:var(--color-text-tertiary);padding:5px 10px;letter-spacing:.04em }
+</style>
+
+<h2 class="sr-only">八大排序算法时间复杂度对比表</h2>
+<div style="padding:1rem 0">
+<table class="tbl">
+  <thead>
+    <tr>
+      <th>算法</th>
+      <th>最好</th>
+      <th>平均</th>
+      <th>最坏</th>
+      <th>空间</th>
+      <th>稳定</th>
+      <th>特点</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="section-head"><td colspan="7">比较类排序</td></tr>
+    <tr>
+      <td class="name">冒泡排序</td>
+      <td><span class="badge b-green">O(n)</span></td>
+      <td><span class="badge b-amber">O(n²)</span></td>
+      <td><span class="badge b-red">O(n²)</span></td>
+      <td><span class="tag">O(1)</span></td>
+      <td class="stable">✓</td>
+      <td style="color:var(--color-text-secondary);font-size:12px">相邻交换</td>
+    </tr>
+    <tr>
+      <td class="name">选择排序</td>
+      <td><span class="badge b-red">O(n²)</span></td>
+      <td><span class="badge b-red">O(n²)</span></td>
+      <td><span class="badge b-red">O(n²)</span></td>
+      <td><span class="tag">O(1)</span></td>
+      <td class="unstable">✗</td>
+      <td style="color:var(--color-text-secondary);font-size:12px">找最小值</td>
+    </tr>
+    <tr>
+      <td class="name">插入排序</td>
+      <td><span class="badge b-green">O(n)</span></td>
+      <td><span class="badge b-amber">O(n²)</span></td>
+      <td><span class="badge b-red">O(n²)</span></td>
+      <td><span class="tag">O(1)</span></td>
+      <td class="stable">✓</td>
+      <td style="color:var(--color-text-secondary);font-size:12px">小数组高效</td>
+    </tr>
+    <tr>
+      <td class="name">希尔排序</td>
+      <td><span class="badge b-green">O(n log n)</span></td>
+      <td><span class="badge b-amber">O(n log²n)</span></td>
+      <td><span class="badge b-red">O(n²)</span></td>
+      <td><span class="tag">O(1)</span></td>
+      <td class="unstable">✗</td>
+      <td style="color:var(--color-text-secondary);font-size:12px">分组插入</td>
+    </tr>
+    <tr>
+      <td class="name">归并排序</td>
+      <td><span class="badge b-blue">O(n log n)</span></td>
+      <td><span class="badge b-blue">O(n log n)</span></td>
+      <td><span class="badge b-blue">O(n log n)</span></td>
+      <td><span class="tag">O(n)</span></td>
+      <td class="stable">✓</td>
+      <td style="color:var(--color-text-secondary);font-size:12px">分治稳定</td>
+    </tr>
+    <tr>
+      <td class="name">快速排序</td>
+      <td><span class="badge b-blue">O(n log n)</span></td>
+      <td><span class="badge b-blue">O(n log n)</span></td>
+      <td><span class="badge b-red">O(n²)</span></td>
+      <td><span class="tag">O(log n)</span></td>
+      <td class="unstable">✗</td>
+      <td style="color:var(--color-text-secondary);font-size:12px">实践最快</td>
+    </tr>
+    <tr>
+      <td class="name">堆排序</td>
+      <td><span class="badge b-blue">O(n log n)</span></td>
+      <td><span class="badge b-blue">O(n log n)</span></td>
+      <td><span class="badge b-blue">O(n log n)</span></td>
+      <td><span class="tag">O(1)</span></td>
+      <td class="unstable">✗</td>
+      <td style="color:var(--color-text-secondary);font-size:12px">原地高效</td>
+    </tr>
+    <tr class="section-head"><td colspan="7">非比较类排序</td></tr>
+    <tr>
+      <td class="name">计数排序</td>
+      <td><span class="badge b-green">O(n+k)</span></td>
+      <td><span class="badge b-green">O(n+k)</span></td>
+      <td><span class="badge b-green">O(n+k)</span></td>
+      <td><span class="tag">O(k)</span></td>
+      <td class="stable">✓</td>
+      <td style="color:var(--color-text-secondary);font-size:12px">整数范围小</td>
+    </tr>
+  </tbody>
+</table>
+<p style="font-size:12px;color:var(--color-text-tertiary);margin:10px 10px 0">k = 数据范围；希尔排序平均复杂度依赖增量序列</p>
+</div>

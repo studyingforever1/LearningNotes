@@ -1,0 +1,159 @@
+<svg viewBox="0 0 960 680" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3498db"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="680" fill="#f8f9fa" rx="8"/>
+
+  <!-- 标题 -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">LOCK 指令如何利用 MESI 实现缓存锁</text>
+
+  <!-- ======= 左半：执行步骤时序 ======= -->
+  <rect x="20" y="65" width="440" height="34" rx="6" fill="#2c3e50"/>
+  <text x="240" y="87" text-anchor="middle" fill="white" font-size="14" font-weight="bold">LOCK CMPXCHG 执行时序（核 A）</text>
+
+  <!-- 步骤框 -->
+  <!-- Step 1 -->
+  <rect x="20" y="110" width="440" height="60" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
+  <rect x="20" y="110" width="8" height="60" rx="4" fill="#f39c12"/>
+  <text x="50" y="133" fill="#e67e22" font-size="13" font-weight="bold">① 发出 RFO（Request For Ownership）</text>
+  <text x="50" y="153" fill="#7f8c8d" font-size="12">CPU 广播总线请求，要求独占目标缓存行</text>
+
+  <!-- Step 2 -->
+  <rect x="20" y="182" width="440" height="60" rx="8" fill="#fdecea" stroke="#e74c3c" stroke-width="2"/>
+  <rect x="20" y="182" width="8" height="60" rx="4" fill="#e74c3c"/>
+  <text x="50" y="205" fill="#c0392b" font-size="13" font-weight="bold">② 其他所有核将该缓存行置为 I（Invalid）</text>
+  <text x="50" y="225" fill="#7f8c8d" font-size="12">总线嗅探协议（Bus Snooping）强制失效</text>
+
+  <!-- Step 3 -->
+  <rect x="20" y="254" width="440" height="60" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="20" y="254" width="8" height="60" rx="4" fill="#27ae60"/>
+  <text x="50" y="277" fill="#1e8449" font-size="13" font-weight="bold">③ 核 A 获得 E 态（Exclusive），独占缓存行</text>
+  <text x="50" y="297" fill="#7f8c8d" font-size="12">此时整个系统只有核 A 持有此行</text>
+
+  <!-- Step 4 -->
+  <rect x="20" y="326" width="440" height="60" rx="8" fill="#ebf5fb" stroke="#3498db" stroke-width="2"/>
+  <rect x="20" y="326" width="8" height="60" rx="4" fill="#3498db"/>
+  <text x="50" y="349" fill="#2980b9" font-size="13" font-weight="bold">④ 执行 Read → Compare → Write（原子）</text>
+  <text x="50" y="369" fill="#7f8c8d" font-size="12">无其他核干扰，三步操作不可分割</text>
+
+  <!-- Step 5 -->
+  <rect x="20" y="398" width="440" height="60" rx="8" fill="#f5eef8" stroke="#8e44ad" stroke-width="2"/>
+  <rect x="20" y="398" width="8" height="60" rx="4" fill="#8e44ad"/>
+  <text x="50" y="421" fill="#6c3483" font-size="13" font-weight="bold">⑤ 缓存行变为 M 态，操作完成</text>
+  <text x="50" y="441" fill="#7f8c8d" font-size="12">后续其他核读取时触发 M→S 写回内存</text>
+
+  <!-- 步骤间箭头 -->
+  <line x1="240" y1="170" x2="240" y2="182" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="240" y1="242" x2="240" y2="254" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="240" y1="314" x2="240" y2="326" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="240" y1="386" x2="240" y2="398" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ======= 右半：多核示意图 ======= -->
+  <rect x="500" y="65" width="440" height="34" rx="6" fill="#2c3e50"/>
+  <text x="720" y="87" text-anchor="middle" fill="white" font-size="14" font-weight="bold">多核 CPU 缓存状态变化</text>
+
+  <!-- 内存 -->
+  <rect x="610" y="560" width="220" height="55" rx="8" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/>
+  <text x="720" y="581" text-anchor="middle" fill="#2c3e50" font-size="13" font-weight="bold">主内存（RAM）</text>
+  <text x="720" y="602" text-anchor="middle" fill="#7f8c8d" font-size="12">addr: 0x1A00  val=5</text>
+
+  <!-- 核A -->
+  <rect x="510" y="110" width="190" height="200" rx="10" fill="#fef9e7" stroke="#f39c12" stroke-width="2.5"/>
+  <text x="605" y="132" text-anchor="middle" fill="#e67e22" font-size="14" font-weight="bold">Core A</text>
+  <!-- Cache A -->
+  <rect x="530" y="145" width="150" height="40" rx="6" fill="#27ae60" stroke="#1e8449" stroke-width="2"/>
+  <text x="605" y="161" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Cache Line</text>
+  <text x="605" y="178" text-anchor="middle" fill="white" font-size="12">状态: E → M</text>
+  <!-- ALU -->
+  <rect x="530" y="200" width="150" height="40" rx="6" fill="#f39c12" stroke="#d68910" stroke-width="1.5"/>
+  <text x="605" y="216" text-anchor="middle" fill="white" font-size="12" font-weight="bold">ALU</text>
+  <text x="605" y="233" text-anchor="middle" fill="white" font-size="11">LOCK CMPXCHG</text>
+  <!-- LOCK prefix box -->
+  <rect x="530" y="255" width="150" height="40" rx="6" fill="#e74c3c" stroke="#c0392b" stroke-width="1.5"/>
+  <text x="605" y="271" text-anchor="middle" fill="white" font-size="12" font-weight="bold">LOCK 前缀</text>
+  <text x="605" y="288" text-anchor="middle" fill="white" font-size="11">持有独占权直到写完</text>
+
+  <!-- 核B -->
+  <rect x="730" y="110" width="190" height="220" rx="10" fill="#f2f3f4" stroke="#95a5a6" stroke-width="2.5"/>
+  <text x="825" y="132" text-anchor="middle" fill="#7f8c8d" font-size="14" font-weight="bold">Core B</text>
+  <!-- Cache B Invalid -->
+  <rect x="750" y="145" width="150" height="40" rx="6" fill="#95a5a6" stroke="#7f8c8d" stroke-width="2"/>
+  <text x="825" y="161" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Cache Line 0x1A00</text>
+  <text x="825" y="178" text-anchor="middle" fill="white" font-size="12">状态: S → I（强制失效）</text>
+  <!-- Cache Miss Stall：仅针对该缓存行 -->
+  <rect x="750" y="195" width="150" height="46" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="825" y="212" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">⚠ Cache Miss Stall</text>
+  <text x="825" y="228" text-anchor="middle" fill="#c0392b" font-size="10">访问 0x1A00 被挂起</text>
+  <text x="825" y="241" text-anchor="middle" fill="#7f8c8d" font-size="10">等待 A 完成后重新加载</text>
+  <!-- 其他指令仍可执行 -->
+  <rect x="750" y="249" width="150" height="68" rx="6" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="825" y="265" text-anchor="middle" fill="#1e8449" font-size="11" font-weight="bold">✅ 其他指令照常执行</text>
+  <text x="825" y="281" text-anchor="middle" fill="#555" font-size="10">乱序执行（OoO）不依赖</text>
+  <text x="825" y="295" text-anchor="middle" fill="#555" font-size="10">0x1A00 的指令继续运行</text>
+  <text x="825" y="309" text-anchor="middle" fill="#7f8c8d" font-size="10">≠ CPU 整体阻塞</text>
+
+  <!-- 总线 -->
+  <rect x="510" y="360" width="410" height="36" rx="6" fill="#2c3e50"/>
+  <text x="715" y="382" text-anchor="middle" fill="white" font-size="13" font-weight="bold">系统总线（Bus Snooping 广播层）</text>
+
+  <!-- RFO 箭头 Core A → Bus -->
+  <line x1="605" y1="310" x2="605" y2="360" stroke="#e74c3c" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+  <text x="570" y="340" fill="#c0392b" font-size="11" font-weight="bold">RFO</text>
+
+  <!-- Bus → Core B Invalid（仅该缓存行失效） -->
+  <line x1="825" y1="360" x2="825" y2="330" stroke="#e74c3c" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+  <text x="832" y="348" fill="#c0392b" font-size="11" font-weight="bold">→ I</text>
+  <text x="832" y="361" fill="#c0392b" font-size="10">仅此行失效</text>
+
+  <!-- Bus → Memory（必要时写回） -->
+  <line x1="715" y1="396" x2="715" y2="560" stroke="#3498db" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrow-blue)"/>
+  <text x="722" y="490" fill="#2980b9" font-size="11">写回（若M→S）</text>
+
+  <!-- 底部对比说明 -->
+  <rect x="20" y="490" width="440" height="170" rx="8" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="1.5"/>
+  <text x="240" y="512" text-anchor="middle" fill="#2c3e50" font-size="13" font-weight="bold">缓存锁 vs 总线锁</text>
+  <!-- 表头 -->
+  <rect x="30" y="520" width="420" height="24" rx="4" fill="#2c3e50"/>
+  <text x="130" y="536" text-anchor="middle" fill="white" font-size="11" font-weight="bold">对比项</text>
+  <text x="290" y="536" text-anchor="middle" fill="white" font-size="11" font-weight="bold">缓存锁（MESI）</text>
+  <text x="420" y="536" text-anchor="middle" fill="white" font-size="11" font-weight="bold">总线锁（LOCK#）</text>
+  <!-- 行1 -->
+  <rect x="30" y="544" width="420" height="22" fill="white" stroke="#e0e0e0" stroke-width="0.5"/>
+  <text x="130" y="559" text-anchor="middle" fill="#555" font-size="11">触发条件</text>
+  <text x="290" y="559" text-anchor="middle" fill="#555" font-size="11">操作数在单一缓存行内</text>
+  <text x="420" y="559" text-anchor="middle" fill="#555" font-size="11">跨缓存行 / 不可缓存</text>
+  <!-- 行2 -->
+  <rect x="30" y="566" width="420" height="22" fill="#f9f9f9" stroke="#e0e0e0" stroke-width="0.5"/>
+  <text x="130" y="581" text-anchor="middle" fill="#555" font-size="11">锁粒度</text>
+  <text x="290" y="581" text-anchor="middle" fill="#27ae60" font-size="11">单个缓存行（64B）</text>
+  <text x="420" y="581" text-anchor="middle" fill="#e74c3c" font-size="11">整条总线</text>
+  <!-- 行3 -->
+  <rect x="30" y="588" width="420" height="22" fill="white" stroke="#e0e0e0" stroke-width="0.5"/>
+  <text x="130" y="603" text-anchor="middle" fill="#555" font-size="11">性能</text>
+  <text x="290" y="603" text-anchor="middle" fill="#27ae60" font-size="11">高（只影响相关核）</text>
+  <text x="420" y="603" text-anchor="middle" fill="#e74c3c" font-size="11">低（其他核全部阻塞）</text>
+  <!-- 行4 -->
+  <rect x="30" y="610" width="420" height="22" fill="#f9f9f9" stroke="#e0e0e0" stroke-width="0.5"/>
+  <text x="130" y="625" text-anchor="middle" fill="#555" font-size="11">现代 x86 优先级</text>
+  <text x="290" y="625" text-anchor="middle" fill="#27ae60" font-size="11">优先使用</text>
+  <text x="420" y="625" text-anchor="middle" fill="#e74c3c" font-size="11">降级使用</text>
+  <!-- 行5 -->
+  <rect x="30" y="632" width="420" height="22" fill="white" stroke="#e0e0e0" stroke-width="0.5"/>
+  <text x="130" y="647" text-anchor="middle" fill="#555" font-size="11">Java 对应场景</text>
+  <text x="290" y="647" text-anchor="middle" fill="#555" font-size="11">AtomicInteger 等原子类</text>
+  <text x="420" y="647" text-anchor="middle" fill="#555" font-size="11">long[] 跨行 / off-heap</text>
+</svg>

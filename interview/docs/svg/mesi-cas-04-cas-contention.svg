@@ -1,0 +1,222 @@
+<svg viewBox="0 0 960 720" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#27ae60"/>
+    </marker>
+    <marker id="arrow-gray" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#95a5a6"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="720" fill="#f8f9fa" rx="8"/>
+
+  <!-- 标题 -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">多核 CAS 竞争：缓存行颠簸（Cache Line Bouncing）</text>
+
+  <!-- ====== 时间轴标题 ====== -->
+  <!-- 列标题 -->
+  <rect x="10" y="58" width="80" height="30" rx="4" fill="#ecf0f1"/>
+  <text x="50" y="78" text-anchor="middle" fill="#7f8c8d" font-size="12" font-weight="bold">时间</text>
+
+  <rect x="100" y="58" width="100" height="30" rx="4" fill="#3498db"/>
+  <text x="150" y="78" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Core A</text>
+
+  <rect x="210" y="58" width="100" height="30" rx="4" fill="#e67e22"/>
+  <text x="260" y="78" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Core B</text>
+
+  <rect x="320" y="58" width="100" height="30" rx="4" fill="#8e44ad"/>
+  <text x="370" y="78" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Core C</text>
+
+  <rect x="430" y="58" width="100" height="30" rx="4" fill="#16a085"/>
+  <text x="480" y="78" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Core D</text>
+
+  <rect x="540" y="58" width="130" height="30" rx="4" fill="#2c3e50"/>
+  <text x="605" y="78" text-anchor="middle" fill="white" font-size="12" font-weight="bold">总线仲裁</text>
+
+  <rect x="680" y="58" width="260" height="30" rx="4" fill="#2c3e50"/>
+  <text x="810" y="78" text-anchor="middle" fill="white" font-size="12" font-weight="bold">缓存行状态快照（同一 addr）</text>
+
+  <!-- ====== T0：初始状态 ====== -->
+  <rect x="10" y="96" width="80" height="44" rx="4" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="50" y="113" text-anchor="middle" fill="#555" font-size="11" font-weight="bold">T0</text>
+  <text x="50" y="130" text-anchor="middle" fill="#7f8c8d" font-size="10">初始</text>
+
+  <rect x="100" y="96" width="100" height="44" rx="4" fill="#ebf5fb" stroke="#3498db" stroke-width="1.5"/>
+  <text x="150" y="116" text-anchor="middle" fill="#2980b9" font-size="12" font-weight="bold">S 态</text>
+  <text x="150" y="133" text-anchor="middle" fill="#7f8c8d" font-size="10">持有副本</text>
+
+  <rect x="210" y="96" width="100" height="44" rx="4" fill="#fef5e7" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="260" y="116" text-anchor="middle" fill="#e67e22" font-size="12" font-weight="bold">S 态</text>
+  <text x="260" y="133" text-anchor="middle" fill="#7f8c8d" font-size="10">持有副本</text>
+
+  <rect x="320" y="96" width="100" height="44" rx="4" fill="#f5eef8" stroke="#8e44ad" stroke-width="1.5"/>
+  <text x="370" y="116" text-anchor="middle" fill="#8e44ad" font-size="12" font-weight="bold">S 态</text>
+  <text x="370" y="133" text-anchor="middle" fill="#7f8c8d" font-size="10">持有副本</text>
+
+  <rect x="430" y="96" width="100" height="44" rx="4" fill="#e8f8f5" stroke="#16a085" stroke-width="1.5"/>
+  <text x="480" y="116" text-anchor="middle" fill="#16a085" font-size="12" font-weight="bold">S 态</text>
+  <text x="480" y="133" text-anchor="middle" fill="#7f8c8d" font-size="10">持有副本</text>
+
+  <rect x="540" y="96" width="130" height="44" rx="4" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="605" y="122" text-anchor="middle" fill="#7f8c8d" font-size="11">—</text>
+
+  <rect x="680" y="96" width="260" height="44" rx="4" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="810" y="122" text-anchor="middle" fill="#555" font-size="12">A=S, B=S, C=S, D=S</text>
+
+  <!-- ====== T1：所有核同时发 RFO ====== -->
+  <rect x="10" y="148" width="80" height="54" rx="4" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="50" y="165" text-anchor="middle" fill="#555" font-size="11" font-weight="bold">T1</text>
+  <text x="50" y="185" text-anchor="middle" fill="#7f8c8d" font-size="10">RFO</text>
+  <text x="50" y="197" text-anchor="middle" fill="#7f8c8d" font-size="10">竞争</text>
+
+  <rect x="100" y="148" width="100" height="54" rx="4" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="150" y="165" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">发 RFO</text>
+  <text x="150" y="181" text-anchor="middle" fill="#c0392b" font-size="10">请求独占</text>
+  <text x="150" y="196" text-anchor="middle" fill="#7f8c8d" font-size="10">S→待定</text>
+
+  <rect x="210" y="148" width="100" height="54" rx="4" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="260" y="165" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">发 RFO</text>
+  <text x="260" y="181" text-anchor="middle" fill="#c0392b" font-size="10">请求独占</text>
+  <text x="260" y="196" text-anchor="middle" fill="#7f8c8d" font-size="10">S→待定</text>
+
+  <rect x="320" y="148" width="100" height="54" rx="4" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="370" y="165" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">发 RFO</text>
+  <text x="370" y="181" text-anchor="middle" fill="#c0392b" font-size="10">请求独占</text>
+  <text x="370" y="196" text-anchor="middle" fill="#7f8c8d" font-size="10">S→待定</text>
+
+  <rect x="430" y="148" width="100" height="54" rx="4" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="480" y="165" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">发 RFO</text>
+  <text x="480" y="181" text-anchor="middle" fill="#c0392b" font-size="10">请求独占</text>
+  <text x="480" y="196" text-anchor="middle" fill="#7f8c8d" font-size="10">S→待定</text>
+
+  <rect x="540" y="148" width="130" height="54" rx="4" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
+  <text x="605" y="165" text-anchor="middle" fill="#e67e22" font-size="11" font-weight="bold">⚖ 总线仲裁</text>
+  <text x="605" y="181" text-anchor="middle" fill="#e67e22" font-size="10">4 个 RFO 同时到达</text>
+  <text x="605" y="196" text-anchor="middle" fill="#e67e22" font-size="10">选出 Core A 优先</text>
+
+  <rect x="680" y="148" width="260" height="54" rx="4" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="810" y="171" text-anchor="middle" fill="#e67e22" font-size="11" font-weight="bold">所有核同时请求独占，互斥</text>
+  <text x="810" y="191" text-anchor="middle" fill="#7f8c8d" font-size="10">E 态在物理上只能由一个核持有</text>
+
+  <!-- ====== T2：A 获得 E 态，其余 → I ====== -->
+  <rect x="10" y="210" width="80" height="54" rx="4" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="50" y="227" text-anchor="middle" fill="#555" font-size="11" font-weight="bold">T2</text>
+  <text x="50" y="247" text-anchor="middle" fill="#7f8c8d" font-size="10">A 赢得</text>
+  <text x="50" y="259" text-anchor="middle" fill="#7f8c8d" font-size="10">仲裁</text>
+
+  <rect x="100" y="210" width="100" height="54" rx="4" fill="#eafaf1" stroke="#27ae60" stroke-width="2.5"/>
+  <text x="150" y="229" text-anchor="middle" fill="#1e8449" font-size="13" font-weight="bold">E 态 ✅</text>
+  <text x="150" y="247" text-anchor="middle" fill="#1e8449" font-size="10">独占，执行</text>
+  <text x="150" y="261" text-anchor="middle" fill="#1e8449" font-size="10">CAS → M 态</text>
+
+  <rect x="210" y="210" width="100" height="54" rx="4" fill="#f2f3f4" stroke="#95a5a6" stroke-width="1.5"/>
+  <text x="260" y="229" text-anchor="middle" fill="#95a5a6" font-size="13" font-weight="bold">I 态 ❌</text>
+  <text x="260" y="247" text-anchor="middle" fill="#95a5a6" font-size="10">无效，等待</text>
+  <text x="260" y="261" text-anchor="middle" fill="#95a5a6" font-size="10">Cache Miss</text>
+
+  <rect x="320" y="210" width="100" height="54" rx="4" fill="#f2f3f4" stroke="#95a5a6" stroke-width="1.5"/>
+  <text x="370" y="229" text-anchor="middle" fill="#95a5a6" font-size="13" font-weight="bold">I 态 ❌</text>
+  <text x="370" y="247" text-anchor="middle" fill="#95a5a6" font-size="10">无效，等待</text>
+  <text x="370" y="261" text-anchor="middle" fill="#95a5a6" font-size="10">Cache Miss</text>
+
+  <rect x="430" y="210" width="100" height="54" rx="4" fill="#f2f3f4" stroke="#95a5a6" stroke-width="1.5"/>
+  <text x="480" y="229" text-anchor="middle" fill="#95a5a6" font-size="13" font-weight="bold">I 态 ❌</text>
+  <text x="480" y="247" text-anchor="middle" fill="#95a5a6" font-size="10">无效，等待</text>
+  <text x="480" y="261" text-anchor="middle" fill="#95a5a6" font-size="10">Cache Miss</text>
+
+  <rect x="540" y="210" width="130" height="54" rx="4" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="605" y="233" text-anchor="middle" fill="#1e8449" font-size="11" font-weight="bold">A 获胜</text>
+  <text x="605" y="252" text-anchor="middle" fill="#7f8c8d" font-size="10">B/C/D → I</text>
+
+  <rect x="680" y="210" width="260" height="54" rx="4" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="810" y="233" text-anchor="middle" fill="#1e8449" font-size="11" font-weight="bold">A=E（独占），B=I，C=I，D=I</text>
+  <text x="810" y="253" text-anchor="middle" fill="#7f8c8d" font-size="10">A 完成 CAS，缓存行变 M 态</text>
+
+  <!-- ====== T3：B 重新竞争 RFO ====== -->
+  <rect x="10" y="272" width="80" height="54" rx="4" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="50" y="289" text-anchor="middle" fill="#555" font-size="11" font-weight="bold">T3</text>
+  <text x="50" y="309" text-anchor="middle" fill="#7f8c8d" font-size="10">B 赢得</text>
+  <text x="50" y="321" text-anchor="middle" fill="#7f8c8d" font-size="10">仲裁</text>
+
+  <rect x="100" y="272" width="100" height="54" rx="4" fill="#f2f3f4" stroke="#95a5a6" stroke-width="1.5"/>
+  <text x="150" y="291" text-anchor="middle" fill="#95a5a6" font-size="12" font-weight="bold">I 态</text>
+  <text x="150" y="309" text-anchor="middle" fill="#95a5a6" font-size="10">CAS 已完成</text>
+  <text x="150" y="323" text-anchor="middle" fill="#95a5a6" font-size="10">退出竞争</text>
+
+  <rect x="210" y="272" width="100" height="54" rx="4" fill="#eafaf1" stroke="#27ae60" stroke-width="2.5"/>
+  <text x="260" y="291" text-anchor="middle" fill="#1e8449" font-size="13" font-weight="bold">E 态 ✅</text>
+  <text x="260" y="309" text-anchor="middle" fill="#1e8449" font-size="10">读新值</text>
+  <text x="260" y="323" text-anchor="middle" fill="#1e8449" font-size="10">CAS 失败重试</text>
+
+  <rect x="320" y="272" width="100" height="54" rx="4" fill="#f2f3f4" stroke="#95a5a6" stroke-width="1.5"/>
+  <text x="370" y="291" text-anchor="middle" fill="#95a5a6" font-size="13" font-weight="bold">I 态 ❌</text>
+  <text x="370" y="309" text-anchor="middle" fill="#95a5a6" font-size="10">继续等待</text>
+  <text x="370" y="323" text-anchor="middle" fill="#95a5a6" font-size="10">Cache Miss</text>
+
+  <rect x="430" y="272" width="100" height="54" rx="4" fill="#f2f3f4" stroke="#95a5a6" stroke-width="1.5"/>
+  <text x="480" y="291" text-anchor="middle" fill="#95a5a6" font-size="13" font-weight="bold">I 态 ❌</text>
+  <text x="480" y="309" text-anchor="middle" fill="#95a5a6" font-size="10">继续等待</text>
+  <text x="480" y="323" text-anchor="middle" fill="#95a5a6" font-size="10">Cache Miss</text>
+
+  <rect x="540" y="272" width="130" height="54" rx="4" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="605" y="295" text-anchor="middle" fill="#1e8449" font-size="11" font-weight="bold">B 获胜</text>
+  <text x="605" y="314" text-anchor="middle" fill="#7f8c8d" font-size="10">C/D → 继续等</text>
+
+  <rect x="680" y="272" width="260" height="54" rx="4" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="810" y="291" text-anchor="middle" fill="#e67e22" font-size="11" font-weight="bold">缓存行从 A 转移到 B</text>
+  <text x="810" y="311" text-anchor="middle" fill="#7f8c8d" font-size="10">B=E，A/C/D=I（缓存行颠簸）</text>
+
+  <!-- ====== 箭头：时序流向 ====== -->
+  <line x1="50" y1="140" x2="50" y2="148" stroke="#aaa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="50" y1="202" x2="50" y2="210" stroke="#aaa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="50" y1="264" x2="50" y2="272" stroke="#aaa" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ====== 缓存行颠簸示意 ====== -->
+  <rect x="10" y="340" width="940" height="50" rx="8" fill="#fdecea" stroke="#e74c3c" stroke-width="2"/>
+  <text x="480" y="360" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="bold">⚠ 缓存行颠簸（Cache Line Bouncing）：同一缓存行在多核间反复转移所有权，每次转移约 100～300 ns</text>
+  <text x="480" y="380" text-anchor="middle" fill="#c0392b" font-size="12">核越多、冲突越激烈 → 总线流量越大 → CAS 自旋开销越高 → 吞吐量反而下降</text>
+
+  <!-- ====== 右侧：CAS 自旋与 LongAdder 对比 ====== -->
+  <!-- AtomicLong 高冲突 -->
+  <rect x="10" y="406" width="455" height="150" rx="8" fill="#fef9e7" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="237" y="426" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="bold">❌ AtomicLong 高冲突场景</text>
+  <text x="237" y="448" text-anchor="middle" fill="#555" font-size="12">所有线程争同一缓存行</text>
+  <!-- 竞争漏斗图 -->
+  <text x="50" y="470" fill="#3498db" font-size="11">Thread-1 ──┐</text>
+  <text x="50" y="488" fill="#e67e22" font-size="11">Thread-2 ──┤  LOCK CMPXCHG</text>
+  <text x="50" y="506" fill="#8e44ad" font-size="11">Thread-3 ──┤  同一地址</text>
+  <text x="50" y="524" fill="#16a085" font-size="11">Thread-4 ──┘</text>
+  <text x="300" y="480" fill="#e74c3c" font-size="11">→ 串行化执行</text>
+  <text x="300" y="498" fill="#e74c3c" font-size="11">→ 大量 Cache Miss</text>
+  <text x="300" y="516" fill="#e74c3c" font-size="11">→ N 线程 ≈ 单线程吞吐</text>
+  <text x="300" y="534" fill="#e74c3c" font-size="11">→ 延迟随线程数线性增长</text>
+
+  <!-- LongAdder 分散 -->
+  <rect x="495" y="406" width="455" height="150" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="717" y="426" text-anchor="middle" fill="#1e8449" font-size="13" font-weight="bold">✅ LongAdder 分散策略</text>
+  <text x="717" y="448" text-anchor="middle" fill="#555" font-size="12">按线程哈希分配到不同 Cell</text>
+  <text x="510" y="470" fill="#3498db" font-size="11">Thread-1 → Cell[0] ──┐</text>
+  <text x="510" y="488" fill="#e67e22" font-size="11">Thread-2 → Cell[1] ──┤ 各自 CAS</text>
+  <text x="510" y="506" fill="#8e44ad" font-size="11">Thread-3 → Cell[2] ──┤ 不同缓存行</text>
+  <text x="510" y="524" fill="#16a085" font-size="11">Thread-4 → Cell[3] ──┘</text>
+  <text x="510" y="544" fill="#1e8449" font-size="11">sum() = base + Cell[0] + Cell[1] + ...</text>
+
+  <!-- 底部说明 -->
+  <rect x="10" y="568" width="940" height="70" rx="8" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="1.5"/>
+  <text x="480" y="588" text-anchor="middle" fill="#2c3e50" font-size="13" font-weight="bold">关键结论</text>
+  <text x="480" y="610" text-anchor="middle" fill="#555" font-size="12">多个核不能同时处于 E 态（物理互斥）→ 总线仲裁串行化 RFO → 同一时刻只有一个核在执行 CAS</text>
+  <text x="480" y="630" text-anchor="middle" fill="#555" font-size="12">高并发 CAS 的瓶颈不是"锁"逻辑，而是缓存行颠簸导致的总线流量和 Cache Miss 延迟</text>
+
+  <!-- 底部公式 -->
+  <rect x="10" y="648" width="940" height="60" rx="8" fill="#2c3e50"/>
+  <text x="480" y="668" text-anchor="middle" fill="white" font-size="12" font-weight="bold">理想 CAS 吞吐 ≈ 1次成功/(RFO往返延迟 × 竞争线程数)　　低冲突≈纳秒级　　高冲突≈微秒级（退化）</text>
+  <text x="480" y="698" text-anchor="middle" fill="#95a5a6" font-size="11">解决方案：LongAdder（分散热点） / 减少共享变量 / 缩短 CAS 临界区 / 换用 synchronized（高冲突下让线程挂起）</text>
+</svg>

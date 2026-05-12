@@ -1,0 +1,107 @@
+<svg viewBox="0 0 960 580" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="580" fill="#f8f9fa" rx="8"/>
+
+  <!-- Title -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">四种内存屏障类型</text>
+
+  <!-- Grid lines -->
+  <line x1="480" y1="60" x2="480" y2="580" stroke="#dee2e6" stroke-width="1.5"/>
+  <line x1="0"   y1="318" x2="960" y2="318" stroke="#dee2e6" stroke-width="1.5"/>
+
+  <!-- ===== Cell 1: LoadLoad (top-left, blue) ===== -->
+  <rect x="18" y="68" width="444" height="32" rx="5" fill="#3498db"/>
+  <text x="240" y="89" text-anchor="middle" fill="white" font-size="14" font-weight="bold">LoadLoad 屏障</text>
+
+  <rect x="78" y="110" width="290" height="44" rx="6" fill="#ebf5fb" stroke="#3498db" stroke-width="1.5"/>
+  <text x="223" y="128" text-anchor="middle" fill="#2980b9" font-size="12" font-weight="bold">Load1（屏障之前的读）</text>
+  <text x="223" y="146" text-anchor="middle" fill="#7f8c8d" font-size="11">任意地址的 load 操作</text>
+
+  <rect x="38" y="164" width="392" height="26" rx="4" fill="#3498db"/>
+  <text x="234" y="181" text-anchor="middle" fill="white" font-size="12" font-weight="bold">══════════════ LoadLoad Barrier ══════════════</text>
+
+  <rect x="78" y="200" width="290" height="44" rx="6" fill="#ebf5fb" stroke="#3498db" stroke-width="1.5"/>
+  <text x="223" y="218" text-anchor="middle" fill="#2980b9" font-size="12" font-weight="bold">Load2（屏障之后的读）</text>
+  <text x="223" y="236" text-anchor="middle" fill="#7f8c8d" font-size="11">任意地址的 load 操作</text>
+
+  <!-- blocked reorder arrow -->
+  <line x1="398" y1="156" x2="398" y2="200" stroke="#e74c3c" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrow-red)"/>
+  <text x="416" y="183" fill="#e74c3c" font-size="16" font-weight="bold">✗</text>
+
+  <rect x="38" y="254" width="392" height="44" rx="5" fill="white" stroke="#3498db" stroke-width="1"/>
+  <text x="234" y="271" text-anchor="middle" fill="#2c3e50" font-size="11" font-weight="bold">Load1 必须在 Load2 之前完成</text>
+  <text x="234" y="288" text-anchor="middle" fill="#7f8c8d" font-size="10">用途：volatile read 之后插入，保证后续读不被提前执行</text>
+
+  <!-- ===== Cell 2: StoreStore (top-right, green) ===== -->
+  <rect x="498" y="68" width="444" height="32" rx="5" fill="#27ae60"/>
+  <text x="720" y="89" text-anchor="middle" fill="white" font-size="14" font-weight="bold">StoreStore 屏障</text>
+
+  <rect x="558" y="110" width="290" height="44" rx="6" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="703" y="128" text-anchor="middle" fill="#1e8449" font-size="12" font-weight="bold">Store1（屏障之前的写）</text>
+  <text x="703" y="146" text-anchor="middle" fill="#7f8c8d" font-size="11">Store Buffer 中等待刷出的写</text>
+
+  <rect x="518" y="164" width="392" height="26" rx="4" fill="#27ae60"/>
+  <text x="714" y="181" text-anchor="middle" fill="white" font-size="12" font-weight="bold">══════════════ StoreStore Barrier ══════════════</text>
+
+  <rect x="558" y="200" width="290" height="44" rx="6" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="703" y="218" text-anchor="middle" fill="#1e8449" font-size="12" font-weight="bold">Store2（屏障之后的写）</text>
+  <text x="703" y="236" text-anchor="middle" fill="#7f8c8d" font-size="11">后续写操作</text>
+
+  <line x1="878" y1="156" x2="878" y2="200" stroke="#e74c3c" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrow-red)"/>
+  <text x="892" y="183" fill="#e74c3c" font-size="16" font-weight="bold">✗</text>
+
+  <rect x="518" y="254" width="392" height="44" rx="5" fill="white" stroke="#27ae60" stroke-width="1"/>
+  <text x="714" y="271" text-anchor="middle" fill="#2c3e50" font-size="11" font-weight="bold">Store1 必须在 Store2 之前对其他核可见</text>
+  <text x="714" y="288" text-anchor="middle" fill="#7f8c8d" font-size="10">用途：volatile write 之前插入，保证前序写不被延后提交</text>
+
+  <!-- ===== Cell 3: LoadStore (bottom-left, orange) ===== -->
+  <rect x="18" y="326" width="444" height="32" rx="5" fill="#e67e22"/>
+  <text x="240" y="347" text-anchor="middle" fill="white" font-size="14" font-weight="bold">LoadStore 屏障</text>
+
+  <rect x="78" y="368" width="290" height="44" rx="6" fill="#fef9e7" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="223" y="386" text-anchor="middle" fill="#d35400" font-size="12" font-weight="bold">Load（屏障之前的读）</text>
+  <text x="223" y="404" text-anchor="middle" fill="#7f8c8d" font-size="11">任意地址的 load 操作</text>
+
+  <rect x="38" y="422" width="392" height="26" rx="4" fill="#e67e22"/>
+  <text x="234" y="439" text-anchor="middle" fill="white" font-size="12" font-weight="bold">══════════════ LoadStore Barrier ══════════════</text>
+
+  <rect x="78" y="458" width="290" height="44" rx="6" fill="#fef9e7" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="223" y="476" text-anchor="middle" fill="#d35400" font-size="12" font-weight="bold">Store（屏障之后的写）</text>
+  <text x="223" y="494" text-anchor="middle" fill="#7f8c8d" font-size="11">后续写操作</text>
+
+  <line x1="398" y1="414" x2="398" y2="458" stroke="#e74c3c" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrow-red)"/>
+  <text x="416" y="441" fill="#e74c3c" font-size="16" font-weight="bold">✗</text>
+
+  <rect x="38" y="510" width="392" height="44" rx="5" fill="white" stroke="#e67e22" stroke-width="1"/>
+  <text x="234" y="527" text-anchor="middle" fill="#2c3e50" font-size="11" font-weight="bold">Load 必须在 Store 之前完成</text>
+  <text x="234" y="544" text-anchor="middle" fill="#7f8c8d" font-size="10">实践中较少单独使用；x86 TSO 模型天然满足此约束</text>
+
+  <!-- ===== Cell 4: StoreLoad - Full Fence (bottom-right, red) ===== -->
+  <rect x="498" y="326" width="444" height="32" rx="5" fill="#e74c3c"/>
+  <text x="720" y="347" text-anchor="middle" fill="white" font-size="14" font-weight="bold">StoreLoad 屏障（Full Fence）⚡</text>
+
+  <rect x="558" y="368" width="290" height="44" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="703" y="386" text-anchor="middle" fill="#c0392b" font-size="12" font-weight="bold">Store（屏障之前的写）</text>
+  <text x="703" y="404" text-anchor="middle" fill="#7f8c8d" font-size="11">强制提交 Store Buffer 中所有写</text>
+
+  <rect x="518" y="422" width="392" height="26" rx="4" fill="#e74c3c"/>
+  <text x="714" y="439" text-anchor="middle" fill="white" font-size="11" font-weight="bold">══════ StoreLoad Barrier（MFENCE / LOCK ADD [rsp], 0）══════</text>
+
+  <rect x="558" y="458" width="290" height="44" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="703" y="476" text-anchor="middle" fill="#c0392b" font-size="12" font-weight="bold">Load（屏障之后的读）</text>
+  <text x="703" y="494" text-anchor="middle" fill="#7f8c8d" font-size="11">读缓存中最新值（不走寄存器）</text>
+
+  <line x1="878" y1="414" x2="878" y2="458" stroke="#e74c3c" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrow-red)"/>
+  <text x="892" y="441" fill="#e74c3c" font-size="16" font-weight="bold">✗</text>
+
+  <rect x="518" y="510" width="392" height="44" rx="5" fill="#fdecea" stroke="#e74c3c" stroke-width="1"/>
+  <text x="714" y="527" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">包含上述全部四种语义，开销最大</text>
+  <text x="714" y="544" text-anchor="middle" fill="#7f8c8d" font-size="10">x86: MFENCE 或 LOCK ADD [rsp], 0；volatile write 的核心屏障</text>
+</svg>

@@ -1,42 +1,35 @@
 package com.zcq;
 
 import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class Test {
     public static void main(String[] args) {
         int[] ints = {3, 4, 2, 1, 9, 7};
-        mergeSort(ints, 0, ints.length - 1);
+        mergerSort(ints, 0, ints.length - 1);
         System.out.println(Arrays.toString(ints));
-
-        LinkedHashMap<String, Integer> map = new LinkedHashMap<>(16,0.75f,true);
     }
 
-    private static void mergeSort(int[] ints, int l, int r) {
-        if (l >= r) {
+    public static synchronized void mergerSort(int[] arr, int left, int right) {
+        if (left >= right) {
             return;
         }
-        int mid = l + (r - l) / 2;
-        mergeSort(ints, l, mid);
-        mergeSort(ints, mid + 1, r);
-        merge(ints, l, r, mid);
+        int mid = left + (right - left) / 2;
+        mergerSort(arr, left, mid);
+        mergerSort(arr, mid + 1, right);
+        merge(arr, left, mid, right);
     }
 
-    private static void merge(int[] ints, int l, int r, int mid) {
-        int[] temp = Arrays.copyOfRange(ints, l, r + 1);
-        int i = 0, j = mid - l + 1, k = l;
-        while (i <= mid - l && j <= r - l) {
-            ints[k++] = temp[i] < temp[j] ? temp[i++] : temp[j++];
+    private static void merge(int[] arr, int left, int mid, int right) {
+        int[] temp = Arrays.copyOfRange(arr, left, right + 1);
+        int i = 0, j = mid + 1 - left, k = left;
+        while (i <= mid - left && j <= right - left) {
+            arr[k++] = temp[i] < temp[j] ? temp[i++] : temp[j++];
         }
-        while (i <= mid - l) {
-            ints[k++] = temp[i++];
+        while (i <= mid - left) {
+            arr[k++] = temp[i++];
         }
-        while (j <= r - l) {
-            ints[k++] = temp[j++];
+        while (j <= right - left) {
+            arr[k++] = temp[j++];
         }
-
     }
-
-
 }

@@ -1,0 +1,158 @@
+<svg viewBox="0 0 960 590" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="590" fill="#f8f9fa" rx="8"/>
+
+  <!-- Title -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">Store Buffer：写操作路径与内存屏障的作用</text>
+
+  <!-- Divider -->
+  <line x1="458" y1="60" x2="458" y2="590" stroke="#dee2e6" stroke-width="1.5"/>
+
+  <!-- ===== LEFT: Memory Hierarchy ===== -->
+  <rect x="18" y="65" width="424" height="32" rx="6" fill="#2c3e50"/>
+  <text x="230" y="86" text-anchor="middle" fill="white" font-size="13" font-weight="bold">写操作内存路径（单核视角）</text>
+
+  <!-- CPU -->
+  <rect x="68" y="108" width="296" height="48" rx="8" fill="#f39c12" stroke="#d68910" stroke-width="2"/>
+  <text x="216" y="128" text-anchor="middle" fill="white" font-size="13" font-weight="bold">CPU 执行单元</text>
+  <text x="216" y="147" text-anchor="middle" fill="white" font-size="11">执行 MOV [addr], val  （store 指令）</text>
+
+  <line x1="216" y1="156" x2="216" y2="170" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Store Buffer -->
+  <rect x="68" y="170" width="296" height="58" rx="8" fill="#e67e22" stroke="#d35400" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="216" y="191" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Store Buffer（写缓冲区）</text>
+  <text x="216" y="209" text-anchor="middle" fill="white" font-size="11">写操作先排队，延迟提交到 L1 Cache</text>
+  <text x="216" y="224" text-anchor="middle" fill="#fff3cd" font-size="10">⚠ 其他核此时读到的仍是旧值</text>
+
+  <!-- Barrier flush band -->
+  <rect x="68" y="228" width="296" height="24" rx="4" fill="#e74c3c"/>
+  <text x="216" y="244" text-anchor="middle" fill="white" font-size="11" font-weight="bold">⚡ MFENCE / LOCK ADD  强制刷出 Store Buffer</text>
+
+  <line x1="216" y1="252" x2="216" y2="266" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- L1 Cache -->
+  <rect x="68" y="266" width="296" height="48" rx="8" fill="#27ae60" stroke="#1e8449" stroke-width="2"/>
+  <text x="216" y="286" text-anchor="middle" fill="white" font-size="13" font-weight="bold">L1 Cache（MESI 工作层）</text>
+  <text x="216" y="304" text-anchor="middle" fill="white" font-size="11">M / E / S / I 状态机，多核间自动同步</text>
+
+  <line x1="216" y1="314" x2="216" y2="328" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Main Memory -->
+  <rect x="68" y="328" width="296" height="44" rx="8" fill="#bdc3c7" stroke="#95a5a6" stroke-width="2"/>
+  <text x="216" y="348" text-anchor="middle" fill="#2c3e50" font-size="13" font-weight="bold">主内存（RAM）</text>
+  <text x="216" y="365" text-anchor="middle" fill="#555" font-size="11">Cache-to-Cache Transfer 优先，内存次之</text>
+
+  <!-- Summary -->
+  <rect x="18" y="390" width="424" height="180" rx="8" fill="white" stroke="#bdc3c7" stroke-width="1.5"/>
+  <text x="230" y="410" text-anchor="middle" fill="#2c3e50" font-size="12" font-weight="bold">各层次问题与对应解决机制</text>
+
+  <rect x="28" y="418" width="404" height="26" rx="4" fill="#fdecea"/>
+  <rect x="28" y="418" width="6" height="26" rx="2" fill="#e74c3c"/>
+  <text x="234" y="435" text-anchor="middle" fill="#c0392b" font-size="11">Store Buffer 延迟刷出　→　内存屏障（MFENCE / LOCK ADD）</text>
+
+  <rect x="28" y="448" width="404" height="26" rx="4" fill="#eafaf1"/>
+  <rect x="28" y="448" width="6" height="26" rx="2" fill="#27ae60"/>
+  <text x="234" y="465" text-anchor="middle" fill="#1e8449" font-size="11">L1 Cache 多核不一致　→　MESI 协议（硬件自动）</text>
+
+  <rect x="28" y="478" width="404" height="26" rx="4" fill="#ebf5fb"/>
+  <rect x="28" y="478" width="6" height="26" rx="2" fill="#3498db"/>
+  <text x="234" y="495" text-anchor="middle" fill="#2980b9" font-size="11">JIT 寄存器缓存变量　→　volatile（禁止 JIT 提升到寄存器）</text>
+
+  <rect x="28" y="508" width="404" height="26" rx="4" fill="#f5eef8"/>
+  <rect x="28" y="508" width="6" height="26" rx="2" fill="#8e44ad"/>
+  <text x="234" y="525" text-anchor="middle" fill="#6c3483" font-size="11">读-改-写多步非原子　→　LOCK 前缀（LOCK CMPXCHG）</text>
+
+  <rect x="28" y="538" width="404" height="24" rx="4" fill="#f8f9fa"/>
+  <text x="234" y="554" text-anchor="middle" fill="#7f8c8d" font-size="10">AtomicInteger 同时使用了后三种：value 加 volatile + CAS 加 LOCK</text>
+
+  <!-- ===== RIGHT: Two Scenarios ===== -->
+  <rect x="476" y="65" width="464" height="32" rx="6" fill="#2c3e50"/>
+  <text x="708" y="86" text-anchor="middle" fill="white" font-size="13" font-weight="bold">无屏障 vs 有屏障（双核对比）</text>
+
+  <!-- No Barrier -->
+  <rect x="476" y="106" width="464" height="26" rx="5" fill="#e74c3c"/>
+  <text x="708" y="123" text-anchor="middle" fill="white" font-size="12" font-weight="bold">❌ 无屏障：Core B 读到旧值</text>
+
+  <rect x="488" y="140" width="200" height="36" rx="6" fill="#fef9e7" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="588" y="155" text-anchor="middle" fill="#d35400" font-size="12" font-weight="bold">Core A</text>
+  <text x="588" y="169" text-anchor="middle" fill="#7f8c8d" font-size="10">MOV [val], 1　写入</text>
+
+  <rect x="488" y="184" width="200" height="34" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="588" y="198" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">Store Buffer: val=1</text>
+  <text x="588" y="211" text-anchor="middle" fill="#c0392b" font-size="10">⚠ 未刷入 L1 Cache</text>
+
+  <rect x="706" y="140" width="200" height="36" rx="6" fill="#ebf5fb" stroke="#3498db" stroke-width="1.5"/>
+  <text x="806" y="155" text-anchor="middle" fill="#2980b9" font-size="12" font-weight="bold">Core B</text>
+  <text x="806" y="169" text-anchor="middle" fill="#7f8c8d" font-size="10">MOV reg, [val]　读取</text>
+
+  <rect x="706" y="184" width="200" height="34" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="2"/>
+  <text x="806" y="198" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">L1 Cache: val=0（旧）</text>
+  <text x="806" y="211" text-anchor="middle" fill="#c0392b" font-size="10">读到旧值 ❌</text>
+
+  <line x1="698" y1="138" x2="698" y2="222" stroke="#dee2e6" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <rect x="488" y="226" width="418" height="22" rx="4" fill="#fdecea"/>
+  <text x="697" y="241" text-anchor="middle" fill="#c0392b" font-size="11">Store Buffer 未刷出 → L1 Cache 仍是旧值 → Core B 读到 val=0</text>
+
+  <!-- Separator -->
+  <line x1="478" y1="260" x2="938" y2="260" stroke="#dee2e6" stroke-width="1.5" stroke-dasharray="6,3"/>
+
+  <!-- With Barrier -->
+  <rect x="476" y="270" width="464" height="26" rx="5" fill="#27ae60"/>
+  <text x="708" y="287" text-anchor="middle" fill="white" font-size="12" font-weight="bold">✅ 有屏障（LOCK ADD / MFENCE）：Core B 读到最新值</text>
+
+  <rect x="488" y="305" width="200" height="34" rx="6" fill="#fef9e7" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="588" y="319" text-anchor="middle" fill="#d35400" font-size="12" font-weight="bold">Core A</text>
+  <text x="588" y="333" text-anchor="middle" fill="#7f8c8d" font-size="10">MOV [val], 1　写入</text>
+
+  <rect x="488" y="347" width="200" height="22" rx="4" fill="#e74c3c"/>
+  <text x="588" y="362" text-anchor="middle" fill="white" font-size="11" font-weight="bold">⚡ LOCK ADD [rsp], 0</text>
+
+  <rect x="488" y="377" width="200" height="34" rx="6" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="588" y="391" text-anchor="middle" fill="#1e8449" font-size="11" font-weight="bold">L1 Cache: val=1（M态）</text>
+  <text x="588" y="405" text-anchor="middle" fill="#1e8449" font-size="10">Store Buffer 已强制刷出</text>
+
+  <!-- RFO arrow -->
+  <path d="M 688 394 L 706 394" fill="none" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)"/>
+  <text x="697" y="388" text-anchor="middle" fill="#e74c3c" font-size="9">RFO</text>
+  <text x="697" y="403" text-anchor="middle" fill="#e74c3c" font-size="9">→ I</text>
+
+  <rect x="706" y="305" width="200" height="34" rx="6" fill="#ebf5fb" stroke="#3498db" stroke-width="1.5"/>
+  <text x="806" y="319" text-anchor="middle" fill="#2980b9" font-size="12" font-weight="bold">Core B</text>
+  <text x="806" y="333" text-anchor="middle" fill="#7f8c8d" font-size="10">MOV reg, [val]　读取</text>
+
+  <rect x="706" y="347" width="200" height="22" rx="4" fill="#f2f3f4" stroke="#95a5a6" stroke-width="1.5"/>
+  <text x="806" y="362" text-anchor="middle" fill="#7f8c8d" font-size="11">Cache Line → I 态</text>
+
+  <rect x="706" y="377" width="200" height="34" rx="6" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <text x="806" y="391" text-anchor="middle" fill="#1e8449" font-size="11" font-weight="bold">Cache Miss → val=1</text>
+  <text x="806" y="405" text-anchor="middle" fill="#1e8449" font-size="10">读到最新值 ✅</text>
+
+  <line x1="698" y1="303" x2="698" y2="415" stroke="#dee2e6" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <rect x="488" y="419" width="418" height="22" rx="4" fill="#eafaf1"/>
+  <text x="697" y="434" text-anchor="middle" fill="#1e8449" font-size="11">屏障刷出 Store Buffer → MESI 令 B 副本失效 → Cache Miss → 读到 val=1</text>
+
+  <!-- Bottom note -->
+  <rect x="476" y="452" width="464" height="118" rx="8" fill="white" stroke="#bdc3c7" stroke-width="1.5"/>
+  <text x="708" y="472" text-anchor="middle" fill="#2c3e50" font-size="12" font-weight="bold">重要区分：内存屏障 vs volatile</text>
+  <text x="708" y="494" text-anchor="middle" fill="#555" font-size="11">内存屏障（MFENCE）→ 解决 Store Buffer 延迟，作用在 Core A 的写路径上</text>
+  <text x="708" y="512" text-anchor="middle" fill="#555" font-size="11">volatile → 禁止 JIT 把变量锁在寄存器，作用在 Core B 的读路径上</text>
+  <text x="708" y="530" text-anchor="middle" fill="#e74c3c" font-size="11">两者针对不同瓶颈，AtomicInteger 同时需要两种机制</text>
+  <text x="708" y="548" text-anchor="middle" fill="#7f8c8d" font-size="10">x86 TSO 已保证 LoadLoad/StoreStore/LoadStore；只有 StoreLoad 需显式屏障</text>
+  <text x="708" y="563" text-anchor="middle" fill="#7f8c8d" font-size="10">ARM/RISC-V 弱内存模型需要为全部四种乱序显式插入屏障</text>
+</svg>

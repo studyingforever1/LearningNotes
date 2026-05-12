@@ -1,0 +1,138 @@
+<svg viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <rect width="960" height="560" fill="#f8f9fa" rx="8"/>
+
+  <!-- Title -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">volatile 与 synchronized 的内存屏障插入位置</text>
+
+  <!-- Column dividers -->
+  <line x1="322" y1="60" x2="322" y2="560" stroke="#dee2e6" stroke-width="1.5"/>
+  <line x1="644" y1="60" x2="644" y2="560" stroke="#dee2e6" stroke-width="1.5"/>
+
+  <!-- ===== Col 1: volatile write ===== -->
+  <rect x="18" y="65" width="286" height="32" rx="6" fill="#8e44ad"/>
+  <text x="161" y="86" text-anchor="middle" fill="white" font-size="13" font-weight="bold">volatile write</text>
+
+  <!-- instruction before -->
+  <rect x="38" y="108" width="246" height="38" rx="5" fill="white" stroke="#bdc3c7" stroke-width="1.5"/>
+  <text x="161" y="123" text-anchor="middle" fill="#555" font-size="11">普通写  store A</text>
+  <text x="161" y="138" text-anchor="middle" fill="#555" font-size="11">普通写  store B</text>
+
+  <!-- StoreStore barrier -->
+  <rect x="38" y="156" width="246" height="24" rx="4" fill="#27ae60"/>
+  <text x="161" y="172" text-anchor="middle" fill="white" font-size="11" font-weight="bold">StoreStore Barrier</text>
+
+  <!-- volatile store -->
+  <rect x="38" y="190" width="246" height="38" rx="5" fill="#8e44ad" stroke="#6c3483" stroke-width="2"/>
+  <text x="161" y="205" text-anchor="middle" fill="white" font-size="12" font-weight="bold">volatile store value = X</text>
+  <text x="161" y="221" text-anchor="middle" fill="#e8daef" font-size="10">MOV [addr], X</text>
+
+  <!-- StoreLoad barrier -->
+  <rect x="38" y="238" width="246" height="24" rx="4" fill="#e74c3c"/>
+  <text x="161" y="254" text-anchor="middle" fill="white" font-size="11" font-weight="bold">StoreLoad Barrier（Full Fence）</text>
+
+  <!-- instruction after -->
+  <rect x="38" y="272" width="246" height="38" rx="5" fill="white" stroke="#bdc3c7" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="161" y="287" text-anchor="middle" fill="#aaa" font-size="11">后续指令</text>
+  <text x="161" y="303" text-anchor="middle" fill="#aaa" font-size="10">不受此屏障限制</text>
+
+  <!-- x86 impl note -->
+  <rect x="18" y="328" width="286" height="86" rx="6" fill="white" stroke="#8e44ad" stroke-width="1.5"/>
+  <text x="161" y="347" text-anchor="middle" fill="#6c3483" font-size="11" font-weight="bold">x86 实际生成</text>
+  <text x="161" y="365" text-anchor="middle" fill="#555" font-size="11">MOV [addr], X</text>
+  <text x="161" y="382" text-anchor="middle" fill="#e74c3c" font-size="11">LOCK ADD [rsp], 0</text>
+  <text x="161" y="399" text-anchor="middle" fill="#7f8c8d" font-size="10">（充当 StoreLoad Full Fence）</text>
+
+  <!-- key note -->
+  <rect x="18" y="430" width="286" height="110" rx="6" fill="#f5eef8" stroke="#8e44ad" stroke-width="1"/>
+  <text x="161" y="449" text-anchor="middle" fill="#6c3483" font-size="11" font-weight="bold">核心作用</text>
+  <text x="161" y="467" text-anchor="middle" fill="#555" font-size="11">StoreStore：保证前序写</text>
+  <text x="161" y="483" text-anchor="middle" fill="#555" font-size="11">不被重排到 volatile 写之后</text>
+  <text x="161" y="501" text-anchor="middle" fill="#555" font-size="11">StoreLoad：强制刷出</text>
+  <text x="161" y="517" text-anchor="middle" fill="#555" font-size="11">Store Buffer，对全局可见</text>
+  <text x="161" y="533" text-anchor="middle" fill="#7f8c8d" font-size="10">ARM 额外需要 DMB ISH</text>
+
+  <!-- ===== Col 2: volatile read ===== -->
+  <rect x="340" y="65" width="286" height="32" rx="6" fill="#2980b9"/>
+  <text x="483" y="86" text-anchor="middle" fill="white" font-size="13" font-weight="bold">volatile read</text>
+
+  <!-- instruction before -->
+  <rect x="360" y="108" width="246" height="38" rx="5" fill="white" stroke="#bdc3c7" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="483" y="123" text-anchor="middle" fill="#aaa" font-size="11">前序指令</text>
+  <text x="483" y="138" text-anchor="middle" fill="#aaa" font-size="10">不受此屏障限制</text>
+
+  <!-- volatile load -->
+  <rect x="360" y="156" width="246" height="38" rx="5" fill="#2980b9" stroke="#1a5276" stroke-width="2"/>
+  <text x="483" y="171" text-anchor="middle" fill="white" font-size="12" font-weight="bold">volatile load value</text>
+  <text x="483" y="187" text-anchor="middle" fill="#d6eaf8" font-size="10">MOV reg, [addr]（x86 无额外指令）</text>
+
+  <!-- LoadLoad barrier -->
+  <rect x="360" y="204" width="246" height="24" rx="4" fill="#3498db"/>
+  <text x="483" y="220" text-anchor="middle" fill="white" font-size="11" font-weight="bold">LoadLoad Barrier</text>
+
+  <!-- LoadStore barrier -->
+  <rect x="360" y="238" width="246" height="24" rx="4" fill="#e67e22"/>
+  <text x="483" y="254" text-anchor="middle" fill="white" font-size="11" font-weight="bold">LoadStore Barrier</text>
+
+  <!-- instruction after -->
+  <rect x="360" y="272" width="246" height="38" rx="5" fill="white" stroke="#bdc3c7" stroke-width="1.5"/>
+  <text x="483" y="287" text-anchor="middle" fill="#555" font-size="11">后续读/写操作</text>
+  <text x="483" y="303" text-anchor="middle" fill="#555" font-size="10">不会被提前到 volatile 读之前</text>
+
+  <!-- x86 impl note -->
+  <rect x="340" y="328" width="286" height="86" rx="6" fill="white" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="483" y="347" text-anchor="middle" fill="#1a5276" font-size="11" font-weight="bold">x86 实际生成</text>
+  <text x="483" y="365" text-anchor="middle" fill="#555" font-size="11">MOV reg, [addr]</text>
+  <text x="483" y="382" text-anchor="middle" fill="#27ae60" font-size="11">（无额外指令）</text>
+  <text x="483" y="399" text-anchor="middle" fill="#7f8c8d" font-size="10">x86 TSO load 天然有 acquire 语义</text>
+
+  <!-- key note -->
+  <rect x="340" y="430" width="286" height="110" rx="6" fill="#ebf5fb" stroke="#2980b9" stroke-width="1"/>
+  <text x="483" y="449" text-anchor="middle" fill="#1a5276" font-size="11" font-weight="bold">核心作用（两层）</text>
+  <text x="483" y="467" text-anchor="middle" fill="#555" font-size="11">① 禁止 JIT 把变量提升到</text>
+  <text x="483" y="483" text-anchor="middle" fill="#555" font-size="11">寄存器（编译器屏障）</text>
+  <text x="483" y="501" text-anchor="middle" fill="#555" font-size="11">② LoadLoad/LoadStore 屏障</text>
+  <text x="483" y="517" text-anchor="middle" fill="#555" font-size="11">保证读到最新值后不乱序</text>
+  <text x="483" y="533" text-anchor="middle" fill="#7f8c8d" font-size="10">ARM 额外需要 LDR + DMB ISH</text>
+
+  <!-- ===== Col 3: synchronized ===== -->
+  <rect x="662" y="65" width="280" height="32" rx="6" fill="#c0392b"/>
+  <text x="802" y="86" text-anchor="middle" fill="white" font-size="13" font-weight="bold">synchronized 块</text>
+
+  <!-- monitorenter -->
+  <rect x="682" y="108" width="240" height="30" rx="5" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <text x="802" y="127" text-anchor="middle" fill="white" font-size="12" font-weight="bold">monitorenter（CAS Mark Word）</text>
+
+  <!-- Acquire barrier -->
+  <rect x="682" y="148" width="240" height="38" rx="4" fill="#3498db"/>
+  <text x="802" y="163" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Acquire 屏障</text>
+  <text x="802" y="179" text-anchor="middle" fill="#d6eaf8" font-size="10">LoadLoad + LoadStore</text>
+
+  <!-- block interior -->
+  <rect x="682" y="196" width="240" height="100" rx="5" fill="white" stroke="#bdc3c7" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="802" y="226" text-anchor="middle" fill="#555" font-size="12" font-weight="bold">synchronized 块内</text>
+  <text x="802" y="244" text-anchor="middle" fill="#7f8c8d" font-size="10">所有读写被屏障保护</text>
+  <text x="802" y="260" text-anchor="middle" fill="#7f8c8d" font-size="10">JIT 可在块内做寄存器缓存</text>
+  <text x="802" y="276" text-anchor="middle" fill="#7f8c8d" font-size="10">（互斥保证安全）</text>
+
+  <!-- Release barrier -->
+  <rect x="682" y="306" width="240" height="38" rx="4" fill="#27ae60"/>
+  <text x="802" y="321" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Release 屏障</text>
+  <text x="802" y="337" text-anchor="middle" fill="#d5f5e3" font-size="10">StoreStore + StoreLoad</text>
+
+  <!-- monitorexit -->
+  <rect x="682" y="354" width="240" height="30" rx="5" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <text x="802" y="373" text-anchor="middle" fill="white" font-size="12" font-weight="bold">monitorexit（释放锁）</text>
+
+  <!-- key note -->
+  <rect x="662" y="400" width="280" height="140" rx="6" fill="white" stroke="#c0392b" stroke-width="1.5"/>
+  <text x="802" y="419" text-anchor="middle" fill="#922b21" font-size="11" font-weight="bold">核心作用</text>
+  <text x="802" y="437" text-anchor="middle" fill="#555" font-size="11">Acquire：进入块时作废寄存器</text>
+  <text x="802" y="453" text-anchor="middle" fill="#555" font-size="11">缓存，重新从缓存加载</text>
+  <text x="802" y="471" text-anchor="middle" fill="#555" font-size="11">Release：退出块时刷出</text>
+  <text x="802" y="487" text-anchor="middle" fill="#555" font-size="11">Store Buffer，写对全局可见</text>
+  <text x="802" y="505" text-anchor="middle" fill="#e74c3c" font-size="11">块外的读写不受任何保护</text>
+  <text x="802" y="521" text-anchor="middle" fill="#e74c3c" font-size="11">→ 块外访问须加 volatile</text>
+  <text x="802" y="537" text-anchor="middle" fill="#7f8c8d" font-size="10">DCL 必须加 volatile 的根本原因</text>
+</svg>

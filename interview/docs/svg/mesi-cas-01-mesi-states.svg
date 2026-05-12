@@ -1,0 +1,115 @@
+<svg viewBox="0 0 960 620" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3498db"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#27ae60"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e67e22"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="960" height="620" fill="#f8f9fa" rx="8"/>
+
+  <!-- 标题栏 -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">MESI 协议状态机</text>
+
+  <!-- ===== 四个状态节点 ===== -->
+  <!-- M - Modified  左上 -->
+  <circle cx="260" cy="200" r="70" fill="#e74c3c" stroke="#c0392b" stroke-width="3"/>
+  <text x="260" y="193" text-anchor="middle" fill="white" font-size="28" font-weight="bold">M</text>
+  <text x="260" y="220" text-anchor="middle" fill="white" font-size="13">Modified</text>
+
+  <!-- E - Exclusive 右上 -->
+  <circle cx="700" cy="200" r="70" fill="#27ae60" stroke="#1e8449" stroke-width="3"/>
+  <text x="700" y="193" text-anchor="middle" fill="white" font-size="28" font-weight="bold">E</text>
+  <text x="700" y="220" text-anchor="middle" fill="white" font-size="13">Exclusive</text>
+
+  <!-- S - Shared    右下 -->
+  <circle cx="700" cy="460" r="70" fill="#3498db" stroke="#2980b9" stroke-width="3"/>
+  <text x="700" y="453" text-anchor="middle" fill="white" font-size="28" font-weight="bold">S</text>
+  <text x="700" y="480" text-anchor="middle" fill="white" font-size="13">Shared</text>
+
+  <!-- I - Invalid   左下 -->
+  <circle cx="260" cy="460" r="70" fill="#95a5a6" stroke="#7f8c8d" stroke-width="3"/>
+  <text x="260" y="453" text-anchor="middle" fill="white" font-size="28" font-weight="bold">I</text>
+  <text x="260" y="480" text-anchor="middle" fill="white" font-size="13">Invalid</text>
+
+  <!-- ===== 状态说明卡片 ===== -->
+  <rect x="20" y="570" width="200" height="38" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="120" y="583" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">M: 已修改，脏数据，独占</text>
+  <text x="120" y="600" text-anchor="middle" fill="#c0392b" font-size="11">与内存不一致，其他核无效</text>
+
+  <rect x="240" y="570" width="200" height="38" rx="6" fill="#eafaf1" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="340" y="583" text-anchor="middle" fill="#1e8449" font-size="11" font-weight="bold">E: 干净，独占</text>
+  <text x="340" y="600" text-anchor="middle" fill="#1e8449" font-size="11">与内存一致，其他核无该行</text>
+
+  <rect x="460" y="570" width="200" height="38" rx="6" fill="#ebf5fb" stroke="#3498db" stroke-width="1.5"/>
+  <text x="560" y="583" text-anchor="middle" fill="#2980b9" font-size="11" font-weight="bold">S: 干净，共享</text>
+  <text x="560" y="600" text-anchor="middle" fill="#2980b9" font-size="11">与内存一致，多核均有该行</text>
+
+  <rect x="680" y="570" width="200" height="38" rx="6" fill="#f2f3f4" stroke="#95a5a6" stroke-width="1.5"/>
+  <text x="780" y="583" text-anchor="middle" fill="#7f8c8d" font-size="11" font-weight="bold">I: 无效</text>
+  <text x="780" y="600" text-anchor="middle" fill="#7f8c8d" font-size="11">缓存行不可用，需重新加载</text>
+
+  <!-- ===== 转换箭头 ===== -->
+
+  <!-- I → E：本地读，其他核无该行 (下→上，左侧) -->
+  <path d="M 205 420 C 160 360 160 270 205 240" fill="none" stroke="#27ae60" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="90" y="318" width="108" height="28" rx="4" fill="white" stroke="#27ae60" stroke-width="1"/>
+  <text x="144" y="328" text-anchor="middle" fill="#1e8449" font-size="10" font-weight="bold">本地读</text>
+  <text x="144" y="341" text-anchor="middle" fill="#1e8449" font-size="10">其他核无该行 → E</text>
+
+  <!-- I → S：本地读，其他核也有 (右侧弧，I→S) -->
+  <path d="M 330 460 L 630 460" fill="none" stroke="#3498db" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="420" y="440" width="120" height="28" rx="4" fill="white" stroke="#3498db" stroke-width="1"/>
+  <text x="480" y="450" text-anchor="middle" fill="#2980b9" font-size="10" font-weight="bold">本地读</text>
+  <text x="480" y="463" text-anchor="middle" fill="#2980b9" font-size="10">其他核有该行 → S</text>
+
+  <!-- I → M：本地写（直接 miss + 写）-->
+  <path d="M 260 390 L 260 270" fill="none" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)"/>
+  <rect x="268" y="318" width="90" height="28" rx="4" fill="white" stroke="#e74c3c" stroke-width="1"/>
+  <text x="313" y="328" text-anchor="middle" fill="#c0392b" font-size="10" font-weight="bold">本地写</text>
+  <text x="313" y="341" text-anchor="middle" fill="#c0392b" font-size="10">发 RFO → M</text>
+
+  <!-- E → M：本地写 -->
+  <path d="M 645 175 C 560 130 415 130 330 165" fill="none" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)"/>
+  <text x="480" y="122" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">本地写 → M</text>
+
+  <!-- E → S：其他核读 -->
+  <path d="M 700 270 L 700 390" fill="none" stroke="#3498db" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="710" y="318" width="90" height="28" rx="4" fill="white" stroke="#3498db" stroke-width="1"/>
+  <text x="755" y="328" text-anchor="middle" fill="#2980b9" font-size="10" font-weight="bold">其他核读</text>
+  <text x="755" y="341" text-anchor="middle" fill="#2980b9" font-size="10">E → S</text>
+
+  <!-- S → M：本地写（发 RFO，其他核 S→I）-->
+  <path d="M 630 440 C 560 400 400 340 330 220" fill="none" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)"/>
+  <rect x="430" y="360" width="110" height="28" rx="4" fill="white" stroke="#e74c3c" stroke-width="1"/>
+  <text x="485" y="370" text-anchor="middle" fill="#c0392b" font-size="10" font-weight="bold">本地写 → M</text>
+  <text x="485" y="383" text-anchor="middle" fill="#c0392b" font-size="10">其他核 S→I</text>
+
+  <!-- M → S：其他核读（写回内存） -->
+  <path d="M 330 200 C 430 200 560 250 630 390" fill="none" stroke="#3498db" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="400" y="255" width="130" height="28" rx="4" fill="white" stroke="#3498db" stroke-width="1"/>
+  <text x="465" y="265" text-anchor="middle" fill="#2980b9" font-size="10" font-weight="bold">其他核读</text>
+  <text x="465" y="278" text-anchor="middle" fill="#2980b9" font-size="10">写回内存，M→S</text>
+
+  <!-- M/E/S → I：其他核写（BusUpgr/BusRdX） -->
+  <path d="M 700 390 C 720 520 600 540 340 510" fill="none" stroke="#e67e22" stroke-width="2" marker-end="url(#arrow-orange)" stroke-dasharray="6,3"/>
+  <text x="640" y="545" text-anchor="middle" fill="#e67e22" font-size="11" font-weight="bold">其他核写 → 强制 I（总线嗅探）</text>
+
+  <!-- 中心标注 -->
+  <text x="480" y="310" text-anchor="middle" fill="#7f8c8d" font-size="12" font-style="italic">RFO = Request For Ownership</text>
+  <text x="480" y="328" text-anchor="middle" fill="#7f8c8d" font-size="12" font-style="italic">（独占请求，使其他核该行无效）</text>
+</svg>

@@ -1,0 +1,142 @@
+<svg viewBox="0 0 960 700" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#27ae60"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e67e22"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="700" fill="#f8f9fa" rx="8"/>
+
+  <!-- 标题 -->
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">CAS 为什么需要 LOCK：竞态问题与原子保证</text>
+
+  <!-- ======= 左半：无 LOCK 的竞态 ======= -->
+  <rect x="20" y="65" width="440" height="34" rx="6" fill="#e74c3c"/>
+  <text x="240" y="87" text-anchor="middle" fill="white" font-size="14" font-weight="bold">❌ 无 LOCK — 存在竞态窗口</text>
+
+  <!-- 时间轴 -->
+  <line x1="60" y1="115" x2="60" y2="610" stroke="#ccc" stroke-width="2"/>
+  <text x="60" y="110" text-anchor="middle" fill="#999" font-size="11">时间</text>
+  <text x="60" y="620" text-anchor="middle" fill="#999" font-size="11">↓</text>
+
+  <!-- 核A 标签 -->
+  <rect x="80" y="108" width="150" height="26" rx="4" fill="#3498db"/>
+  <text x="155" y="125" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Core A（CAS v=5→6）</text>
+
+  <!-- 核B 标签 -->
+  <rect x="300" y="108" width="150" height="26" rx="4" fill="#e67e22"/>
+  <text x="375" y="125" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Core B（CAS v=5→7）</text>
+
+  <!-- 核A 步骤 -->
+  <rect x="80" y="148" width="150" height="36" rx="6" fill="#ebf5fb" stroke="#3498db" stroke-width="1.5"/>
+  <text x="155" y="162" text-anchor="middle" fill="#2980b9" font-size="11" font-weight="bold">① 读 v = 5</text>
+  <text x="155" y="177" text-anchor="middle" fill="#7f8c8d" font-size="10">CMPXCHG 第一步</text>
+
+  <!-- 竞态窗口 高亮区域 -->
+  <rect x="68" y="192" width="392" height="100" rx="6" fill="#fef9e7" stroke="#f39c12" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="264" y="212" text-anchor="middle" fill="#e67e22" font-size="12" font-weight="bold">⚠ 竞态窗口（A 尚未写，B 已插入）</text>
+
+  <!-- 核B 步骤在窗口中 -->
+  <rect x="300" y="220" width="150" height="36" rx="6" fill="#fdecea" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="375" y="234" text-anchor="middle" fill="#e74c3c" font-size="11" font-weight="bold">② 读 v = 5</text>
+  <text x="375" y="249" text-anchor="middle" fill="#7f8c8d" font-size="10">B 也读到了旧值</text>
+
+  <rect x="300" y="264" width="150" height="36" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="375" y="278" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">③ 比较 5==5 ✓</text>
+  <text x="375" y="293" text-anchor="middle" fill="#7f8c8d" font-size="10">B 写入 v = 7</text>
+
+  <!-- 核A 继续 -->
+  <rect x="80" y="300" width="150" height="36" rx="6" fill="#ebf5fb" stroke="#3498db" stroke-width="1.5"/>
+  <text x="155" y="314" text-anchor="middle" fill="#2980b9" font-size="11" font-weight="bold">④ 比较 5==5 ✓</text>
+  <text x="155" y="329" text-anchor="middle" fill="#7f8c8d" font-size="10">A 写入 v = 6</text>
+
+  <!-- 结果：数据不一致 -->
+  <rect x="80" y="354" width="370" height="44" rx="8" fill="#fdecea" stroke="#e74c3c" stroke-width="2"/>
+  <text x="265" y="372" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="bold">❌ 结果：v = 6（B 的写被 A 覆盖）</text>
+  <text x="265" y="390" text-anchor="middle" fill="#c0392b" font-size="12">TOCTOU 问题：检查（读/比较）和使用（写）之间存在窗口</text>
+
+  <!-- CAS 三步标注 -->
+  <text x="265" y="430" text-anchor="middle" fill="#555" font-size="12" font-weight="bold">CMPXCHG 三步本身不原子：</text>
+  <rect x="80" y="440" width="370" height="30" rx="6" fill="#f2f3f4" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="265" y="460" text-anchor="middle" fill="#555" font-size="12">① 读 V　　② 比较 V==E　　③ 写入 N</text>
+
+  <!-- ======= 右半：有 LOCK 的原子 CAS ======= -->
+  <rect x="500" y="65" width="440" height="34" rx="6" fill="#27ae60"/>
+  <text x="720" y="87" text-anchor="middle" fill="white" font-size="14" font-weight="bold">✅ LOCK CMPXCHG — 原子保证</text>
+
+  <!-- 时间轴 -->
+  <line x1="540" y1="115" x2="540" y2="610" stroke="#ccc" stroke-width="2"/>
+
+  <!-- 核A LOCK 区间 -->
+  <rect x="558" y="108" width="360" height="26" rx="4" fill="#27ae60"/>
+  <text x="738" y="125" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Core A —— LOCK 锁定缓存行独占权</text>
+
+  <!-- LOCK 独占区域 -->
+  <rect x="548" y="148" width="175" height="170" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2.5"/>
+  <text x="635" y="168" text-anchor="middle" fill="#1e8449" font-size="11" font-weight="bold">LOCK 独占区间</text>
+  <text x="635" y="183" text-anchor="middle" fill="#1e8449" font-size="10">（缓存行处于 E 态）</text>
+
+  <rect x="560" y="193" width="150" height="33" rx="6" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
+  <text x="635" y="207" text-anchor="middle" fill="white" font-size="11" font-weight="bold">① 读 v = 5</text>
+  <text x="635" y="221" text-anchor="middle" fill="white" font-size="10">独占期间读</text>
+
+  <rect x="560" y="234" width="150" height="33" rx="6" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
+  <text x="635" y="248" text-anchor="middle" fill="white" font-size="11" font-weight="bold">② 比较 5==5 ✓</text>
+  <text x="635" y="262" text-anchor="middle" fill="white" font-size="10">独占期间比较</text>
+
+  <rect x="560" y="275" width="150" height="33" rx="6" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
+  <text x="635" y="289" text-anchor="middle" fill="white" font-size="11" font-weight="bold">③ 写入 v = 6</text>
+  <text x="635" y="303" text-anchor="middle" fill="white" font-size="10">独占期间写</text>
+
+  <!-- 核B 在 LOCK 期间阻塞 -->
+  <rect x="740" y="148" width="175" height="170" rx="8" fill="#f2f3f4" stroke="#bdc3c7" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="827" y="168" text-anchor="middle" fill="#95a5a6" font-size="11" font-weight="bold">Core B</text>
+  <text x="827" y="200" text-anchor="middle" fill="#95a5a6" font-size="24">⏸</text>
+  <text x="827" y="232" text-anchor="middle" fill="#95a5a6" font-size="12" font-weight="bold">阻塞等待</text>
+  <text x="827" y="252" text-anchor="middle" fill="#bdc3c7" font-size="11">缓存行为 I 态</text>
+  <text x="827" y="270" text-anchor="middle" fill="#bdc3c7" font-size="11">无法读取</text>
+  <text x="827" y="290" text-anchor="middle" fill="#bdc3c7" font-size="11">直到 A 释放</text>
+
+  <!-- LOCK 释放后 B 重试 -->
+  <rect x="740" y="330" width="175" height="36" rx="6" fill="#fef9e7" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="827" y="344" text-anchor="middle" fill="#e67e22" font-size="11" font-weight="bold">B 重新读 v = 6</text>
+  <text x="827" y="359" text-anchor="middle" fill="#7f8c8d" font-size="10">读到 A 写后的新值</text>
+
+  <rect x="740" y="374" width="175" height="36" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="827" y="388" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">比较 6 ≠ 5 ✗ → 失败</text>
+  <text x="827" y="403" text-anchor="middle" fill="#7f8c8d" font-size="10">CAS 返回 false，自旋重试</text>
+
+  <!-- 结果：正确 -->
+  <rect x="548" y="428" width="370" height="44" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <text x="733" y="446" text-anchor="middle" fill="#1e8449" font-size="13" font-weight="bold">✅ 结果：A 成功写 v=6，B 检测到冲突重试</text>
+  <text x="733" y="464" text-anchor="middle" fill="#27ae60" font-size="12">无数据丢失，并发语义正确</text>
+
+  <!-- 底部 Java 映射 -->
+  <rect x="20" y="490" width="440" height="80" rx="8" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="1.5"/>
+  <text x="240" y="510" text-anchor="middle" fill="#2c3e50" font-size="12" font-weight="bold">Java 中 CAS 调用链</text>
+  <text x="240" y="530" text-anchor="middle" fill="#555" font-size="12">AtomicInteger.compareAndSet()</text>
+  <text x="240" y="548" text-anchor="middle" fill="#555" font-size="11">→ Unsafe.compareAndSwapInt()</text>
+  <text x="240" y="564" text-anchor="middle" fill="#555" font-size="11">→ x86: LOCK CMPXCHG [addr], newVal</text>
+
+  <rect x="548" y="490" width="370" height="80" rx="8" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="1.5"/>
+  <text x="733" y="510" text-anchor="middle" fill="#2c3e50" font-size="12" font-weight="bold">ABA 问题（LOCK 无法解决）</text>
+  <text x="733" y="530" text-anchor="middle" fill="#555" font-size="12">v: 5 → 7 → 5，A 的 CAS 仍能成功</text>
+  <text x="733" y="548" text-anchor="middle" fill="#555" font-size="11">解决方案：AtomicStampedReference</text>
+  <text x="733" y="564" text-anchor="middle" fill="#555" font-size="11">引入版本号，比较 (value, stamp) 对</text>
+
+  <!-- 底部总结 -->
+  <rect x="20" y="590" width="900" height="44" rx="8" fill="#2c3e50"/>
+  <text x="460" y="607" text-anchor="middle" fill="white" font-size="12" font-weight="bold">结论：MESI 保证缓存一致性（每次读到最新值），LOCK 保证多步操作的原子性（读-比-写不可分割）</text>
+  <text x="460" y="626" text-anchor="middle" fill="#95a5a6" font-size="11">CAS = 乐观锁思想；synchronized = 悲观锁思想；两者底层均依赖 MESI + LOCK</text>
+</svg>

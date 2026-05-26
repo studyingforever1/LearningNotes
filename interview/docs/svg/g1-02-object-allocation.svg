@@ -1,0 +1,138 @@
+<svg viewBox="0 0 980 820" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#27ae60"/>
+    </marker>
+  </defs>
+
+  <rect width="980" height="820" fill="#f8f9fa" rx="8"/>
+  <rect x="0" y="0" width="980" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="980" height="10" fill="#2c3e50"/>
+  <text x="490" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">G1 对象分配流程</text>
+
+  <!-- 入口 -->
+  <rect x="400" y="68" width="180" height="40" rx="20" fill="#2c3e50"/>
+  <text x="490" y="93" text-anchor="middle" fill="white" font-size="14" font-weight="bold">new Object()</text>
+
+  <line x1="490" y1="108" x2="490" y2="128" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- ========== Diamond 1: 大对象? ========== -->
+  <polygon points="490,130 630,185 490,240 350,185" fill="#fef9e7" stroke="#f1c40f" stroke-width="2"/>
+  <text x="490" y="180" text-anchor="middle" font-size="13" font-weight="bold" fill="#7d6608">对象大小 ≥</text>
+  <text x="490" y="198" text-anchor="middle" font-size="13" font-weight="bold" fill="#7d6608">Region 的 50% ?</text>
+
+  <!-- 是 → Humongous -->
+  <text x="640" y="178" font-size="12" fill="#c0392b" font-weight="bold">是</text>
+  <line x1="630" y1="185" x2="698" y2="185" stroke="#e74c3c" stroke-width="1.8" marker-end="url(#arrow-red)"/>
+  <rect x="700" y="158" width="200" height="60" rx="6" fill="#fadbd8" stroke="#e74c3c" stroke-width="2"/>
+  <text x="800" y="180" text-anchor="middle" font-size="13" font-weight="bold" fill="#922b21">Humongous 分配</text>
+  <text x="800" y="198" text-anchor="middle" font-size="11" fill="#555">Old 区找 N 个连续 Free Region</text>
+  <text x="800" y="212" text-anchor="middle" font-size="11" fill="#555">标记 H-start / H-cont</text>
+
+  <!-- Humongous 出口 → 右汇流 -->
+  <line x1="900" y1="188" x2="930" y2="188" stroke="#27ae60" stroke-width="1.8"/>
+
+  <!-- 否 → 下 -->
+  <text x="500" y="262" font-size="12" fill="#1e8449" font-weight="bold">否</text>
+  <line x1="490" y1="240" x2="490" y2="268" stroke="#27ae60" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+
+  <!-- ========== Diamond 2: TLAB 够? ========== -->
+  <polygon points="490,270 630,325 490,380 350,325" fill="#d6eaff" stroke="#3498db" stroke-width="2"/>
+  <text x="490" y="320" text-anchor="middle" font-size="13" font-weight="bold" fill="#1f618d">TLAB 剩余空间</text>
+  <text x="490" y="338" text-anchor="middle" font-size="13" font-weight="bold" fill="#1f618d">足够 ?</text>
+
+  <!-- 是 → TLAB 指针碰撞 -->
+  <text x="640" y="318" font-size="12" fill="#1e8449" font-weight="bold">是</text>
+  <line x1="630" y1="325" x2="698" y2="325" stroke="#27ae60" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <rect x="700" y="298" width="200" height="60" rx="6" fill="#d5f5e3" stroke="#27ae60" stroke-width="2"/>
+  <text x="800" y="320" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e8449">TLAB 指针碰撞</text>
+  <text x="800" y="338" text-anchor="middle" font-size="11" fill="#555">无锁，单线程局部分配</text>
+  <text x="800" y="352" text-anchor="middle" font-size="11" fill="#555">99%+ 对象走此路径</text>
+
+  <!-- TLAB 出口 → 右汇流 -->
+  <line x1="900" y1="328" x2="930" y2="328" stroke="#27ae60" stroke-width="1.8"/>
+
+  <!-- 否 → 下 -->
+  <text x="500" y="402" font-size="12" fill="#c0392b" font-weight="bold">否</text>
+  <line x1="490" y1="380" x2="490" y2="408" stroke="#e74c3c" stroke-width="1.8" marker-end="url(#arrow-red)"/>
+
+  <!-- ========== Diamond 3: refill_waste? ========== -->
+  <polygon points="490,410 630,465 490,520 350,465" fill="#fef9e7" stroke="#f1c40f" stroke-width="2"/>
+  <text x="490" y="460" text-anchor="middle" font-size="13" font-weight="bold" fill="#7d6608">剩余空间 ≥</text>
+  <text x="490" y="478" text-anchor="middle" font-size="13" font-weight="bold" fill="#7d6608">refill_waste ?</text>
+
+  <!-- 否(浪费小) → 右 → 新 TLAB -->
+  <text x="640" y="458" font-size="11" fill="#1e8449" font-weight="bold">否(浪费小)</text>
+  <line x1="630" y1="465" x2="698" y2="465" stroke="#27ae60" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <rect x="700" y="438" width="200" height="60" rx="6" fill="#d5f5e3" stroke="#27ae60" stroke-width="2"/>
+  <text x="800" y="460" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e8449">丢弃旧 TLAB</text>
+  <text x="800" y="478" text-anchor="middle" font-size="11" fill="#555">CAS 申请新 TLAB</text>
+  <text x="800" y="492" text-anchor="middle" font-size="11" fill="#555">在新 TLAB 内分配</text>
+
+  <!-- 新 TLAB 出口 → 右汇流 -->
+  <line x1="900" y1="468" x2="930" y2="468" stroke="#27ae60" stroke-width="1.8"/>
+
+  <!-- 是(浪费大) → 左 → Eden 慢路径 -->
+  <text x="260" y="458" font-size="11" fill="#c0392b" font-weight="bold">是(浪费大)</text>
+  <line x1="350" y1="465" x2="282" y2="465" stroke="#e74c3c" stroke-width="1.8" marker-end="url(#arrow-red)"/>
+  <rect x="80" y="438" width="200" height="60" rx="6" fill="#fadbd8" stroke="#e74c3c" stroke-width="2"/>
+  <text x="180" y="460" text-anchor="middle" font-size="13" font-weight="bold" fill="#922b21">Eden 共享区慢路径</text>
+  <text x="180" y="478" text-anchor="middle" font-size="11" fill="#555">CAS 抢 Eden Region top 指针</text>
+  <text x="180" y="492" text-anchor="middle" font-size="11" fill="#555">保留旧 TLAB 给后续小对象</text>
+
+  <!-- Eden slow → down -->
+  <line x1="180" y1="498" x2="180" y2="528" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- ========== Diamond 4: Eden 还有 Free Region? ========== -->
+  <polygon points="180,530 320,590 180,650 40,590" fill="#fef9e7" stroke="#f1c40f" stroke-width="2"/>
+  <text x="180" y="585" text-anchor="middle" font-size="12" font-weight="bold" fill="#7d6608">Eden 还有可分配的</text>
+  <text x="180" y="603" text-anchor="middle" font-size="12" font-weight="bold" fill="#7d6608">Free Region ?</text>
+
+  <!-- 是 → 右 → 汇流 -->
+  <text x="330" y="585" font-size="11" fill="#1e8449" font-weight="bold">是</text>
+  <line x1="320" y1="590" x2="930" y2="590" stroke="#27ae60" stroke-width="1.8"/>
+
+  <!-- 否 → 下 → Young GC -->
+  <text x="190" y="668" font-size="11" fill="#c0392b" font-weight="bold">否</text>
+  <line x1="180" y1="650" x2="180" y2="676" stroke="#e74c3c" stroke-width="1.8" marker-end="url(#arrow-red)"/>
+  <rect x="80" y="678" width="200" height="60" rx="6" fill="#fdecea" stroke="#e74c3c" stroke-width="2"/>
+  <text x="180" y="700" text-anchor="middle" font-size="13" font-weight="bold" fill="#922b21">触发 GC</text>
+  <text x="180" y="716" text-anchor="middle" font-size="11" fill="#555">Young / Mixed / Full GC</text>
+  <text x="180" y="730" text-anchor="middle" font-size="11" fill="#888">回收后重试分配（虚线回到入口）</text>
+
+  <!-- GC 后重试 → 虚线回入口 -->
+  <path d="M 280 708 Q 380 708 380 130 Q 380 88 410 88" fill="none" stroke="#7f8c8d" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <text x="390" y="400" font-size="11" fill="#7f8c8d" transform="rotate(0)">GC 完成后</text>
+  <text x="390" y="416" font-size="11" fill="#7f8c8d">重新走分配流程</text>
+
+  <!-- ========== 右侧汇流总线 ========== -->
+  <line x1="930" y1="188" x2="930" y2="755" stroke="#27ae60" stroke-width="2"/>
+  <line x1="930" y1="755" x2="690" y2="755" stroke="#27ae60" stroke-width="2"/>
+  <line x1="690" y1="755" x2="690" y2="772" stroke="#27ae60" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+  <!-- ========== 终态：分配完成 ========== -->
+  <rect x="560" y="775" width="260" height="40" rx="20" fill="#27ae60"/>
+  <text x="690" y="801" text-anchor="middle" fill="white" font-size="15" font-weight="bold">✓ 分配完成（返回对象引用）</text>
+
+  <!-- ========== Humongous 副作用提示框 ========== -->
+  <rect x="20" y="130" width="320" height="80" rx="6" fill="#fff3cd" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="180" y="152" text-anchor="middle" font-size="12" font-weight="bold" fill="#a04000">⚠ Humongous 副作用</text>
+  <text x="30" y="172" font-size="11" fill="#555">• 直接进入 Old，不经历年轻代</text>
+  <text x="30" y="188" font-size="11" fill="#555">• Region 末尾可能浪费空间</text>
+  <text x="30" y="204" font-size="11" fill="#555">• 频繁分配易触发 IHOP / Full GC</text>
+
+  <!-- 路径占比说明 -->
+  <rect x="20" y="280" width="320" height="120" rx="6" fill="#eaf2f8" stroke="#3498db" stroke-width="1.5"/>
+  <text x="180" y="302" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f618d">四条分配路径占比（经验值）</text>
+  <text x="30" y="324" font-size="11" fill="#333">① TLAB 指针碰撞 ………… 99%+（最快，无锁）</text>
+  <text x="30" y="342" font-size="11" fill="#333">② 新 TLAB ………………… &lt; 1%（CAS 一次申请 TLAB）</text>
+  <text x="30" y="360" font-size="11" fill="#333">③ Eden 慢路径 …………… &lt; 0.1%（CAS 抢 Eden 指针）</text>
+  <text x="30" y="378" font-size="11" fill="#333">④ Humongous …………… 极少（≥ Region/2 时）</text>
+  <text x="30" y="394" font-size="11" fill="#888">→ 调优重点：让 99%+ 落在路径 ①</text>
+</svg>

@@ -1,0 +1,140 @@
+<svg viewBox="0 0 960 720" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2980b9"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8e44ad"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="720" fill="#f8f9fa" rx="8"/>
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">RocketMQ 消费模式：Cluster vs Broadcast + 长轮询 Pull</text>
+
+  <!-- ============== 上：集群消费 ============== -->
+  <text x="30" y="80" font-size="15" font-weight="bold" fill="#2c3e50">① 集群消费 CLUSTERING（默认）：一条消息只被组内一个 Consumer 消费</text>
+
+  <!-- Topic / 4 Queues -->
+  <rect x="40" y="100" width="180" height="200" rx="8" fill="#e8f4ff" stroke="#3498db" stroke-width="2"/>
+  <text x="130" y="122" text-anchor="middle" font-size="13" font-weight="bold" fill="#1b4f72">Topic: OrderTopic</text>
+  <text x="130" y="138" text-anchor="middle" font-size="10" fill="#1b4f72">4 个 MessageQueue</text>
+
+  <rect x="55" y="148" width="150" height="28" fill="#aed6f1" stroke="#2980b9"/>
+  <text x="130" y="167" text-anchor="middle" font-size="11" fill="#1b4f72">Queue 0</text>
+  <rect x="55" y="180" width="150" height="28" fill="#aed6f1" stroke="#2980b9"/>
+  <text x="130" y="199" text-anchor="middle" font-size="11" fill="#1b4f72">Queue 1</text>
+  <rect x="55" y="212" width="150" height="28" fill="#aed6f1" stroke="#2980b9"/>
+  <text x="130" y="231" text-anchor="middle" font-size="11" fill="#1b4f72">Queue 2</text>
+  <rect x="55" y="244" width="150" height="28" fill="#aed6f1" stroke="#2980b9"/>
+  <text x="130" y="263" text-anchor="middle" font-size="11" fill="#1b4f72">Queue 3</text>
+
+  <!-- 分配箭头 -->
+  <line x1="205" y1="162" x2="340" y2="148" stroke="#2980b9" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <line x1="205" y1="194" x2="340" y2="182" stroke="#2980b9" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <line x1="205" y1="226" x2="340" y2="240" stroke="#2980b9" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <line x1="205" y1="258" x2="340" y2="270" stroke="#2980b9" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+
+  <!-- ConsumerGroup -->
+  <rect x="340" y="100" width="350" height="200" rx="10" fill="#fff" stroke="#bdc3c7" stroke-dasharray="6,3" stroke-width="2"/>
+  <text x="515" y="120" text-anchor="middle" font-size="12" font-style="italic" fill="#7f8c8d">ConsumerGroup_A（同组）</text>
+
+  <rect x="360" y="135" width="140" height="60" rx="8" fill="#8e44ad" stroke="#6c3483"/>
+  <text x="430" y="158" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Consumer-1</text>
+  <text x="430" y="178" text-anchor="middle" fill="white" font-size="10">分到 Queue 0 / 1</text>
+
+  <rect x="530" y="135" width="140" height="60" rx="8" fill="#8e44ad" stroke="#6c3483"/>
+  <text x="600" y="158" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Consumer-2</text>
+  <text x="600" y="178" text-anchor="middle" fill="white" font-size="10">分到 Queue 2 / 3</text>
+
+  <text x="515" y="222" text-anchor="middle" font-size="11" fill="#555">Rebalance 策略：AVG / AVG_BY_CIRCLE / CONSISTENT_HASH ...</text>
+  <text x="515" y="240" text-anchor="middle" font-size="11" fill="#555">默认 AllocateMessageQueueAveragely：平均分</text>
+  <text x="515" y="266" text-anchor="middle" font-size="11" fill="#196f3d" font-weight="bold">offset 存在 Broker（消费者宕机也不丢进度）</text>
+  <text x="515" y="284" text-anchor="middle" font-size="11" fill="#196f3d" font-weight="bold">消费失败 → 进入 %RETRY%CG 重试队列</text>
+
+  <!-- 集群消费的右侧说明 -->
+  <g transform="translate(720, 100)">
+    <rect x="0" y="0" width="200" height="200" fill="#fef9e7" stroke="#f1c40f" rx="6"/>
+    <text x="100" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#7d6608">特征</text>
+    <text x="14" y="44" font-size="11" fill="#333">• 每条消息只被组内</text>
+    <text x="14" y="60" font-size="11" fill="#333">  一个 Consumer 消费</text>
+    <text x="14" y="84" font-size="11" fill="#333">• Queue 数 ≥ Consumer 数</text>
+    <text x="14" y="100" font-size="11" fill="#333">  否则有闲置 Consumer</text>
+    <text x="14" y="124" font-size="11" fill="#333">• offset 存 Broker</text>
+    <text x="14" y="148" font-size="11" fill="#333">• 支持失败重试 + 死信</text>
+    <text x="14" y="172" font-size="11" fill="#333">• 典型：订单、支付、</text>
+    <text x="14" y="188" font-size="11" fill="#333">  通知等业务消息</text>
+  </g>
+
+  <!-- ============== 中：广播消费 ============== -->
+  <line x1="30" y1="320" x2="930" y2="320" stroke="#bdc3c7" stroke-dasharray="4,3"/>
+
+  <text x="30" y="346" font-size="15" font-weight="bold" fill="#2c3e50">② 广播消费 BROADCASTING：每个 Consumer 都收一份</text>
+
+  <rect x="40" y="365" width="180" height="100" rx="8" fill="#fadbd8" stroke="#e74c3c" stroke-width="2"/>
+  <text x="130" y="388" text-anchor="middle" font-size="13" font-weight="bold" fill="#922b21">Topic: ConfigTopic</text>
+  <text x="130" y="410" text-anchor="middle" font-size="11" fill="#922b21">配置变更广播</text>
+  <text x="130" y="432" text-anchor="middle" font-size="11" fill="#922b21">缓存刷新通知</text>
+
+  <line x1="220" y1="395" x2="320" y2="395" stroke="#e74c3c" stroke-width="2"/>
+  <line x1="320" y1="395" x2="320" y2="375" stroke="#e74c3c" stroke-width="2"/>
+  <line x1="320" y1="395" x2="320" y2="415" stroke="#e74c3c" stroke-width="2"/>
+  <line x1="320" y1="395" x2="320" y2="435" stroke="#e74c3c" stroke-width="2"/>
+  <line x1="320" y1="375" x2="358" y2="375" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)"/>
+  <line x1="320" y1="415" x2="358" y2="415" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)"/>
+  <line x1="320" y1="435" x2="358" y2="435" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)"/>
+
+  <rect x="360" y="362" width="150" height="28" rx="6" fill="#e74c3c"/>
+  <text x="435" y="381" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Consumer-1 收到一份</text>
+  <rect x="360" y="402" width="150" height="28" rx="6" fill="#e74c3c"/>
+  <text x="435" y="421" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Consumer-2 收到一份</text>
+  <rect x="360" y="422" width="150" height="28" rx="6" fill="#e74c3c"/>
+  <text x="435" y="441" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Consumer-3 收到一份</text>
+
+  <g transform="translate(540, 360)">
+    <rect x="0" y="0" width="380" height="100" fill="#fef9e7" stroke="#f1c40f" rx="6"/>
+    <text x="190" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="#7d6608">特征</text>
+    <text x="14" y="46" font-size="11" fill="#333">• 每条消息被组内<tspan font-weight="bold">所有</tspan> Consumer 各消费一遍</text>
+    <text x="14" y="64" font-size="11" fill="#333">• <tspan font-weight="bold" fill="#922b21">offset 存 Consumer 本地</tspan>（~/.rocketmq_offsets）</text>
+    <text x="14" y="82" font-size="11" fill="#333">• <tspan font-weight="bold" fill="#922b21">不支持失败重试</tspan>，失败即丢；典型：配置/广播</text>
+  </g>
+
+  <!-- ============== 下：长轮询 Pull ============== -->
+  <line x1="30" y1="490" x2="930" y2="490" stroke="#bdc3c7" stroke-dasharray="4,3"/>
+
+  <text x="30" y="516" font-size="15" font-weight="bold" fill="#2c3e50">③ "Push" 模式的真相：长轮询 Pull（默认 15s）</text>
+
+  <!-- Consumer -->
+  <rect x="40" y="540" width="160" height="80" rx="8" fill="#8e44ad" stroke="#6c3483"/>
+  <text x="120" y="565" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Consumer</text>
+  <text x="120" y="585" text-anchor="middle" fill="white" font-size="10">PullMessageService</text>
+  <text x="120" y="603" text-anchor="middle" fill="white" font-size="10">不断发起 pull 请求</text>
+
+  <line x1="200" y1="580" x2="290" y2="580" stroke="#8e44ad" stroke-width="2.5" marker-end="url(#arrow-purple)"/>
+  <text x="245" y="572" text-anchor="middle" font-size="10" fill="#6c3483" font-weight="bold">pull(timeout=15s)</text>
+
+  <!-- Broker -->
+  <rect x="290" y="540" width="380" height="80" rx="8" fill="#3498db" stroke="#2874a6"/>
+  <text x="480" y="562" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Broker</text>
+  <text x="480" y="582" text-anchor="middle" fill="white" font-size="10">PullMessageProcessor 查 ConsumeQueue</text>
+  <text x="480" y="598" text-anchor="middle" fill="white" font-size="10">无消息 → PullRequestHoldService 挂起请求</text>
+  <text x="480" y="614" text-anchor="middle" fill="#f1c40f" font-size="10">ReputMessageService 派发新消息时唤醒挂起的请求</text>
+
+  <line x1="670" y1="580" x2="760" y2="580" stroke="#8e44ad" stroke-width="2.5" stroke-dasharray="3,2" marker-end="url(#arrow-purple)"/>
+  <text x="715" y="572" text-anchor="middle" font-size="10" fill="#6c3483">立即返回 / 超时返回</text>
+
+  <rect x="760" y="540" width="160" height="80" rx="8" fill="#27ae60" stroke="#1e8449"/>
+  <text x="840" y="565" text-anchor="middle" fill="white" font-size="13" font-weight="bold">收到消息</text>
+  <text x="840" y="585" text-anchor="middle" fill="white" font-size="10">回调 MessageListener</text>
+  <text x="840" y="603" text-anchor="middle" fill="white" font-size="10">→ 提交 offset</text>
+
+  <g transform="translate(30, 640)">
+    <rect x="0" y="0" width="900" height="60" fill="#fff" stroke="#bdc3c7" rx="6"/>
+    <text x="14" y="22" font-size="12" fill="#333"><tspan font-weight="bold" fill="#6c3483">优点</tspan>：消费速率由 Consumer 控制（不会被压垮）；同时无消息时也接近 Push 的实时性</text>
+    <text x="14" y="44" font-size="12" fill="#333"><tspan font-weight="bold" fill="#6c3483">关键</tspan>：客户端看到的 MessageListenerConcurrently 是 Push 抽象，底层仍是 Pull——RocketMQ 没有真正的 Server Push</text>
+  </g>
+</svg>

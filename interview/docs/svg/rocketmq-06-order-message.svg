@@ -1,0 +1,137 @@
+<svg viewBox="0 0 960 720" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2980b9"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#27ae60"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c0392b"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="720" fill="#f8f9fa" rx="8"/>
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">RocketMQ 顺序消息：分区有序的三端协作</text>
+
+  <!-- ① Producer 端 -->
+  <text x="30" y="80" font-size="15" font-weight="bold" fill="#27ae60">① Producer 端：同一业务 Key 固定路由到同一 Queue</text>
+
+  <!-- 订单消息 -->
+  <g transform="translate(30, 95)">
+    <rect x="0" y="0" width="180" height="160" rx="8" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.5"/>
+    <text x="90" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#196f3d">订单消息（业务 Key=OrderId）</text>
+
+    <rect x="10" y="30" width="160" height="22" fill="#fff" stroke="#bdc3c7"/>
+    <text x="90" y="45" text-anchor="middle" font-size="10" fill="#333">Order=1001 · 创建</text>
+    <rect x="10" y="54" width="160" height="22" fill="#fff" stroke="#bdc3c7"/>
+    <text x="90" y="69" text-anchor="middle" font-size="10" fill="#333">Order=2002 · 创建</text>
+    <rect x="10" y="78" width="160" height="22" fill="#fff" stroke="#bdc3c7"/>
+    <text x="90" y="93" text-anchor="middle" font-size="10" fill="#333">Order=1001 · 支付</text>
+    <rect x="10" y="102" width="160" height="22" fill="#fff" stroke="#bdc3c7"/>
+    <text x="90" y="117" text-anchor="middle" font-size="10" fill="#333">Order=1001 · 完成</text>
+    <rect x="10" y="126" width="160" height="22" fill="#fff" stroke="#bdc3c7"/>
+    <text x="90" y="141" text-anchor="middle" font-size="10" fill="#333">Order=2002 · 支付</text>
+  </g>
+
+  <!-- 路由器 -->
+  <line x1="210" y1="175" x2="295" y2="175" stroke="#27ae60" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="295" y="135" width="180" height="80" rx="8" fill="#fef9e7" stroke="#f1c40f" stroke-width="1.5"/>
+  <text x="385" y="158" text-anchor="middle" font-size="12" font-weight="bold" fill="#7d6608">MessageQueueSelector</text>
+  <text x="385" y="178" text-anchor="middle" font-size="10" fill="#7d6608">hash(OrderId) % queueSize</text>
+  <text x="385" y="196" text-anchor="middle" font-size="10" fill="#7d6608">Order=1001 → Queue 1</text>
+  <text x="385" y="210" text-anchor="middle" font-size="10" fill="#7d6608">Order=2002 → Queue 2</text>
+
+  <!-- Broker Queue -->
+  <line x1="475" y1="175" x2="555" y2="175" stroke="#27ae60" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+  <g transform="translate(555, 95)">
+    <rect x="0" y="0" width="370" height="160" rx="8" fill="#e8f4ff" stroke="#3498db" stroke-width="1.5"/>
+    <text x="185" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#1b4f72">Broker：OrderTopic 的 4 个 Queue</text>
+
+    <rect x="10" y="30" width="170" height="56" fill="#fff" stroke="#bdc3c7"/>
+    <text x="20" y="46" font-size="10" fill="#1b4f72" font-weight="bold">Queue 1（Order 1001 全部进入）</text>
+    <text x="20" y="62" font-size="10" fill="#333">1001创建 → 1001支付 → 1001完成</text>
+    <text x="20" y="78" font-size="9" fill="#27ae60">FIFO 顺序保留 ✓</text>
+
+    <rect x="190" y="30" width="170" height="56" fill="#fff" stroke="#bdc3c7"/>
+    <text x="200" y="46" font-size="10" fill="#1b4f72" font-weight="bold">Queue 2（Order 2002 全部进入）</text>
+    <text x="200" y="62" font-size="10" fill="#333">2002创建 → 2002支付</text>
+    <text x="200" y="78" font-size="9" fill="#27ae60">FIFO 顺序保留 ✓</text>
+
+    <rect x="10" y="92" width="170" height="56" fill="#fff" stroke="#bdc3c7" stroke-dasharray="3,2"/>
+    <text x="95" y="123" text-anchor="middle" font-size="10" fill="#888">Queue 0 (其他订单)</text>
+
+    <rect x="190" y="92" width="170" height="56" fill="#fff" stroke="#bdc3c7" stroke-dasharray="3,2"/>
+    <text x="275" y="123" text-anchor="middle" font-size="10" fill="#888">Queue 3 (其他订单)</text>
+  </g>
+
+  <!-- ② Broker 端：Queue 锁 -->
+  <line x1="30" y1="275" x2="930" y2="275" stroke="#bdc3c7" stroke-dasharray="4,3"/>
+
+  <text x="30" y="298" font-size="15" font-weight="bold" fill="#e67e22">② Broker 端：每个 Queue 一把分布式锁，Consumer 拉取前先抢锁</text>
+
+  <g transform="translate(30, 310)">
+    <rect x="0" y="0" width="900" height="120" fill="#fff" stroke="#bdc3c7" rx="6"/>
+    <text x="14" y="22" font-size="11" font-weight="bold" fill="#a04000">RebalanceLockManager（Broker 维护）</text>
+
+    <rect x="14" y="34" width="180" height="76" rx="4" fill="#fef9e7" stroke="#f1c40f"/>
+    <text x="104" y="54" text-anchor="middle" font-size="11" font-weight="bold" fill="#7d6608">Queue 0 锁</text>
+    <text x="104" y="74" text-anchor="middle" font-size="10" fill="#7d6608">持有者：Consumer-A</text>
+    <text x="104" y="92" text-anchor="middle" font-size="10" fill="#7d6608">续约时间戳：xxx</text>
+
+    <rect x="208" y="34" width="180" height="76" rx="4" fill="#fef9e7" stroke="#f1c40f"/>
+    <text x="298" y="54" text-anchor="middle" font-size="11" font-weight="bold" fill="#7d6608">Queue 1 锁</text>
+    <text x="298" y="74" text-anchor="middle" font-size="10" fill="#7d6608">持有者：Consumer-A</text>
+
+    <rect x="402" y="34" width="180" height="76" rx="4" fill="#fef9e7" stroke="#f1c40f"/>
+    <text x="492" y="54" text-anchor="middle" font-size="11" font-weight="bold" fill="#7d6608">Queue 2 锁</text>
+    <text x="492" y="74" text-anchor="middle" font-size="10" fill="#7d6608">持有者：Consumer-B</text>
+
+    <rect x="596" y="34" width="180" height="76" rx="4" fill="#fef9e7" stroke="#f1c40f"/>
+    <text x="686" y="54" text-anchor="middle" font-size="11" font-weight="bold" fill="#7d6608">Queue 3 锁</text>
+    <text x="686" y="74" text-anchor="middle" font-size="10" fill="#7d6608">持有者：Consumer-B</text>
+
+    <text x="790" y="80" font-size="10" fill="#a04000" font-weight="bold">锁 30s 续约</text>
+  </g>
+
+  <!-- ③ Consumer 端 -->
+  <text x="30" y="460" font-size="15" font-weight="bold" fill="#8e44ad">③ Consumer 端：MessageListenerOrderly 单线程消费每个 Queue</text>
+
+  <g transform="translate(30, 475)">
+    <rect x="0" y="0" width="430" height="180" fill="#fff" stroke="#bdc3c7" rx="6"/>
+    <text x="14" y="22" font-size="12" font-weight="bold" fill="#6c3483">Consumer-A（拿到 Queue 0、1 的锁）</text>
+
+    <rect x="20" y="36" width="380" height="60" fill="#e8d6f5" stroke="#8e44ad" rx="4"/>
+    <text x="210" y="56" text-anchor="middle" font-size="11" fill="#4a235a" font-weight="bold">Queue 0 消费线程</text>
+    <text x="210" y="74" text-anchor="middle" font-size="10" fill="#4a235a">synchronized(processQueue)</text>
+    <text x="210" y="90" text-anchor="middle" font-size="10" fill="#4a235a">同一时刻只有一个线程在跑</text>
+
+    <rect x="20" y="104" width="380" height="60" fill="#e8d6f5" stroke="#8e44ad" rx="4"/>
+    <text x="210" y="124" text-anchor="middle" font-size="11" fill="#4a235a" font-weight="bold">Queue 1 消费线程</text>
+    <text x="210" y="142" text-anchor="middle" font-size="10" fill="#4a235a">synchronized(processQueue)</text>
+    <text x="210" y="158" text-anchor="middle" font-size="10" fill="#4a235a">同一时刻只有一个线程在跑</text>
+  </g>
+
+  <g transform="translate(490, 475)">
+    <rect x="0" y="0" width="430" height="180" fill="#fadbd8" stroke="#e74c3c" rx="6"/>
+    <text x="14" y="22" font-size="12" font-weight="bold" fill="#922b21">⚠️ 顺序消息的代价</text>
+
+    <text x="14" y="46" font-size="11" fill="#333">• 一条消息消费失败 → 阻塞整个 Queue 的后续消息</text>
+    <text x="14" y="66" font-size="11" fill="#333">• MessageListenerOrderly 失败返回 SUSPEND_CURRENT_QUEUE_A_MOMENT</text>
+    <text x="14" y="86" font-size="11" fill="#333">  → 默认重试 Integer.MAX_VALUE 次！需手动设置 maxReconsumeTimes</text>
+    <text x="14" y="106" font-size="11" fill="#333">• 不能用并发消费提速（同 Queue 内必须串行）</text>
+    <text x="14" y="126" font-size="11" fill="#333">• Consumer 扩容受 Queue 数量限制</text>
+    <text x="14" y="154" font-size="11" font-weight="bold" fill="#922b21">→ 必须做好业务幂等 + 失败兜底（人工跳过或死信）</text>
+  </g>
+
+  <g transform="translate(30, 670)">
+    <rect x="0" y="0" width="900" height="40" fill="#2c3e50" rx="6"/>
+    <text x="450" y="25" text-anchor="middle" font-size="12" fill="white">"分区有序"是 RocketMQ 提供的能力上限——全局有序需 1 个 Queue + 单线程消费，吞吐极低，极少使用</text>
+  </g>
+</svg>

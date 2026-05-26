@@ -1,0 +1,139 @@
+<svg viewBox="0 0 980 640" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3498db"/>
+    </marker>
+  </defs>
+
+  <rect width="980" height="640" fill="#f8f9fa" rx="8"/>
+  <rect x="0" y="0" width="980" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="980" height="10" fill="#2c3e50"/>
+  <text x="490" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">G1 跨 Region 引用：Card Table + RSet + 写屏障</text>
+
+  <!-- 问题陈述 -->
+  <rect x="20" y="68" width="940" height="48" fill="#fef9e7" stroke="#f1c40f" stroke-width="1.5" rx="6"/>
+  <text x="490" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#7d6608">问题：Young GC 只想扫描年轻代，但 Old 区可能有引用指向 Young 区的对象</text>
+  <text x="490" y="106" text-anchor="middle" font-size="12" fill="#555">→ 必须记录"谁引用了我"，避免每次 GC 扫描整个 Old 区</text>
+
+  <!-- ===== 左侧：Region 与卡表 ===== -->
+  <g transform="translate(30, 140)">
+    <text x="200" y="0" text-anchor="middle" font-size="14" font-weight="bold" fill="#555">Old Region（被引用方）</text>
+
+    <!-- Old Region -->
+    <rect x="0" y="14" width="400" height="160" fill="#e8d6f5" stroke="#8e44ad" stroke-width="2" rx="4"/>
+
+    <!-- 卡片网格 8x4 -->
+    <g font-size="9" text-anchor="middle">
+      <g>
+        <rect x="10"  y="24" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="60"  y="24" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="110" y="24" width="48" height="36" fill="#fadbd8" stroke="#e74c3c" stroke-width="1.8"/>
+        <text x="134" y="46" fill="#922b21" font-weight="bold">dirty</text>
+        <rect x="160" y="24" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="210" y="24" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="260" y="24" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="310" y="24" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="360" y="24" width="30" height="36" fill="white" stroke="#bbb"/>
+      </g>
+      <g>
+        <rect x="10"  y="64" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="60"  y="64" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="110" y="64" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="160" y="64" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="210" y="64" width="48" height="36" fill="#fadbd8" stroke="#e74c3c" stroke-width="1.8"/>
+        <text x="234" y="86" fill="#922b21" font-weight="bold">dirty</text>
+        <rect x="260" y="64" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="310" y="64" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="360" y="64" width="30" height="36" fill="white" stroke="#bbb"/>
+      </g>
+      <g>
+        <rect x="10"  y="104" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="60"  y="104" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="110" y="104" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="160" y="104" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="210" y="104" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="260" y="104" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="310" y="104" width="48" height="36" fill="white" stroke="#bbb"/>
+        <rect x="360" y="104" width="30" height="36" fill="white" stroke="#bbb"/>
+      </g>
+    </g>
+
+    <text x="200" y="190" text-anchor="middle" font-size="11" fill="#888">每个 Card = 512 字节 · 卡表是字节数组，1 字节标记 1 张卡的脏/净</text>
+
+    <!-- 引用对象（圆点） -->
+    <circle cx="134" cy="42" r="5" fill="#8e44ad"/>
+    <circle cx="234" cy="82" r="5" fill="#8e44ad"/>
+  </g>
+
+  <!-- ===== 右侧：Young Region（引用方） ===== -->
+  <g transform="translate(560, 140)">
+    <text x="200" y="0" text-anchor="middle" font-size="14" font-weight="bold" fill="#555">Young Region（被引用对象所在）</text>
+
+    <rect x="0" y="14" width="400" height="160" fill="#d6eaff" stroke="#3498db" stroke-width="2" rx="4"/>
+
+    <circle cx="60"  cy="60"  r="14" fill="#27ae60"/>
+    <text x="60" y="64" text-anchor="middle" fill="white" font-size="11" font-weight="bold">A</text>
+
+    <circle cx="200" cy="110" r="14" fill="#27ae60"/>
+    <text x="200" y="114" text-anchor="middle" fill="white" font-size="11" font-weight="bold">B</text>
+
+    <text x="200" y="200" text-anchor="middle" font-size="12" fill="#555">A、B 是被 Old 区引用的活对象</text>
+  </g>
+
+  <!-- 跨 Region 引用线 -->
+  <path d="M 164 182 Q 350 100 590 200" stroke="#8e44ad" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 264 222 Q 450 160 690 250" stroke="#8e44ad" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="380" y="120" font-size="11" fill="#8e44ad" font-weight="bold">Old → Young 引用</text>
+
+  <!-- ===== 下半：写屏障流程 ===== -->
+  <g transform="translate(30, 380)">
+    <text x="460" y="0" text-anchor="middle" font-size="15" font-weight="bold" fill="#2c3e50">写屏障：维护 RSet 的运行机制</text>
+
+    <!-- 步骤 1 -->
+    <rect x="0" y="20" width="200" height="80" rx="6" fill="#d5f5e3" stroke="#27ae60" stroke-width="2"/>
+    <text x="100" y="42" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e8449">① 用户代码</text>
+    <text x="100" y="62" text-anchor="middle" font-size="11" fill="#333">old.field = young;</text>
+    <text x="100" y="82" text-anchor="middle" font-size="11" fill="#555">JIT 在写引用处插入屏障</text>
+
+    <line x1="200" y1="60" x2="240" y2="60" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- 步骤 2 -->
+    <rect x="240" y="20" width="200" height="80" rx="6" fill="#fef9e7" stroke="#f1c40f" stroke-width="2"/>
+    <text x="340" y="42" text-anchor="middle" font-size="13" font-weight="bold" fill="#7d6608">② Post-Write Barrier</text>
+    <text x="340" y="62" text-anchor="middle" font-size="11" fill="#333">将 old 所在卡片标为 dirty</text>
+    <text x="340" y="82" text-anchor="middle" font-size="11" fill="#555">写入线程本地 Dirty Card Queue</text>
+
+    <line x1="440" y1="60" x2="480" y2="60" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- 步骤 3 -->
+    <rect x="480" y="20" width="200" height="80" rx="6" fill="#fadbd8" stroke="#e74c3c" stroke-width="2"/>
+    <text x="580" y="42" text-anchor="middle" font-size="13" font-weight="bold" fill="#922b21">③ Refinement 线程</text>
+    <text x="580" y="62" text-anchor="middle" font-size="11" fill="#333">异步消费 Dirty Card Queue</text>
+    <text x="580" y="82" text-anchor="middle" font-size="11" fill="#555">扫描卡片，更新对应 RSet</text>
+
+    <line x1="680" y1="60" x2="720" y2="60" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- 步骤 4 -->
+    <rect x="720" y="20" width="200" height="80" rx="6" fill="#e8d6f5" stroke="#8e44ad" stroke-width="2"/>
+    <text x="820" y="42" text-anchor="middle" font-size="13" font-weight="bold" fill="#6c3483">④ Young GC</text>
+    <text x="820" y="62" text-anchor="middle" font-size="11" fill="#333">读 Young Region 的 RSet</text>
+    <text x="820" y="82" text-anchor="middle" font-size="11" fill="#555">无需扫描整个 Old 区</text>
+  </g>
+
+  <!-- RSet 结构说明 -->
+  <g transform="translate(30, 510)">
+    <rect x="0" y="0" width="920" height="110" fill="#eaf2f8" stroke="#3498db" stroke-width="1.5" rx="6"/>
+    <text x="14" y="22" font-size="13" font-weight="bold" fill="#1f618d">RSet（Remembered Set）数据结构 · 每个 Region 持有一个</text>
+
+    <text x="14" y="46" font-size="12" fill="#333">• <tspan font-weight="bold">本质</tspan>：哈希表，记录"哪些其他 Region 的哪些卡片，引用了本 Region 内的对象"</text>
+    <text x="14" y="66" font-size="12" fill="#333">• <tspan font-weight="bold">方向</tspan>：points-into（指向我的） — 与传统 Card Table 的 points-out 相反</text>
+    <text x="14" y="86" font-size="12" fill="#333">• <tspan font-weight="bold">三级粒度</tspan>：稀疏哈希表（少量卡） → 细粒度位图 → 粗粒度（整个 Region 一个 bit，省内存）</text>
+    <text x="14" y="104" font-size="12" fill="#555">• <tspan font-weight="bold">成本</tspan>：RSet 本身占整堆 5%~20% 空间，写屏障带来约 10%~20% 写性能开销</text>
+  </g>
+</svg>

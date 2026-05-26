@@ -1,8 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir \"D:\\\\\\\\doc\\\\\\\\docs\\\\\\\\svg\\\\\\\\\")",
-      "Bash(xxd)"
+      "Bash(git mv *)",
+      "Bash(mv \"java-troubleshooting.md\" \"Java-问题排查.md\")",
+      "Bash(mv \"jvm-g1-collector.md\" \"JVM-G1垃圾收集器.md\")",
+      "Bash(mv \"rocketmq.md\" \"RocketMQ消息中间件.md\")"
     ]
   }
 }

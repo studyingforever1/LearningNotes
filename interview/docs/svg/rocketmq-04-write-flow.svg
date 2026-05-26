@@ -1,0 +1,102 @@
+<svg viewBox="0 0 960 720" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2980b9"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e67e22"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8e44ad"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="720" fill="#f8f9fa" rx="8"/>
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">RocketMQ 消息写入与异步派发流程</text>
+
+  <!-- Producer -->
+  <rect x="40" y="80" width="160" height="80" rx="10" fill="#27ae60" stroke="#1e8449" stroke-width="2"/>
+  <text x="120" y="106" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Producer</text>
+  <text x="120" y="126" text-anchor="middle" fill="white" font-size="11">send(msg)</text>
+  <text x="120" y="144" text-anchor="middle" fill="white" font-size="10">同步 / 异步 / 单向</text>
+
+  <!-- 箭头 1 -->
+  <line x1="200" y1="120" x2="290" y2="120" stroke="#27ae60" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+  <text x="245" y="112" text-anchor="middle" font-size="10" fill="#196f3d" font-weight="bold">Netty Remoting</text>
+
+  <!-- Broker 接收 -->
+  <rect x="290" y="80" width="180" height="80" rx="10" fill="#3498db" stroke="#2874a6" stroke-width="2"/>
+  <text x="380" y="106" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Broker 接收</text>
+  <text x="380" y="126" text-anchor="middle" fill="white" font-size="11">SendMessageProcessor</text>
+  <text x="380" y="144" text-anchor="middle" fill="white" font-size="10">解码 + 校验 + 计算 QueueId</text>
+
+  <!-- 箭头 2 -->
+  <line x1="380" y1="160" x2="380" y2="200" stroke="#2980b9" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <text x="510" y="183" font-size="11" fill="#1b4f72" font-weight="bold">① 写入 CommitLog</text>
+
+  <!-- CommitLog -->
+  <rect x="220" y="200" width="320" height="100" rx="10" fill="#e8f4ff" stroke="#3498db" stroke-width="2"/>
+  <text x="380" y="222" text-anchor="middle" font-size="14" font-weight="bold" fill="#1b4f72">CommitLog (mmap PageCache)</text>
+  <text x="380" y="244" text-anchor="middle" font-size="11" fill="#1b4f72">CommitLog#putMessage()</text>
+  <text x="380" y="262" text-anchor="middle" font-size="11" fill="#1b4f72">→ MappedFile#appendMessage()</text>
+  <text x="380" y="282" text-anchor="middle" font-size="10" fill="#1b4f72">顺序追加 1GB 文件，写到 PageCache 立即返回</text>
+
+  <!-- 刷盘分支 -->
+  <line x1="280" y1="300" x2="180" y2="350" stroke="#e67e22" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+  <rect x="60" y="350" width="240" height="80" rx="8" fill="#fef9e7" stroke="#f1c40f" stroke-width="1.5"/>
+  <text x="180" y="372" text-anchor="middle" font-size="12" font-weight="bold" fill="#7d6608">同步刷盘 SYNC_FLUSH</text>
+  <text x="180" y="392" text-anchor="middle" font-size="10" fill="#7d6608">PageCache → fsync → 磁盘</text>
+  <text x="180" y="410" text-anchor="middle" font-size="10" fill="#7d6608">刷完才 ACK，断电不丢</text>
+  <text x="180" y="424" text-anchor="middle" font-size="10" fill="#922b21">性能低 · 可靠性高</text>
+
+  <line x1="480" y1="300" x2="580" y2="350" stroke="#e67e22" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+  <rect x="460" y="350" width="240" height="80" rx="8" fill="#fef9e7" stroke="#f1c40f" stroke-width="1.5"/>
+  <text x="580" y="372" text-anchor="middle" font-size="12" font-weight="bold" fill="#7d6608">异步刷盘 ASYNC_FLUSH</text>
+  <text x="580" y="392" text-anchor="middle" font-size="10" fill="#7d6608">写完 PageCache 立即 ACK</text>
+  <text x="580" y="410" text-anchor="middle" font-size="10" fill="#7d6608">后台 FlushRealTimeService 批量刷</text>
+  <text x="580" y="424" text-anchor="middle" font-size="10" fill="#196f3d">性能高 · 宕机可能丢</text>
+
+  <!-- 主从复制 -->
+  <line x1="540" y1="250" x2="750" y2="250" stroke="#e67e22" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+  <text x="640" y="240" text-anchor="middle" font-size="11" fill="#a04000" font-weight="bold">主从复制</text>
+  <rect x="750" y="200" width="180" height="100" rx="10" fill="#aed6f1" stroke="#2874a6" stroke-width="2"/>
+  <text x="840" y="222" text-anchor="middle" font-size="13" font-weight="bold" fill="#1b4f72">Slave Broker</text>
+  <text x="840" y="244" text-anchor="middle" font-size="10" fill="#1b4f72">HAService 拉取</text>
+  <text x="840" y="262" text-anchor="middle" font-size="10" fill="#1b4f72">/ DLedger Raft</text>
+  <text x="840" y="282" text-anchor="middle" font-size="10" fill="#1b4f72">SYNC_MASTER → 多数派 ACK</text>
+
+  <!-- 派发分支 -->
+  <line x1="380" y1="300" x2="380" y2="460" stroke="#8e44ad" stroke-width="2.5" marker-end="url(#arrow-purple)"/>
+  <text x="395" y="350" font-size="11" fill="#6c3483" font-weight="bold">② ReputMessageService</text>
+  <text x="395" y="366" font-size="10" fill="#6c3483">后台线程，每 1ms 唤醒一次</text>
+  <text x="395" y="382" font-size="10" fill="#6c3483">扫描 CommitLog 新增部分，派发</text>
+
+  <!-- 派发目标 -->
+  <rect x="100" y="460" width="320" height="120" rx="10" fill="#fef9e7" stroke="#f1c40f" stroke-width="2"/>
+  <text x="260" y="484" text-anchor="middle" font-size="13" font-weight="bold" fill="#7d6608">ConsumeQueue</text>
+  <text x="260" y="504" text-anchor="middle" font-size="11" fill="#7d6608">写入 (commitLogOffset, size, tagHash)</text>
+  <text x="260" y="524" text-anchor="middle" font-size="11" fill="#7d6608">→ 唤醒挂起的拉取请求</text>
+  <text x="260" y="546" text-anchor="middle" font-size="10" fill="#7d6608">PullRequestHoldService 通知</text>
+  <text x="260" y="564" text-anchor="middle" font-size="10" fill="#7d6608">等待此 Topic-Queue 的 Consumer</text>
+
+  <rect x="450" y="460" width="320" height="120" rx="10" fill="#fadbd8" stroke="#e74c3c" stroke-width="2"/>
+  <text x="610" y="484" text-anchor="middle" font-size="13" font-weight="bold" fill="#922b21">IndexFile</text>
+  <text x="610" y="504" text-anchor="middle" font-size="11" fill="#922b21">如果消息带 Keys / UniqKey</text>
+  <text x="610" y="524" text-anchor="middle" font-size="11" fill="#922b21">写入哈希索引</text>
+  <text x="610" y="546" text-anchor="middle" font-size="10" fill="#922b21">用于按 MessageKey 反查</text>
+  <text x="610" y="564" text-anchor="middle" font-size="10" fill="#922b21">/ 按时间区间检索</text>
+
+  <!-- 关键说明 -->
+  <g transform="translate(40, 610)">
+    <rect x="0" y="0" width="880" height="90" fill="#fff" stroke="#bdc3c7" rx="6"/>
+    <text x="14" y="22" font-size="13" font-weight="bold" fill="#2c3e50">关键点</text>
+    <text x="14" y="44" font-size="11" fill="#333">• <tspan font-weight="bold" fill="#1b4f72">CommitLog 写入</tspan> 是同步的，ConsumeQueue/IndexFile 是<tspan font-weight="bold" fill="#6c3483">异步派发</tspan>——所以新消息有 ms 级延迟才能被消费</text>
+    <text x="14" y="64" font-size="11" fill="#333">• <tspan font-weight="bold" fill="#a04000">主从复制</tspan> 在 ACK 之前或之后取决于 ASYNC_MASTER / SYNC_MASTER 配置</text>
+    <text x="14" y="84" font-size="11" fill="#333">• 金融级零丢：SYNC_FLUSH + SYNC_MASTER（性能最低）；常规业务：ASYNC_FLUSH + SYNC_MASTER（性能/可靠平衡）</text>
+  </g>
+</svg>

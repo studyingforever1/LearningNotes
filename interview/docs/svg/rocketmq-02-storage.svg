@@ -1,0 +1,146 @@
+<svg viewBox="0 0 960 700" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2980b9"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8e44ad"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="700" fill="#f8f9fa" rx="8"/>
+  <rect x="0" y="0" width="960" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="960" height="10" fill="#2c3e50"/>
+  <text x="480" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">RocketMQ 存储模型：CommitLog / ConsumeQueue / IndexFile</text>
+
+  <!-- CommitLog 主体 -->
+  <text x="40" y="80" font-size="14" font-weight="bold" fill="#2c3e50">① CommitLog（所有 Topic 共用，1GB/文件，顺序追加）</text>
+  <g transform="translate(40, 90)">
+    <rect x="0" y="0" width="880" height="120" fill="#e8f4ff" stroke="#3498db" stroke-width="1.5" rx="6"/>
+
+    <!-- 消息块 -->
+    <g font-size="10" text-anchor="middle">
+      <rect x="10" y="14" width="90" height="36" fill="#aed6f1" stroke="#2980b9"/>
+      <text x="55" y="28" fill="#1b4f72" font-weight="bold">TopicA-Q0</text>
+      <text x="55" y="42" fill="#1b4f72">offset=0</text>
+
+      <rect x="104" y="14" width="90" height="36" fill="#d6eaff" stroke="#2980b9"/>
+      <text x="149" y="28" fill="#1b4f72" font-weight="bold">TopicB-Q1</text>
+      <text x="149" y="42" fill="#1b4f72">offset=1024</text>
+
+      <rect x="198" y="14" width="90" height="36" fill="#aed6f1" stroke="#2980b9"/>
+      <text x="243" y="28" fill="#1b4f72" font-weight="bold">TopicA-Q1</text>
+      <text x="243" y="42" fill="#1b4f72">offset=2048</text>
+
+      <rect x="292" y="14" width="90" height="36" fill="#f5cba7" stroke="#d35400"/>
+      <text x="337" y="28" fill="#7e3a07" font-weight="bold">TopicC-Q0</text>
+      <text x="337" y="42" fill="#7e3a07">offset=3072</text>
+
+      <rect x="386" y="14" width="90" height="36" fill="#aed6f1" stroke="#2980b9"/>
+      <text x="431" y="28" fill="#1b4f72" font-weight="bold">TopicA-Q0</text>
+      <text x="431" y="42" fill="#1b4f72">offset=4096</text>
+
+      <rect x="480" y="14" width="90" height="36" fill="#d6eaff" stroke="#2980b9"/>
+      <text x="525" y="28" fill="#1b4f72" font-weight="bold">TopicB-Q0</text>
+      <text x="525" y="42" fill="#1b4f72">offset=5120</text>
+
+      <rect x="574" y="14" width="90" height="36" fill="#f5cba7" stroke="#d35400"/>
+      <text x="619" y="28" fill="#7e3a07" font-weight="bold">TopicC-Q1</text>
+      <text x="619" y="42" fill="#7e3a07">offset=6144</text>
+
+      <rect x="668" y="14" width="90" height="36" fill="#aed6f1" stroke="#2980b9"/>
+      <text x="713" y="28" fill="#1b4f72" font-weight="bold">TopicA-Q0</text>
+      <text x="713" y="42" fill="#1b4f72">offset=7168</text>
+
+      <rect x="762" y="14" width="110" height="36" fill="#ecf0f1" stroke="#95a5a6" stroke-dasharray="3,2"/>
+      <text x="817" y="28" fill="#7f8c8d">未写入</text>
+      <text x="817" y="42" fill="#7f8c8d">tail</text>
+    </g>
+
+    <!-- 顺序写指针 -->
+    <text x="20" y="80" font-size="11" fill="#555">写入指针（顺序追加）</text>
+    <line x1="20" y1="92" x2="850" y2="92" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <text x="20" y="110" font-size="10" fill="#888">文件名 = 起始物理 offset：00000000000000000000  →  00000000001073741824  →  ...</text>
+  </g>
+
+  <!-- 派发箭头 -->
+  <line x1="200" y1="220" x2="200" y2="290" stroke="#2980b9" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <text x="80" y="260" font-size="11" fill="#1b4f72" font-weight="bold">ReputMessageService</text>
+  <text x="100" y="276" font-size="10" fill="#1b4f72">异步派发</text>
+
+  <line x1="700" y1="220" x2="700" y2="290" stroke="#8e44ad" stroke-width="2" marker-end="url(#arrow-purple)"/>
+  <text x="630" y="260" font-size="11" fill="#6c3483" font-weight="bold">ReputMessageService</text>
+  <text x="660" y="276" font-size="10" fill="#6c3483">异步派发</text>
+
+  <!-- ConsumeQueue -->
+  <text x="40" y="312" font-size="14" font-weight="bold" fill="#2c3e50">② ConsumeQueue（每 Topic-Queue 一个目录，每条 20 字节，约 6MB / 文件）</text>
+  <g transform="translate(40, 322)">
+    <rect x="0" y="0" width="500" height="180" fill="#fef9e7" stroke="#f1c40f" stroke-width="1.5" rx="6"/>
+
+    <text x="14" y="22" font-size="12" font-weight="bold" fill="#7d6608">TopicA / queueId=0</text>
+    <g font-size="10">
+      <rect x="14" y="34" width="470" height="22" fill="#fff" stroke="#bdc3c7"/>
+      <text x="22" y="49" fill="#333">[commitLogOffset = 0]      [size = 1024]   [tagHashCode = 0x3a2b]</text>
+      <rect x="14" y="58" width="470" height="22" fill="#fff" stroke="#bdc3c7"/>
+      <text x="22" y="73" fill="#333">[commitLogOffset = 2048]   [size = 1024]   [tagHashCode = 0x9f01]</text>
+      <rect x="14" y="82" width="470" height="22" fill="#fff" stroke="#bdc3c7"/>
+      <text x="22" y="97" fill="#333">[commitLogOffset = 4096]   [size = 1024]   [tagHashCode = 0x3a2b]</text>
+      <rect x="14" y="106" width="470" height="22" fill="#fff" stroke="#bdc3c7"/>
+      <text x="22" y="121" fill="#333">[commitLogOffset = 7168]   [size = 1024]   [tagHashCode = 0xbb20]</text>
+    </g>
+
+    <text x="14" y="148" font-size="11" fill="#7d6608">每条记录固定 20 字节 = 8(offset) + 4(size) + 8(tag)</text>
+    <text x="14" y="166" font-size="11" fill="#7d6608">单文件 30w 条 × 20B ≈ 5.72 MB；Consumer 顺序读此文件</text>
+  </g>
+
+  <!-- IndexFile -->
+  <g transform="translate(560, 322)">
+    <rect x="0" y="0" width="360" height="180" fill="#fadbd8" stroke="#e74c3c" stroke-width="1.5" rx="6"/>
+    <text x="14" y="22" font-size="12" font-weight="bold" fill="#922b21">③ IndexFile（哈希索引，按 Key/时间 检索）</text>
+
+    <g font-size="10" fill="#922b21">
+      <text x="14" y="46">Header (40B)：起止时间、起止物理 offset</text>
+      <text x="14" y="66">Slot Table (500w × 4B)：hash(key) % 500w → slot</text>
+      <text x="14" y="86">Index Linked List (2000w × 20B)：</text>
+
+      <rect x="20" y="94" width="320" height="20" fill="#fff" stroke="#cb4335"/>
+      <text x="28" y="108">[keyHash][phyOffset][timeDiff][prevIdx]</text>
+
+      <text x="14" y="132">通过 Key 检索：</text>
+      <text x="14" y="148">1) hash(key) → slot</text>
+      <text x="14" y="164">2) 沿链表回溯，找到所有匹配的 commitLogOffset</text>
+    </g>
+  </g>
+
+  <!-- Consumer 读流程 -->
+  <g transform="translate(40, 530)">
+    <rect x="0" y="0" width="880" height="150" fill="#fff" stroke="#bdc3c7" rx="6"/>
+    <text x="14" y="22" font-size="13" font-weight="bold" fill="#2c3e50">Consumer 读取消息的两步</text>
+
+    <rect x="20" y="38" width="200" height="90" fill="#fef9e7" stroke="#f1c40f" rx="4"/>
+    <text x="120" y="58" text-anchor="middle" font-size="12" font-weight="bold" fill="#7d6608">① 查 ConsumeQueue</text>
+    <text x="120" y="78" text-anchor="middle" font-size="10" fill="#7d6608">读 (TopicA, Q0, idx=2)</text>
+    <text x="120" y="94" text-anchor="middle" font-size="10" fill="#7d6608">→ 拿到 commitLogOffset=4096</text>
+    <text x="120" y="110" text-anchor="middle" font-size="10" fill="#7d6608">→ 拿到 size=1024</text>
+
+    <line x1="220" y1="83" x2="290" y2="83" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="290" y="38" width="200" height="90" fill="#e8f4ff" stroke="#3498db" rx="4"/>
+    <text x="390" y="58" text-anchor="middle" font-size="12" font-weight="bold" fill="#1b4f72">② 查 CommitLog</text>
+    <text x="390" y="78" text-anchor="middle" font-size="10" fill="#1b4f72">按 offset=4096 读 size=1024</text>
+    <text x="390" y="94" text-anchor="middle" font-size="10" fill="#1b4f72">→ 拿到完整消息体</text>
+    <text x="390" y="110" text-anchor="middle" font-size="10" fill="#1b4f72">（mmap 零拷贝）</text>
+
+    <line x1="490" y1="83" x2="560" y2="83" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="560" y="38" width="300" height="90" fill="#d5f5e3" stroke="#27ae60" rx="4"/>
+    <text x="710" y="58" text-anchor="middle" font-size="12" font-weight="bold" fill="#196f3d">③ Netty 返回 Consumer</text>
+    <text x="710" y="78" text-anchor="middle" font-size="10" fill="#196f3d">通过 sendfile / mmap 零拷贝下发</text>
+    <text x="710" y="96" text-anchor="middle" font-size="10" fill="#196f3d">Tag 过滤在 Broker 端先按 hash 比对，</text>
+    <text x="710" y="112" text-anchor="middle" font-size="10" fill="#196f3d">Consumer 端再做一次精确字符串比对</text>
+  </g>
+</svg>

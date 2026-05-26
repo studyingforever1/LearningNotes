@@ -1,0 +1,125 @@
+<svg viewBox="0 0 980 760" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e74c3c"/>
+    </marker>
+  </defs>
+
+  <rect width="980" height="760" fill="#f8f9fa" rx="8"/>
+  <rect x="0" y="0" width="980" height="50" fill="#2c3e50" rx="8"/>
+  <rect x="0" y="40" width="980" height="10" fill="#2c3e50"/>
+  <text x="490" y="32" text-anchor="middle" fill="white" font-size="20" font-weight="bold">并发标记：三色标记 + SATB</text>
+
+  <!-- 触发条件 -->
+  <rect x="20" y="68" width="940" height="44" fill="#fef9e7" stroke="#f1c40f" stroke-width="1.5" rx="6"/>
+  <text x="490" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#7d6608">触发条件：Old 区占用 ≥ IHOP（默认 45%）</text>
+  <text x="490" y="106" text-anchor="middle" font-size="12" fill="#555">目标：找出哪些 Old Region 垃圾最多，为 Mixed GC 准备 CSet 候选</text>
+
+  <!-- ============ 三色标记 ============ -->
+  <text x="245" y="138" text-anchor="middle" font-size="15" font-weight="bold" fill="#2c3e50">三色标记法</text>
+
+  <!-- 白 -->
+  <circle cx="80" cy="200" r="36" fill="white" stroke="#7f8c8d" stroke-width="2"/>
+  <text x="80" y="195" text-anchor="middle" font-size="13" font-weight="bold" fill="#555">白</text>
+  <text x="80" y="212" text-anchor="middle" font-size="11" fill="#555">未访问</text>
+  <text x="80" y="252" text-anchor="middle" font-size="11" fill="#888">最终白色 = 垃圾</text>
+
+  <!-- 灰 -->
+  <circle cx="220" cy="200" r="36" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="2"/>
+  <text x="220" y="195" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">灰</text>
+  <text x="220" y="212" text-anchor="middle" font-size="11" fill="#fff">已访问</text>
+  <text x="220" y="252" text-anchor="middle" font-size="11" fill="#888">子节点未扫描完</text>
+
+  <!-- 黑 -->
+  <circle cx="360" cy="200" r="36" fill="#2c3e50" stroke="#7f8c8d" stroke-width="2"/>
+  <text x="360" y="195" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">黑</text>
+  <text x="360" y="212" text-anchor="middle" font-size="11" fill="#fff">已扫完</text>
+  <text x="360" y="252" text-anchor="middle" font-size="11" fill="#888">活对象</text>
+
+  <line x1="116" y1="200" x2="184" y2="200" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="256" y1="200" x2="324" y2="200" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ============ 漏标问题 ============ -->
+  <text x="735" y="138" text-anchor="middle" font-size="15" font-weight="bold" fill="#c0392b">并发标记的"漏标"问题</text>
+
+  <g transform="translate(490, 156)">
+    <rect x="0" y="0" width="490" height="120" fill="#fdecea" stroke="#e74c3c" stroke-width="1.5" rx="6"/>
+    <text x="14" y="22" font-size="12" font-weight="bold" fill="#922b21">同时满足两条件 → 漏标（白对象被误回收）</text>
+    <text x="14" y="44" font-size="11" fill="#333">① 黑对象新增了对白对象的引用</text>
+    <text x="14" y="62" font-size="11" fill="#333">② 灰对象删除了通往该白对象的所有路径</text>
+    <text x="14" y="86" font-size="12" font-weight="bold" fill="#922b21">解决思路（两选一）：</text>
+    <text x="14" y="104" font-size="11" fill="#333">• <tspan font-weight="bold">破坏条件 ①</tspan>：写屏障捕获新增引用 → Incremental Update（CMS）</text>
+    <text x="14" y="120" font-size="11" fill="#333">• <tspan font-weight="bold">破坏条件 ②</tspan>：写屏障捕获被删除的旧引用 → <tspan fill="#c0392b">SATB（G1）</tspan></text>
+  </g>
+
+  <!-- ============ SATB 详解 ============ -->
+  <text x="490" y="310" text-anchor="middle" font-size="15" font-weight="bold" fill="#2c3e50">SATB（Snapshot-At-The-Beginning）原理</text>
+
+  <g transform="translate(20, 326)">
+    <rect x="0" y="0" width="940" height="120" fill="#eaf2f8" stroke="#3498db" stroke-width="1.5" rx="6"/>
+    <text x="470" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#1f618d">核心思想：以并发标记开始时刻的对象图为"逻辑快照"，期间所有"被断开的引用"都视为仍存活</text>
+
+    <text x="14" y="46" font-size="12" fill="#333">▸ <tspan font-weight="bold">Pre-Write Barrier</tspan>：执行 obj.field = newVal 之前，先把 obj.field 的旧值压入 SATB Queue</text>
+    <text x="14" y="66" font-size="12" fill="#333">▸ 后台标记线程消费 SATB Queue，把旧值视为"灰对象"重新扫描，保证不被漏标</text>
+    <text x="14" y="86" font-size="12" fill="#333">▸ 副作用：本轮可能多保留一些"刚刚变成垃圾"的对象（浮动垃圾），下轮回收</text>
+    <text x="14" y="106" font-size="11" fill="#888">优势：写屏障简单（只在 setter 写之前压一次旧值），并发吞吐高，无需 STW Final Remark 重扫所有 Old</text>
+  </g>
+
+  <!-- ============ 四阶段流程时间线 ============ -->
+  <text x="490" y="480" text-anchor="middle" font-size="15" font-weight="bold" fill="#2c3e50">并发标记四阶段时间线</text>
+
+  <g transform="translate(30, 500)">
+    <!-- 主时间轴 -->
+    <line x1="0" y1="60" x2="920" y2="60" stroke="#7f8c8d" stroke-width="2"/>
+
+    <!-- 阶段 1：初始标记（STW，搭便车） -->
+    <rect x="0" y="36" width="80" height="48" fill="#e74c3c" rx="3"/>
+    <text x="40" y="60" text-anchor="middle" fill="white" font-size="11" font-weight="bold">①</text>
+    <text x="40" y="76" text-anchor="middle" fill="white" font-size="10">STW</text>
+    <text x="40" y="100" text-anchor="middle" font-size="11" font-weight="bold" fill="#922b21">初始标记</text>
+    <text x="40" y="116" text-anchor="middle" font-size="10" fill="#555">Initial Mark</text>
+    <text x="40" y="130" text-anchor="middle" font-size="10" fill="#555">扫 GC Roots</text>
+    <text x="40" y="144" text-anchor="middle" font-size="10" fill="#888">搭 Young GC</text>
+    <text x="40" y="156" text-anchor="middle" font-size="10" fill="#888">便车 STW</text>
+
+    <!-- 阶段 2：并发标记 -->
+    <rect x="100" y="36" width="450" height="48" fill="#27ae60" rx="3"/>
+    <text x="325" y="60" text-anchor="middle" fill="white" font-size="11" font-weight="bold">② 并发</text>
+    <text x="325" y="76" text-anchor="middle" fill="white" font-size="10">Concurrent</text>
+    <text x="325" y="100" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e8449">并发标记</text>
+    <text x="325" y="116" text-anchor="middle" font-size="10" fill="#555">Concurrent Mark</text>
+    <text x="325" y="130" text-anchor="middle" font-size="10" fill="#555">遍历对象图、三色标记</text>
+    <text x="325" y="144" text-anchor="middle" font-size="10" fill="#555">SATB 屏障记录被删引用</text>
+    <text x="325" y="158" text-anchor="middle" font-size="10" fill="#888">与应用并发，可能持续数百毫秒~数秒</text>
+
+    <!-- 阶段 3：最终标记（STW） -->
+    <rect x="570" y="36" width="100" height="48" fill="#e74c3c" rx="3"/>
+    <text x="620" y="60" text-anchor="middle" fill="white" font-size="11" font-weight="bold">③</text>
+    <text x="620" y="76" text-anchor="middle" fill="white" font-size="10">STW</text>
+    <text x="620" y="100" text-anchor="middle" font-size="11" font-weight="bold" fill="#922b21">再标记</text>
+    <text x="620" y="116" text-anchor="middle" font-size="10" fill="#555">Remark</text>
+    <text x="620" y="130" text-anchor="middle" font-size="10" fill="#555">处理 SATB Queue</text>
+    <text x="620" y="144" text-anchor="middle" font-size="10" fill="#555">残余引用</text>
+    <text x="620" y="158" text-anchor="middle" font-size="10" fill="#888">停顿极短</text>
+
+    <!-- 阶段 4：清理（部分 STW） -->
+    <rect x="690" y="36" width="230" height="48" fill="#f39c12" rx="3"/>
+    <text x="805" y="60" text-anchor="middle" fill="white" font-size="11" font-weight="bold">④ 部分 STW</text>
+    <text x="805" y="76" text-anchor="middle" fill="white" font-size="10">Cleanup</text>
+    <text x="805" y="100" text-anchor="middle" font-size="11" font-weight="bold" fill="#a04000">清理</text>
+    <text x="805" y="116" text-anchor="middle" font-size="10" fill="#555">统计每个 Region 存活率</text>
+    <text x="805" y="130" text-anchor="middle" font-size="10" fill="#555">按"垃圾密度"排序</text>
+    <text x="805" y="144" text-anchor="middle" font-size="10" fill="#555">回收 100% 垃圾的 Region</text>
+    <text x="805" y="158" text-anchor="middle" font-size="10" fill="#888">为 Mixed GC 准备候选</text>
+  </g>
+
+  <!-- 关键提示 -->
+  <g transform="translate(20, 700)">
+    <rect x="0" y="0" width="940" height="48" fill="#fff3cd" stroke="#e67e22" stroke-width="1.5" rx="6"/>
+    <text x="14" y="22" font-size="12" font-weight="bold" fill="#a04000">⚠ 关键：并发标记本身不回收任何对象，只是"侦察"和"统计"</text>
+    <text x="14" y="40" font-size="11" fill="#555">真正的 Old 区回收发生在后续的 Mixed GC。Cleanup 阶段只回收"完全空的" Region（垃圾密度 100%）</text>
+  </g>
+</svg>

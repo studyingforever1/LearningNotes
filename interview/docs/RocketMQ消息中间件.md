@@ -967,15 +967,6 @@ vm.dirty_background_ratio=10     # 后台刷盘阈值
 
 ---
 
-## 十三、参考资料
-
-- [RocketMQ 官方文档](https://rocketmq.apache.org/zh/docs/)
-- 《RocketMQ 技术内幕》—— 丁威、周继锋
-- [DLedger 设计文档](https://github.com/openmessaging/dledger)
-- 阿里云 RocketMQ 5.0 白皮书
-
----
-
 ## 十四、RocketMQ vs Kafka 深度对比
 
 > 第一章已给出维度速览，本章从**设计哲学、存储引擎、消费模型、可靠性、生态**五个层面深入剖析两者差异，帮助选型决策。
@@ -1037,6 +1028,7 @@ Broker
 | 大消息 | 性能尚可 | 大消息会"挤占" CommitLog，影响其他 Topic |
 
 **结论**：
+
 - **Topic 少、单 Topic 流量大** → Kafka 胜（日志、CDC、流计算）
 - **Topic 多、单 Topic 流量中等** → RocketMQ 胜（业务消息、订单、库存、风控）
 
@@ -1253,7 +1245,7 @@ Consumer 业务代码抛异常 / 返回 `ConsumeConcurrentlyStatus.RECONSUME_LAT
 
 #### 场景 7：主从切换（DLedger 故障转移）
 
-DLedger 切主时，**未同步到所有副本的位点**可能丢失，新 Master 上线后会重新投递部分消息。
+
 
 #### 场景 8：消费者主动 resetOffset / 时间戳回溯
 
@@ -1501,3 +1493,537 @@ List<MessageView> messages = consumer.receive(10, Duration.ofSeconds(30));
 > 至于"减少重复"的优化（增大超时、调大批量、用 POP 消费），是锦上添花，**不是解法**。
 
 ---
+
+## 十六、RocketMQ 写入流程演进：4.5 之前 vs 4.5 之后
+
+![RocketMQ 写入流程演进](svg/rocketmq-07-write-flow-evolution.svg)
+
+> **核心变化**：4.5 之前是传统 Master-Slave 主从架构，不支持自动切主；4.5 引入 DLedger（Raft）后实现了**自动选主 + 强一致复制**。
+
+### 16.1 4.5 之前：Master-Slave 主从模式
+
+#### 写入流程（时序）
+
+```
+Producer                   Master Broker                    Slave Broker
+   │                           │                               │
+   │ 1. SEND_MESSAGE           │                               │
+   │──────────────────────────►│                               │
+   │                           │                               │
+   │                    2. CommitLog.putMessage()               │
+   │                       MappedByteBuffer.put()              │
+   │                       (写入 PageCache)                    │
+   │                           │                               │
+   │                    3. 刷盘策略                             │
+   │                       ├─ SYNC_FLUSH: 等 fsync 完成        │
+   │                       └─ ASYNC_FLUSH: 直接过              │
+   │                           │                               │
+   │                    4. 主从复制（HAService）                │
+   │                       ├─ SYNC_MASTER ──────────────────────►│ 拉取数据
+   │                       │   等待 Slave 写入 PageCache        │ 写入自己的 CommitLog
+   │                       │◄──────────────────────────────────│ 返回 ACK
+   │                       └─ ASYNC_MASTER: 直接过              │ (异步拉取)
+   │                           │                               │
+   │ 5. SendResult (SEND_OK)   │                               │
+   │◄──────────────────────────│                               │
+```
+
+#### 关键特点
+
+| 维度 | 说明 |
+|---|---|
+| 节点角色 | BrokerId=0 为 Master（读写），BrokerId>0 为 Slave（只读） |
+| 复制方式 | HAService：Slave 主动连接 Master，**拉取** CommitLog 增量 |
+| 复制单位 | **字节流**（CommitLog 的 raw bytes） |
+| ACK 条件 | SYNC_MASTER: 等 1 个 Slave 写入 PageCache |
+| 故障切换 | **不能自动切主**，Master 宕机后该 BrokerName 不可写 |
+| 恢复方式 | 人工修改配置重启 / 运维脚本切换 |
+
+#### Slave 的 HAClient 拉取机制
+
+```
+Slave HAClient (后台线程)
+    │
+    ▼
+1. 与 Master 建立 TCP 长连接（HA 端口，默认 10912）
+    │
+    ▼
+2. 上报自己当前的 CommitLog maxOffset
+    │
+    ▼
+3. Master 从该 offset 开始推送数据（最多 32KB/次）
+    │
+    ▼
+4. Slave 写入本地 CommitLog
+    │
+    ▼
+5. 如果是 SYNC_MASTER：Slave 写完后上报新的 offset → Master 解除等待
+```
+
+#### 致命痛点
+
+```
+Master 宕机后发生什么？
+    │
+    ├─ Slave 仍然存活，但 BrokerId ≠ 0
+    │
+    ├─ Producer 向该 BrokerName 发消息 → 失败（只有 Master 能写）
+    │
+    ├─ Consumer 可以继续从 Slave 读（已有消息不丢）
+    │
+    └─ 恢复手段：
+        ├─ 方式 1：修复 Master，重新启动
+        ├─ 方式 2：人工把 Slave 配置改为 BrokerId=0 重启
+        └─ 方式 3：运维脚本自动化（但仍有分钟级中断）
+```
+
+---
+
+### 16.2 4.5 之后：DLedger 模式（Raft 一致性）
+
+#### 写入流程（时序）
+
+```
+Producer              Leader Broker              Follower-1            Follower-2
+   │                      │                         │                     │
+   │ 1. SEND_MESSAGE      │                         │                     │
+   │─────────────────────►│                         │                     │
+   │                      │                         │                     │
+   │               2. DLedgerCommitLog.putMessage()  │                     │
+   │                  封装消息为 DLedger Entry        │                     │
+   │                  追加到本地 Raft Log             │                     │
+   │                      │                         │                     │
+   │               3. AppendEntries RPC（并行发送）   │                     │
+   │                      │────────────────────────►│                     │
+   │                      │─────────────────────────────────────────────►│
+   │                      │                         │                     │
+   │                      │                  4. 写入本地 Raft Log          │
+   │                      │                         │                     │
+   │                      │◄────────────────────────│ ACK                 │
+   │                      │◄─────────────────────────────────────────────│ ACK
+   │                      │                         │                     │
+   │               5. 收到 2/3 ACK → Committed       │                     │
+   │                      │                         │                     │
+   │ 6. SendResult        │                         │                     │
+   │◄─────────────────────│                         │                     │
+```
+
+#### 关键特点
+
+| 维度 | 说明 |
+|---|---|
+| 节点角色 | **动态**：Leader / Follower / Candidate（Raft 状态机） |
+| 复制方式 | DLedger：Leader **推送** AppendEntries RPC |
+| 复制单位 | **Raft Entry**（日志条目，包含消息体 + 元数据） |
+| ACK 条件 | **多数派**（N/2+1）节点确认 |
+| 故障切换 | **自动选主**：Leader 宕机后 Follower 发起选举，10s 内完成 |
+| 节点数要求 | 至少 **3 节点**（奇数），容忍 (N-1)/2 节点故障 |
+
+#### DLedger 替换了什么
+
+```
+传统模式                          DLedger 模式
+┌──────────────────┐            ┌──────────────────┐
+│ CommitLog        │            │ DLedgerCommitLog │  ← 替换存储层
+│ (直接 mmap 写入) │            │ (封装为 Raft Log) │
+├──────────────────┤            ├──────────────────┤
+│ HAService        │            │ DLedgerServer    │  ← 替换复制层
+│ (字节流主从拉取) │            │ (Raft 协议推送)   │
+├──────────────────┤            ├──────────────────┤
+│ 无               │            │ 选举模块          │  ← 新增选主
+│                  │            │ (RequestVote RPC) │
+└──────────────────┘            └──────────────────┘
+
+不变的部分：
+- ConsumeQueue / IndexFile 构建逻辑不变
+- Producer / Consumer API 不变
+- NameServer 路由发现不变
+```
+
+#### 自动故障切换过程
+
+```
+正常运行：Leader (Node-A) + Follower (Node-B) + Follower (Node-C)
+    │
+    ▼
+Node-A 宕机（Leader 心跳超时，默认 electionTimeout = 1000ms × 随机因子）
+    │
+    ▼
+Node-B / Node-C 选举超时 → 转为 Candidate
+    │
+    ▼
+Candidate 发起 RequestVote RPC
+    │
+    ▼
+获得多数票（2/3）→ 成为新 Leader
+    │
+    ▼
+新 Leader 向 NameServer 注册（Broker 心跳携带角色信息）
+    │
+    ▼
+Producer 下次拉路由（最多 30s）→ 发现新 Leader → 切换发送目标
+    │
+    ▼
+写入能力自动恢复（总中断时间 ≈ 选举超时 + 路由刷新 ≈ 10~40s）
+```
+
+---
+
+### 16.3 两种模式写入流程对比
+
+| 维度 | 4.5 之前（Master-Slave） | 4.5 之后（DLedger） |
+|---|---|---|
+| **CommitLog 写入** | `DefaultMessageStore.putMessage()` → `MappedFile.appendMessage()` | `DLedgerCommitLog.putMessage()` → 封装 Entry → `DLedgerServer.append()` |
+| **复制协议** | HAService（TCP 字节流推送） | Raft AppendEntries RPC |
+| **写入确认条件** | Master 写完 + (可选) 1 个 Slave ACK | Leader 写完 + **多数派** ACK |
+| **刷盘** | SYNC_FLUSH / ASYNC_FLUSH | DLedger 内部管理（默认异步） |
+| **消息可见延迟** | 写完 CommitLog → 1ms 内派发 ConsumeQueue | Committed 后 → 1ms 内派发 ConsumeQueue |
+| **故障后写入恢复** | **人工切主（分钟级~小时级）** | **自动选主（10~40s）** |
+| **数据一致性** | 最终一致（异步拉取可能丢最后几条） | **强一致**（Committed 的数据多数派持有） |
+| **吞吐量** | 高（单 Master 写） | 略低（多一跳 Raft 投票，约降 10~20%） |
+| **部署成本** | 2 节点（1 Master + 1 Slave） | 至少 3 节点（奇数） |
+
+### 16.4 DLedger 写入的性能代价
+
+```
+传统模式写入耗时拆解：
+  Netty 接收           0.1ms
+  CommitLog append     0.01ms（PageCache）
+  同步刷盘（可选）     1-10ms
+  同步复制（可选）     1-5ms（1 个 Slave）
+  ──────────────────────────
+  总计                 1-15ms
+
+DLedger 模式写入耗时拆解：
+  Netty 接收           0.1ms
+  封装 Raft Entry      0.02ms
+  本地 append          0.01ms
+  AppendEntries RPC    1-5ms（并行发送，等最快的多数派）
+  ──────────────────────────
+  总计                 1-6ms（多数情况下 ≈ 同步复制模式）
+```
+
+**结论**：DLedger 的性能代价主要在**多数派等待**，但由于是并行发送等最快的 N/2+1 响应，实际延迟与 SYNC_MASTER 模式接近。**换来的是自动切主能力，这在生产环境是巨大的运维优势。**
+
+### 16.5 5.0+ Controller 模式（补充）
+
+RocketMQ 5.0 在 DLedger 基础上又引入了 **Controller 模式**：
+
+```
+┌────────────────────────────────────────────────────────────┐
+│  Controller 集群（独立部署，基于 Raft）                      │
+│  职责：仅管理选主决策，不参与数据复制                        │
+└────────────────────────────────────────────────────────────┘
+        │                        │
+        ▼                        ▼
+┌──────────────┐         ┌──────────────┐
+│ Broker-A     │ ←复制→  │ Broker-B     │   ← 仍用 HAService 字节流复制
+│ (Master)     │         │ (Slave)      │
+└──────────────┘         └──────────────┘
+```
+
+| 维度 | DLedger 模式 | Controller 模式 |
+|---|---|---|
+| 选主由谁管 | Broker 自己选（Raft） | Controller 集群管 |
+| 数据复制 | Raft Log | **传统 HAService**（字节流） |
+| 节点数 | 至少 3 Broker | **2 Broker + Controller 集群** |
+| 优势 | 强一致 | **兼容旧 CommitLog 格式、升级平滑** |
+| 适合场景 | 新集群 | 老集群平滑升级高可用 |
+
+### 16.6 面试回答模板
+
+> Q：RocketMQ 4.5 前后的写入流程有什么区别？
+>
+> A：**4.5 之前**是传统 Master-Slave 架构：Producer 发消息到 Master，Master 写 CommitLog（mmap + PageCache），然后根据配置决定同步/异步刷盘、同步/异步复制到 Slave。Slave 通过 HAService 主动拉取 Master 的 CommitLog 增量数据。**致命问题是 Master 宕机后不能自动切主**，需要人工介入。
+>
+> **4.5 之后**引入 DLedger 模式，底层换成 Raft 协议：写入时 Leader 把消息封装为 Raft Entry，通过 AppendEntries RPC 并行推送给 Follower，等**多数派 ACK** 后才返回成功。核心改进是**自动选主**——Leader 宕机后 10s 内自动选出新 Leader，写入能力自动恢复。
+>
+> 代价是：①需要至少 3 节点（奇数）；②吞吐略降（多一跳投票）。但对生产环境来说，**自动切主的运维价值远大于 10% 的性能损失**。
+>
+> 5.0 还补充了 Controller 模式：选主逻辑由独立的 Controller 集群管理，数据复制仍用传统 HAService，方便老集群平滑升级。
+
+---
+
+## 十七、补充问答
+
+### Q1：消息丢失——全链路如何保证消息不丢？
+
+**答**：消息丢失有三个面，每个面的原因和解法不同。
+
+#### 全链路三个面
+
+```
+Producer ──发送──► Broker ──投递──► Consumer
+   (a)                (b)               (c)
+```
+
+#### (a) 生产端丢失
+
+| 原因 | 解法 |
+|---|---|
+| 网络抖动，ACK 未回 | **同步发送**（send 阻塞等 ACK）+ 重试 3 次 |
+| Broker 还没收到就宕机 | **事务消息**（half 消息 + 本地事务 + 回查，保证发与不发的原子性） |
+
+```java
+// 同步发送 + 重试（默认）
+producer.setRetryTimesWhenSendFailed(3);
+SendResult result = producer.send(msg);  // 失败抛异常，业务层再重试
+
+// 事务消息（本地事务与发消息原子）
+producer.sendMessageInTransaction(msg, localTransactionExecuter, arg);
+```
+
+#### (b) Broker 端丢失
+
+| 原因 | 解法 |
+|---|---|
+| 消息在 PageCache 未刷盘，OS 宕机 | `flushDiskType=SYNC_FLUSH`（等 fsync 再返回 ACK） |
+| Master 宕机，Slave 未同步最新数据 | `brokerRole=SYNC_MASTER`（等 Slave ACK 再返回）或 **DLedger 多数派写入** |
+
+**生产推荐组合**：
+
+| 业务级别 | 复制 | 刷盘 |
+|---|---|---|
+| 一般业务 | ASYNC_MASTER | ASYNC_FLUSH |
+| 重要业务（黄金组合） | **SYNC_MASTER** | ASYNC_FLUSH |
+| 金融级 | SYNC_MASTER | SYNC_FLUSH |
+
+> `SYNC_MASTER + ASYNC_FLUSH` 是最常见生产组合：Broker 宕机不丢（Slave 有），OS 级宕机极小概率丢最近一批（可接受）。
+
+#### (c) 消费端丢失
+
+| 原因 | 解法 |
+|---|---|
+| 拿到消息后业务处理前宕机 | **业务处理完成后才 return CONSUME_SUCCESS**，不提前 ACK |
+| 业务逻辑异常导致"假成功" | catch 处理，失败返回 RECONSUME_LATER，走重试链 |
+
+```java
+@Override
+public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs, ...) {
+    try {
+        doBusinessLogic(msgs);             // 先处理
+        return CONSUME_SUCCESS;            // 处理完再 ACK
+    } catch (Exception e) {
+        log.error("消费失败，触发重试", e);
+        return RECONSUME_LATER;            // 让 Broker 重新投递
+    }
+}
+```
+
+#### 总结
+
+```
+面      风险                  解法
+─────────────────────────────────────────────────────
+(a) 发  网络 / 宕机丢 ACK    同步发送 + 重试；事务消息
+(b) 存  未刷盘 / 未同步      SYNC_MASTER + DLedger
+(c) 消  处理前宕机            业务完成才 ACK；消费幂等
+```
+
+**零丢失代价极高**（SYNC_FLUSH + SYNC_MASTER + 严格幂等），99% 业务选**黄金组合 + 消费幂等 + 离线对账兜底**。
+
+---
+
+### Q2：消息重复与幂等——为什么会重复消费，怎么保证幂等？
+
+**答**：RocketMQ 是 **at-least-once（至少一次）**语义，重复消费是必然事件，不是 bug，唯一可靠解法是**消费侧幂等**。
+
+#### 重复消费的根因
+
+```
+┌──────────────┐       ┌──────────────┐       ┌──────────────┐
+│  Producer    │       │   Broker     │       │  Consumer    │
+│ ① 超时重试   │──────►│ ③ 主从切换   │──────►│ ④ ACK 丢失   │
+│ ② 主动重发   │       │              │       │ ⑤ Rebalance  │
+│              │       │              │       │ ⑥ 重试机制   │
+└──────────────┘       └──────────────┘       └──────────────┘
+```
+
+- **① 生产超时重试**：Broker 落盘成功，但 ACK 网络丢失 → Producer 认为失败重发 → 重复
+- **④ 消费 ACK 丢失**：消费成功但提交位点前宕机 → Broker 重新投递（**最高频来源**）
+- **⑤ Rebalance**：Consumer 扩缩容时，正在消费中的消息分配给新实例 → 重复
+
+#### 幂等方案（由优到劣）
+
+**方案一：状态机 CAS（最优雅，零额外存储）**
+
+适合业务有明确状态流转（订单、支付等）：
+
+```java
+// 只有 WAITING_PAY 状态才允许更新为 PAID
+int updated = orderMapper.updateStatusCAS(orderId,
+    OrderStatus.WAITING_PAY, OrderStatus.PAID);  // WHERE status = WAITING_PAY
+if (updated == 0) return;  // 状态已变，跳过
+```
+
+**方案二：数据库唯一索引（最通用，最稳）**
+
+```sql
+UNIQUE KEY uk_biz_id (biz_id)   -- 重复插入抛 DuplicateKeyException
+```
+
+```java
+try {
+    messageLogMapper.insert(new Log(msg.getKeys()));
+    doBusinessLogic(msg);
+} catch (DuplicateKeyException e) {
+    return CONSUME_SUCCESS;  // 已处理，直接 ACK
+}
+```
+
+**方案三：Redis SETNX（高并发，注意 TTL）**
+
+```java
+Boolean ok = redis.setIfAbsent("msg:dedup:" + msgId, "1", Duration.ofDays(7));
+if (!ok) return;  // 重复，跳过
+try {
+    process(msg);
+} catch (Exception e) {
+    redis.delete("msg:dedup:" + msgId);  // 失败需删除，允许重试
+    throw e;
+}
+```
+
+**方案对比**
+
+| 方案 | 性能 | 可靠性 | 复杂度 | 适用 |
+|---|---|---|---|---|
+| 状态机 CAS | 高 | ★★★★★ | 低 | 有状态流转的业务 |
+| DB 唯一索引 | 中 | ★★★★★ | 低 | 通用，首选 |
+| Redis SETNX | 高 | ★★★★ | 中 | 高并发，中等一致性要求 |
+
+#### 面试金句
+
+> RocketMQ 不保证不重复，它是 at-least-once。重复来源有三层：生产端超时重试、Broker 主从切换、消费端 ACK 丢失/Rebalance。解法是**消费侧幂等**：优先用**状态机 CAS**（零成本），其次**DB 唯一索引**（最通用），高并发用 **Redis SETNX** 作为前置过滤。
+
+---
+
+### Q3：消息顺序性——如何保证顺序消息？
+
+**答**：顺序消息需要**Producer + Broker + Consumer 三端协同**，只要任意一端打破约束就会乱序。
+
+#### 两种顺序级别
+
+| 类型 | 保证范围 | 可用性 | 场景 |
+|---|---|---|---|
+| **分区顺序（默认）** | 正常情况下同 ShardingKey 有序 | **高**（Broker 故障时短暂乱序） | 99% 业务 |
+| **严格顺序** | 任何情况下有序 | **低**（Broker 故障时整个 Queue 阻塞） | 金融转账、订单状态机 |
+
+#### 三端约束
+
+**① Producer 端：MessageQueueSelector 固定路由**
+
+```java
+producer.send(msg, (mqs, m, arg) -> {
+    Long orderId = (Long) arg;
+    return mqs.get((int)(orderId % mqs.size()));  // 同一 orderId 永远进同一 Queue
+}, orderId);
+```
+
+- 必须**单线程串行**发同一 ShardingKey 的消息
+- ShardingKey 选业务唯一标识（订单ID、用户ID）
+
+**② Broker 端：CommitLog 天然保证 Queue 内顺序**
+
+同一 Queue 内的消息按写入先后顺序追加到 CommitLog，ConsumeQueue 索引按序构建，顺序无需额外配置。
+
+**③ Consumer 端：MessageListenerOrderly + 三级锁**
+
+```java
+consumer.registerMessageListener((MessageListenerOrderly) (msgs, context) -> {
+    // 同一 Queue 单线程串行执行，失败会阻塞重试
+    processOrder(msgs);
+    return ConsumeOrderlyStatus.SUCCESS;
+});
+```
+
+三级锁保证串行：
+
+```
+1. Broker 端 Queue 分布式锁（同一时刻只有一个 Consumer 持有，60s TTL，每 20s 续锁）
+   └─ 防止 Rebalance 过渡期两个 Consumer 同时消费同一 Queue
+2. Consumer 本地 ProcessQueue 锁（Object monitor）
+   └─ 防止同一 Queue 被多线程并发消费
+3. 消费失败阻塞重试（不跳过当前消息）
+   └─ 保证消息处理的物理顺序
+```
+
+#### 顺序消息的代价
+
+```
+             顺序消息             并发消息
+─────────────────────────────────────────────
+吞吐量       低（单线程）         高（多线程）
+消费失败     阻塞整个 Queue       独立重试，不影响其他消息
+可用性       严格顺序时低         高
+```
+
+**关键洞察**：99% 的"顺序"需求实际上是**同一业务单元（同 orderId）内的相对顺序**，分区顺序完全满足。严格顺序几乎只用于系统级强一致场景。
+
+---
+
+### Q4：消息堆积——如何排查和处理积压？
+
+**答**：堆积 = 生产速度 > 消费速度，处理分**止血（治标）**和**根治（治本）**两步。
+
+#### 堆积的常见原因
+
+| 原因 | 排查手段 |
+|---|---|
+| 消费逻辑慢（DB 慢查询、外部接口超时） | 监控 consumeMessage 耗时、线程 dump |
+| 消费者实例不足 | 查 Consumer 在线数 vs Queue 数 |
+| 消费异常陷入重试死循环 | 看 %RETRY% 队列积压 + %DLQ% 死信 |
+| 批量业务触发流量洪峰 | 生产 TPS 曲线突刺 |
+| Rebalance 频繁导致消费停顿 | Consumer 实例频繁上下线日志 |
+
+#### 止血（短期处理）
+
+```
+Step 1：判断积压量级
+         小（< 百万）→ 扩消费者实例，等自然消化
+         大（> 千万）→ 需要特殊手段
+
+Step 2：扩消费者实例（注意上限）
+         ⚠️ Consumer 实例数不能超过 Queue 数！
+            多余实例空转，对消化没有帮助
+         → 先用 mqadmin 扩 Queue 数，再扩 Consumer
+
+Step 3：临时提速
+         - 增大 consumeMessageBatchMaxSize（批量消费）
+         - 非核心逻辑降级（只落库，事后补偿）
+         - 消费线程数调大（consumeThreadMax 默认 20）
+
+Step 4：极端情况——新建 Topic 搬运
+         1. 新建消费速度更快的临时 Topic
+         2. 写一个搬运程序：从原 Topic 消费 → 转发到新 Topic
+         3. 更多消费者消费新 Topic
+         4. 消化完后切回
+```
+
+#### 根治（长期方案）
+
+```
+问题                    方案
+──────────────────────────────────────────────────
+消费逻辑慢              DB 批量写、异步化、缓存前置
+实例上限受 Queue 约束   建 Topic 时 Queue 数留 2 倍扩容余量
+不同业务混用一个 Topic  按业务拆分 Topic，隔离影响
+消息太大（> 1MB）       业务侧压缩 / 只传引用（ID + 对象存 OSS）
+```
+
+#### 关键监控指标
+
+| 指标 | 告警阈值 | 含义 |
+|---|---|---|
+| ConsumerGroup 消费延迟 | > 1min | 消费跟不上 |
+| %RETRY% 队列积压 | 持续增长 | 消费异常，非速度问题 |
+| %DLQ% 死信队列 | > 0 | 业务 bug，必须人工介入 |
+| Consumer 在线数 < Queue 数 | 立即告警 | 有 Queue 无人消费 |
+
+#### 面试金句
+
+> 消息堆积本质是**消费速度跟不上生产速度**。止血三板斧：①扩 Consumer 实例（不超过 Queue 数）、②扩 Queue 数（配合 Consumer 一起扩）、③业务降级（跳过非核心逻辑只落库）。根治要找慢点：慢查询、外部依赖、消息太大、Topic 混用。**Consumer 实例数超过 Queue 数是无效扩容**，这是面试最常考的陷阱。
+
+---
+
+*最后更新：2026-05-26*

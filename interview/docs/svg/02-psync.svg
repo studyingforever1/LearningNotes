@@ -1,0 +1,127 @@
+<svg viewBox="0 0 860 500" xmlns="http://www.w3.org/2000/svg" font-family="'PingFang SC','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <marker id="arr-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+    </marker>
+    <marker id="arr-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+    <filter id="sh" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#00000018"/>
+    </filter>
+  </defs>
+
+  <rect width="860" height="500" fill="#f8f9fa" rx="12"/>
+  <text x="430" y="35" text-anchor="middle" font-size="17" font-weight="bold" fill="#2c3e50">全量同步 vs 增量同步（PSYNC）</text>
+
+  <!-- ======= LEFT: Full sync ======= -->
+  <rect x="20" y="55" width="390" height="430" rx="10" fill="#fef5f5" stroke="#e74c3c" stroke-width="2"/>
+  <text x="215" y="82" text-anchor="middle" font-size="14" font-weight="bold" fill="#e74c3c">全量同步（首次连接 / replid 不匹配）</text>
+
+  <!-- Slave block -->
+  <rect x="40" y="100" width="100" height="40" rx="6" fill="#3498db" filter="url(#sh)"/>
+  <text x="90" y="125" text-anchor="middle" font-size="13" fill="white">Slave</text>
+
+  <!-- Master block -->
+  <rect x="290" y="100" width="100" height="40" rx="6" fill="#e74c3c" filter="url(#sh)"/>
+  <text x="340" y="125" text-anchor="middle" font-size="13" fill="white">Master</text>
+
+  <!-- Timeline lines -->
+  <line x1="90" y1="140" x2="90" y2="450" stroke="#3498db" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="340" y1="140" x2="340" y2="450" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- Step 1: PSYNC ? -1 -->
+  <line x1="92" y1="165" x2="338" y2="165" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="215" y="158" text-anchor="middle" font-size="11" fill="#555">PSYNC ? -1</text>
+
+  <!-- Step 2: FULLRESYNC -->
+  <line x1="338" y1="195" x2="92" y2="195" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#arr-red)"/>
+  <text x="215" y="188" text-anchor="middle" font-size="11" fill="#e74c3c">+FULLRESYNC replid offset</text>
+
+  <!-- Step 3: BGSAVE -->
+  <rect x="280" y="210" width="120" height="30" rx="5" fill="#fdecea" stroke="#e74c3c" stroke-width="1"/>
+  <text x="340" y="230" text-anchor="middle" font-size="11" fill="#c0392b">BGSAVE → 生成 RDB</text>
+
+  <!-- Step 4: 写命令进 backlog -->
+  <rect x="280" y="250" width="120" height="30" rx="5" fill="#fdecea" stroke="#e74c3c" stroke-width="1"/>
+  <text x="340" y="270" text-anchor="middle" font-size="11" fill="#c0392b">写命令 → repl_backlog</text>
+
+  <!-- Step 5: 发送RDB -->
+  <line x1="338" y1="296" x2="92" y2="296" stroke="#e74c3c" stroke-width="2" marker-end="url(#arr-red)"/>
+  <text x="215" y="289" text-anchor="middle" font-size="11" fill="#e74c3c">发送 RDB 文件</text>
+
+  <!-- Step 6: Slave清空+加载 -->
+  <rect x="40" y="310" width="100" height="35" rx="5" fill="#d6eaf8" stroke="#3498db" stroke-width="1"/>
+  <text x="90" y="326" text-anchor="middle" font-size="10" fill="#1a5276">清空旧数据</text>
+  <text x="90" y="339" text-anchor="middle" font-size="10" fill="#1a5276">加载 RDB</text>
+
+  <!-- Step 7: 发送backlog增量 -->
+  <line x1="338" y1="362" x2="92" y2="362" stroke="#27ae60" stroke-width="1.5" marker-end="url(#arr-green)"/>
+  <text x="215" y="355" text-anchor="middle" font-size="11" fill="#27ae60">发送 backlog 积压增量</text>
+
+  <!-- Step 8: 命令传播 -->
+  <line x1="338" y1="390" x2="92" y2="390" stroke="#27ae60" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-green)"/>
+  <text x="215" y="383" text-anchor="middle" font-size="11" fill="#27ae60">进入命令传播阶段</text>
+
+  <!-- ======= RIGHT: Incremental sync ======= -->
+  <rect x="450" y="55" width="390" height="430" rx="10" fill="#f0fdf4" stroke="#27ae60" stroke-width="2"/>
+  <text x="645" y="82" text-anchor="middle" font-size="14" font-weight="bold" fill="#27ae60">增量同步（断线重连 / offset 在 backlog 内）</text>
+
+  <!-- Slave -->
+  <rect x="470" y="100" width="100" height="40" rx="6" fill="#3498db" filter="url(#sh)"/>
+  <text x="520" y="125" text-anchor="middle" font-size="13" fill="white">Slave</text>
+
+  <!-- Master -->
+  <rect x="720" y="100" width="100" height="40" rx="6" fill="#e74c3c" filter="url(#sh)"/>
+  <text x="770" y="125" text-anchor="middle" font-size="13" fill="white">Master</text>
+
+  <line x1="520" y1="140" x2="520" y2="450" stroke="#3498db" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="770" y1="140" x2="770" y2="450" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- Step 1 -->
+  <line x1="522" y1="165" x2="768" y2="165" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="645" y="158" text-anchor="middle" font-size="11" fill="#555">PSYNC &lt;replid&gt; &lt;offset&gt;</text>
+
+  <!-- Master checks -->
+  <rect x="710" y="178" width="120" height="50" rx="5" fill="#fef9f0" stroke="#f39c12" stroke-width="1"/>
+  <text x="770" y="196" text-anchor="middle" font-size="10" fill="#e67e22">✓ replid 匹配？</text>
+  <text x="770" y="212" text-anchor="middle" font-size="10" fill="#e67e22">✓ offset 在 backlog？</text>
+  <text x="770" y="225" text-anchor="middle" font-size="10" fill="#27ae60">→ 是，走增量</text>
+
+  <!-- +CONTINUE -->
+  <line x1="768" y1="242" x2="522" y2="242" stroke="#27ae60" stroke-width="1.5" marker-end="url(#arr-green)"/>
+  <text x="645" y="235" text-anchor="middle" font-size="11" fill="#27ae60">+CONTINUE</text>
+
+  <!-- backlog diagram -->
+  <rect x="595" y="258" width="200" height="55" rx="6" fill="#e8f8f0" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="695" y="276" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e8449">repl_backlog（环形缓冲）</text>
+  <!-- ring buffer visual -->
+  <rect x="605" y="283" width="20" height="18" rx="2" fill="#27ae60"/>
+  <rect x="627" y="283" width="20" height="18" rx="2" fill="#27ae60"/>
+  <rect x="649" y="283" width="20" height="18" rx="2" fill="#f39c12"/>
+  <rect x="671" y="283" width="20" height="18" rx="2" fill="#f39c12"/>
+  <rect x="693" y="283" width="20" height="18" rx="2" fill="#f39c12"/>
+  <rect x="715" y="283" width="20" height="18" rx="2" fill="#bdc3c7"/>
+  <rect x="737" y="283" width="20" height="18" rx="2" fill="#bdc3c7"/>
+  <rect x="759" y="283" width="20" height="18" rx="2" fill="#bdc3c7"/>
+  <text x="639" y="318" font-size="9" fill="#555">已确认</text>
+  <text x="687" y="318" font-size="9" fill="#e67e22">待发送</text>
+  <text x="735" y="318" font-size="9" fill="#aaa">空闲</text>
+
+  <!-- Send delta -->
+  <line x1="768" y1="340" x2="522" y2="340" stroke="#27ae60" stroke-width="2" marker-end="url(#arr-green)"/>
+  <text x="645" y="333" text-anchor="middle" font-size="11" fill="#27ae60">发送 offset 之后的命令差量</text>
+
+  <!-- Continue propagation -->
+  <line x1="768" y1="370" x2="522" y2="370" stroke="#27ae60" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-green)"/>
+  <text x="645" y="363" text-anchor="middle" font-size="11" fill="#27ae60">恢复命令传播</text>
+
+  <!-- Key advantage -->
+  <rect x="470" y="390" width="360" height="60" rx="6" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="650" y="410" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e8449">✅ 增量同步优势</text>
+  <text x="650" y="428" text-anchor="middle" font-size="11" fill="#1a5276">无需重新传 RDB，节省带宽和 CPU</text>
+  <text x="650" y="444" text-anchor="middle" font-size="11" fill="#1a5276">前提：backlog 足够大（repl-backlog-size）</text>
+</svg>

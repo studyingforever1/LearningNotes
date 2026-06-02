@@ -1,0 +1,92 @@
+<svg viewBox="0 0 860 560" xmlns="http://www.w3.org/2000/svg" font-family="'PingFang SC','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7f8c8d"/>
+    </marker>
+    <marker id="arr-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+    </marker>
+    <marker id="arr-orange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e67e22"/>
+    </marker>
+    <marker id="arr-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+    <filter id="sh" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#00000020"/>
+    </filter>
+  </defs>
+
+  <rect width="860" height="560" fill="#f8f9fa" rx="12"/>
+  <text x="430" y="35" text-anchor="middle" font-size="18" font-weight="bold" fill="#2c3e50">Sentinel 哨兵架构与故障转移</text>
+
+  <!-- ===== Sentinels ===== -->
+  <rect x="50" y="60" width="130" height="70" rx="10" fill="#f39c12" stroke="#e67e22" stroke-width="2" filter="url(#sh)"/>
+  <text x="115" y="90" text-anchor="middle" font-size="13" font-weight="bold" fill="white">Sentinel 1</text>
+  <text x="115" y="110" text-anchor="middle" font-size="11" fill="#fef9ee">Leader 候选</text>
+
+  <rect x="360" y="60" width="130" height="70" rx="10" fill="#f39c12" stroke="#e67e22" stroke-width="2" filter="url(#sh)"/>
+  <text x="425" y="90" text-anchor="middle" font-size="13" font-weight="bold" fill="white">Sentinel 2</text>
+  <text x="425" y="110" text-anchor="middle" font-size="11" fill="#fef9ee">普通节点</text>
+
+  <rect x="670" y="60" width="130" height="70" rx="10" fill="#f39c12" stroke="#e67e22" stroke-width="2" filter="url(#sh)"/>
+  <text x="735" y="90" text-anchor="middle" font-size="13" font-weight="bold" fill="white">Sentinel 3</text>
+  <text x="735" y="110" text-anchor="middle" font-size="11" fill="#fef9ee">普通节点</text>
+
+  <!-- Sentinel ↔ Sentinel: Pub/Sub hello -->
+  <line x1="180" y1="95" x2="358" y2="95" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <line x1="490" y1="95" x2="668" y2="95" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="270" y="88" text-anchor="middle" font-size="10" fill="#e67e22">Pub/Sub __sentinel__:hello</text>
+  <text x="580" y="88" text-anchor="middle" font-size="10" fill="#e67e22">Gossip 互相发现</text>
+
+  <!-- Master (failed) -->
+  <rect x="310" y="195" width="180" height="80" rx="10" fill="#c0392b" stroke="#922b21" stroke-width="2.5" filter="url(#sh)"/>
+  <text x="400" y="228" text-anchor="middle" font-size="15" font-weight="bold" fill="white">❌ 旧 Master</text>
+  <text x="400" y="250" text-anchor="middle" font-size="12" fill="#fad7d7">宕机 / 网络分区</text>
+  <text x="400" y="266" text-anchor="middle" font-size="11" fill="#fad7d7">6379</text>
+
+  <!-- Sentinels PING to Master -->
+  <line x1="115" y1="130" x2="340" y2="195" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-red)"/>
+  <text x="190" y="165" text-anchor="middle" font-size="10" fill="#e74c3c">PING → 超时</text>
+  <line x1="425" y1="130" x2="410" y2="193" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-red)"/>
+  <line x1="735" y1="130" x2="465" y2="195" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-red)"/>
+
+  <!-- Slaves -->
+  <rect x="80" y="350" width="150" height="70" rx="10" fill="#3498db" stroke="#2980b9" stroke-width="2" filter="url(#sh)"/>
+  <text x="155" y="380" text-anchor="middle" font-size="13" font-weight="bold" fill="white">Slave A</text>
+  <text x="155" y="398" text-anchor="middle" font-size="11" fill="#d6eaf8">offset 最大（最新）</text>
+  <text x="155" y="412" text-anchor="middle" font-size="10" fill="#d6eaf8">→ 优先晋升</text>
+
+  <rect x="580" y="350" width="150" height="70" rx="10" fill="#3498db" stroke="#2980b9" stroke-width="2" filter="url(#sh)"/>
+  <text x="655" y="380" text-anchor="middle" font-size="13" font-weight="bold" fill="white">Slave B</text>
+  <text x="655" y="398" text-anchor="middle" font-size="11" fill="#d6eaf8">offset 较小</text>
+  <text x="655" y="412" text-anchor="middle" font-size="10" fill="#d6eaf8">→ 后选</text>
+
+  <!-- Master → Slaves: 复制 -->
+  <line x1="345" y1="275" x2="210" y2="348" stroke="#3498db" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+  <line x1="455" y1="275" x2="605" y2="348" stroke="#3498db" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+  <text x="258" y="320" font-size="10" fill="#7f8c8d">原复制关系</text>
+
+  <!-- Failover steps box -->
+  <rect x="30" y="445" width="800" height="100" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <text x="430" y="465" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e8449">故障转移 4 步骤</text>
+  <text x="45" y="485" font-size="11" fill="#1a5276">① Sentinel 标记 SDOWN → 收集投票 → 超过 quorum → ODOWN（客观下线）</text>
+  <text x="45" y="502" font-size="11" fill="#1a5276">② Raft-like 选举 → Sentinel Leader 诞生（获得 max(quorum, N/2+1) 票）</text>
+  <text x="45" y="519" font-size="11" fill="#1a5276">③ Leader 选最优 Slave（replica-priority → 最大 offset → run_id）→ 发 REPLICAOF NO ONE</text>
+  <text x="45" y="536" font-size="11" fill="#1a5276">④ 通知其余 Slave 切换到新 Master，旧 Master 恢复后以 Slave 身份重新加入</text>
+
+  <!-- Arrow: Slave A becomes new master -->
+  <rect x="80" y="350" width="150" height="70" rx="10" fill="#27ae60" stroke="#1e8449" stroke-width="3" filter="url(#sh)" opacity="0.9"/>
+  <text x="155" y="380" text-anchor="middle" font-size="13" font-weight="bold" fill="white">✅ 新 Master</text>
+  <text x="155" y="398" text-anchor="middle" font-size="11" fill="#d5f5e3">REPLICAOF NO ONE</text>
+  <text x="155" y="412" text-anchor="middle" font-size="10" fill="#d5f5e3">晋升为主节点</text>
+
+  <!-- Slave B → new master -->
+  <line x1="580" y1="385" x2="232" y2="385" stroke="#27ae60" stroke-width="2" marker-end="url(#arr-green)"/>
+  <text x="406" y="378" text-anchor="middle" font-size="11" fill="#27ae60">REPLICAOF 新Master</text>
+
+  <!-- Client notify -->
+  <rect x="360" y="145" width="140" height="38" rx="6" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="1.5"/>
+  <text x="430" y="162" text-anchor="middle" font-size="11" fill="#555">客户端订阅</text>
+  <text x="430" y="177" text-anchor="middle" font-size="10" fill="#7f8c8d">+switch-master 事件</text>
+</svg>

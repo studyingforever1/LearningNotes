@@ -1,0 +1,96 @@
+<svg viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg" font-family="'PingFang SC','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <marker id="arr-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+    </marker>
+    <marker id="arr-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+    <marker id="arr-orange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e67e22"/>
+    </marker>
+    <filter id="sh" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#00000022"/>
+    </filter>
+  </defs>
+
+  <rect width="900" height="480" fill="#f8f9fa" rx="12"/>
+  <text x="450" y="35" text-anchor="middle" font-size="18" font-weight="bold" fill="#2c3e50">Redis Cluster 自动故障转移（Raft-like 选举）</text>
+
+  <!-- Step numbers -->
+  <!-- STEP 1: Master fails -->
+  <text x="30" y="80" font-size="13" font-weight="bold" fill="#e74c3c">① 故障检测</text>
+  <rect x="30" y="90" width="200" height="65" rx="10" fill="#c0392b" stroke="#922b21" stroke-width="2" filter="url(#sh)"/>
+  <text x="130" y="117" text-anchor="middle" font-size="14" font-weight="bold" fill="white">❌ Master B</text>
+  <text x="130" y="137" text-anchor="middle" font-size="11" fill="#fad7d7">宕机 / 超过 cluster-node-timeout</text>
+  <text x="130" y="153" text-anchor="middle" font-size="10" fill="#fad7d7">（默认 15s）未回复 PING</text>
+
+  <text x="30" y="178" font-size="11" fill="#e74c3c">→ 邻居节点标记为 PFAIL</text>
+  <text x="30" y="194" font-size="11" fill="#e74c3c">→ Gossip 传播 PFAIL 状态</text>
+  <text x="30" y="210" font-size="11" fill="#e74c3c">→ 超过半数 Master 同意 PFAIL</text>
+  <text x="30" y="226" font-size="11" fill="#e74c3c">→ 标记 FAIL，广播 FAIL 消息</text>
+
+  <!-- STEP 2: Slave detects -->
+  <text x="270" y="80" font-size="13" font-weight="bold" fill="#e67e22">② Slave 发起选举</text>
+  <rect x="270" y="90" width="200" height="65" rx="10" fill="#3498db" stroke="#2980b9" stroke-width="2" filter="url(#sh)"/>
+  <text x="370" y="117" text-anchor="middle" font-size="14" font-weight="bold" fill="white">Slave B</text>
+  <text x="370" y="137" text-anchor="middle" font-size="11" fill="#d6eaf8">检测到 Master B 被标记 FAIL</text>
+  <text x="370" y="153" text-anchor="middle" font-size="10" fill="#d6eaf8">等待随机延迟后发起选举</text>
+
+  <rect x="270" y="170" width="200" height="70" rx="8" fill="#fef9f0" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="370" y="190" text-anchor="middle" font-size="12" font-weight="bold" fill="#e67e22">随机延迟公式</text>
+  <text x="370" y="207" text-anchor="middle" font-size="11" fill="#555">500ms + random(0,500)ms</text>
+  <text x="370" y="222" text-anchor="middle" font-size="11" fill="#555">+ rank × 1000ms</text>
+  <text x="370" y="235" text-anchor="middle" font-size="10" fill="#7f8c8d">rank 越小（offset 越大）等待越短</text>
+
+  <!-- STEP 3: Vote -->
+  <text x="520" y="80" font-size="13" font-weight="bold" fill="#9b59b6">③ 投票过程</text>
+  <rect x="520" y="90" width="350" height="150" rx="10" fill="#f4ecf7" stroke="#8e44ad" stroke-width="2" filter="url(#sh)"/>
+
+  <!-- Slave B requests -->
+  <rect x="535" y="105" width="100" height="40" rx="6" fill="#3498db" filter="url(#sh)"/>
+  <text x="585" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Slave B</text>
+
+  <!-- Master A votes -->
+  <rect x="660" y="100" width="90" height="35" rx="6" fill="#e74c3c" filter="url(#sh)"/>
+  <text x="705" y="122" text-anchor="middle" font-size="11" font-weight="bold" fill="white">Master A</text>
+  <!-- Master C votes -->
+  <rect x="760" y="100" width="90" height="35" rx="6" fill="#8e44ad" filter="url(#sh)"/>
+  <text x="805" y="122" text-anchor="middle" font-size="11" font-weight="bold" fill="white">Master C</text>
+
+  <!-- Vote arrows -->
+  <line x1="637" y1="125" x2="658" y2="117" stroke="#9b59b6" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="635" y="112" font-size="10" fill="#9b59b6">请求投票</text>
+  <line x1="705" y1="135" x2="638" y2="145" stroke="#27ae60" stroke-width="1.5" marker-end="url(#arr-green)"/>
+  <text x="665" y="152" text-anchor="middle" font-size="10" fill="#27ae60">✓ 投票</text>
+  <line x1="760" y1="130" x2="640" y2="150" stroke="#27ae60" stroke-width="1.5" marker-end="url(#arr-green)"/>
+
+  <rect x="535" y="185" width="320" height="45" rx="6" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="695" y="204" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e8449">获得 N/2+1 = 2 票 → 选举成功</text>
+  <text x="695" y="222" text-anchor="middle" font-size="11" fill="#1a5276">每个 epoch 每个 Master 只投一票（先到先得）</text>
+
+  <!-- STEP 4: Promotion + broadcast -->
+  <text x="30" y="270" font-size="13" font-weight="bold" fill="#27ae60">④ 晋升 + 广播新路由</text>
+  <rect x="30" y="280" width="840" height="90" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+
+  <rect x="50" y="295" width="130" height="60" rx="8" fill="#27ae60" filter="url(#sh)"/>
+  <text x="115" y="320" text-anchor="middle" font-size="13" font-weight="bold" fill="white">✅ 新 Master B</text>
+  <text x="115" y="338" text-anchor="middle" font-size="11" fill="#d5f5e3">REPLICAOF NO ONE</text>
+  <text x="115" y="353" text-anchor="middle" font-size="10" fill="#d5f5e3">接管全部 slot 5461~10922</text>
+
+  <line x1="180" y1="325" x2="240" y2="325" stroke="#27ae60" stroke-width="2" marker-end="url(#arr-green)"/>
+  <text x="290" y="300" font-size="11" fill="#1e8449">广播 PONG（携带新 configEpoch）</text>
+  <text x="290" y="317" font-size="11" fill="#1e8449">所有节点更新路由表</text>
+  <text x="290" y="334" font-size="11" fill="#1e8449">客户端收到 MOVED 后更新本地路由缓存</text>
+  <text x="290" y="351" font-size="11" fill="#1e8449">原 Master B 恢复后，以 Slave 身份重新加入集群</text>
+
+  <!-- Timeline summary -->
+  <rect x="30" y="388" width="840" height="78" rx="10" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="1.5"/>
+  <text x="450" y="407" text-anchor="middle" font-size="13" font-weight="bold" fill="#2c3e50">故障转移时间估算</text>
+  <text x="50" y="428" font-size="11" fill="#555">故障发现：cluster-node-timeout（默认 15s）→ Gossip 传播收敛：O(log N) 秒 → Slave 延迟等待：约 0.5~2s</text>
+  <text x="50" y="448" font-size="11" fill="#555">总计：通常 15~30s 完成故障转移，期间该 Master 负责的 slot 不可用（可通过缩短 cluster-node-timeout 加速）</text>
+  <text x="50" y="462" font-size="12" fill="#e74c3c">注：Cluster 不依赖外部 Sentinel，Master 节点间自行通过 Gossip + Raft-like 选举完成全流程</text>
+</svg>
